@@ -6,12 +6,12 @@
 | Clase | Dependencias | Signals expuestos | Archivo |
 |-------|-------------|------------------|---------|
 | `AppUpdateFacade` | `AppUpdateService`, `ToastService` | — | `src/app/core/facades/app-update.facade.ts` |
-| `AuthFacade` | `SupabaseService`, `ProfilesRepository`, `Router` | — | `src/app/core/facades/auth.facade.ts` |
-| `ProductosFacade` | `ProductosRepository` | — | `src/app/core/facades/base.facade.ts` |
-| `FamilyFacade` | `FamilyRepository` | — | `src/app/core/facades/family.facade.ts` |
-| `ProductSearchFacade` | `ProductsRepository` | — | `src/app/core/facades/product-search.facade.ts` |
-| `ProductsFacade` | `FamilyRepository`, `ProductsRepository`, `ShoppingListsRepository`, `ListItemsRepository` | — | `src/app/core/facades/products.facade.ts` |
-| `ReceiptScannerFacade` | `FamilyRepository`, `ProductsRepository`, `ReceiptsRepository` | — | `src/app/core/facades/receipt-scanner.facade.ts` |
-| `ShoppingListFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ListItemsRepository` | — | `src/app/core/facades/shopping-list.facade.ts` |
+| `AuthFacade` | `SupabaseService`, `ProfilesRepository`, `NavController`, `SessionScopeService` | — | `src/app/core/facades/auth.facade.ts` |
+| `ProductosFacade` | `ProductosRepository`, `SessionScopeService` | — | `src/app/core/facades/base.facade.ts` |
+| `FamilyFacade` | `FamilyRepository`, `SessionScopeService` | — | `src/app/core/facades/family.facade.ts` |
+| `ProductSearchFacade` | `ProductsRepository`, `SessionScopeService` | — | `src/app/core/facades/product-search.facade.ts` |
+| `ProductsFacade` | `FamilyRepository`, `ProductsRepository`, `ShoppingListsRepository`, `ListItemsRepository`, `SessionScopeService` | — | `src/app/core/facades/products.facade.ts` |
+| `ReceiptScannerFacade` | `FamilyRepository`, `ProductsRepository`, `ReceiptsRepository`, `SessionScopeService` | — | `src/app/core/facades/receipt-scanner.facade.ts` |
+| `ShoppingListFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ListItemsRepository`, `ToastService` | — | `src/app/core/facades/shopping-list.facade.ts` |
 
 <!-- AUTO-GENERATED:END -->

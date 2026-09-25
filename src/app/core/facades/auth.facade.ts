@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavController } from '@ionic/angular';
 import type { User } from '@core/models/user.model';
 import { getInitialsFromDisplayName } from '@core/models/user.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -21,7 +21,7 @@ export class AuthFacade {
   /** Solo sesión (login, eventos, contraseña). Los datos van por Repositories. */
   private supabase = inject(SupabaseService);
   private profiles = inject(ProfilesRepository);
-  private router = inject(Router);
+  private nav = inject(NavController);
   /** Datos de la familia en memoria (lista, catálogo…): se descartan al cambiar de sesión. */
   private sessionScope = inject(SessionScopeService);
 
@@ -156,7 +156,9 @@ export class AuthFacade {
     } finally {
       this._currentUser.set(null);
       this.sessionScope.clear(); // quien entre después en este teléfono no ve estos datos
-      await this.router.navigate(['/login']);
+      // navigateRoot (no router.navigate): Ionic destruye las páginas de esta sesión en vez de
+      // dejarlas en su stack; al entrar otro usuario se crean de nuevo y cargan sus datos.
+      await this.nav.navigateRoot('/login');
     }
   }
 

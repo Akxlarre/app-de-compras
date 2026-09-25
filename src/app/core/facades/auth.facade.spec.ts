@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { NavController } from '@ionic/angular';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { AuthFacade } from './auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -15,6 +16,7 @@ describe('AuthFacade', () => {
   let mockSupabase: any;
   let profiles: { findById: ReturnType<typeof vi.fn> };
   const mockRouter = { navigate: vi.fn() };
+  const mockNav = { navigateRoot: vi.fn().mockResolvedValue(true) };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,6 +45,7 @@ describe('AuthFacade', () => {
         { provide: SupabaseService, useValue: mockSupabase },
         { provide: ProfilesRepository, useValue: profiles },
         { provide: Router, useValue: mockRouter },
+        { provide: NavController, useValue: mockNav },
       ],
     });
 
@@ -76,7 +79,8 @@ describe('AuthFacade', () => {
     await facade.logout();
     expect(mockSupabase.signOut).toHaveBeenCalled();
     expect(facade.currentUser()).toBeNull();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
+    // navigateRoot: Ionic destruye las páginas de la sesión anterior (no quedan en su stack).
+    expect(mockNav.navigateRoot).toHaveBeenCalledWith('/login');
   });
 
   describe('limpieza de datos al cambiar de sesión', () => {
