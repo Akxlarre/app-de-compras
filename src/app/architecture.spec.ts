@@ -133,6 +133,25 @@ describe('Arquitectura: acceso a datos', () => {
     ).toEqual([]);
   });
 
+  it('(h) los facades con datos del usuario se limpian al cerrar sesión (SessionScopeService)', () => {
+    // BaseFacade se registra solo. Los demás deben registrar su reset(); si no, el próximo usuario
+    // del mismo teléfono ve datos del anterior (bug reproducido en staging, spec 0004).
+    const noUserData = new Set([
+      'core/facades/auth.facade.ts',
+      'core/facades/app-update.facade.ts',
+    ]);
+    expect(
+      violations(
+        (f) =>
+          isFacade(f.path) &&
+          f.path !== 'core/facades/base.facade.ts' &&
+          !noUserData.has(f.path) &&
+          !/\bextends\s+BaseFacade\b/.test(f.code) &&
+          !/\bSessionScopeService\b/.test(f.code)
+      )
+    ).toEqual([]);
+  });
+
   it('(d) @supabase/supabase-js solo en repositories, infraestructura y models', () => {
     expect(
       violations(

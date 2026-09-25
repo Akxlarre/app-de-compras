@@ -4,6 +4,8 @@ import { ShoppingListFacade } from './shopping-list.facade';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ListItemsRepository } from '../repositories/list-items.repository';
+import { ToastService } from '../services/ui/toast.service';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 const list = (items: any[] = []) =>
   ({ id: 'list-1', name: 'Semana', status: 'active', list_items: items } as any);
@@ -14,9 +16,11 @@ describe('ShoppingListFacade', () => {
   let lists: Record<string, ReturnType<typeof vi.fn>>;
   let items: Record<string, ReturnType<typeof vi.fn>>;
   let stopWatching: ReturnType<typeof vi.fn>;
+  let toast: { error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     stopWatching = vi.fn();
+    toast = { error: vi.fn() };
     family = { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') };
     lists = {
       findLatestActive: vi.fn().mockResolvedValue(list()),
@@ -41,6 +45,7 @@ describe('ShoppingListFacade', () => {
         { provide: FamilyRepository, useValue: family },
         { provide: ShoppingListsRepository, useValue: lists },
         { provide: ListItemsRepository, useValue: items },
+        { provide: ToastService, useValue: toast },
       ],
     });
     facade = TestBed.inject(ShoppingListFacade);
@@ -111,13 +116,35 @@ describe('ShoppingListFacade', () => {
       expect(items['remove']).toHaveBeenCalledWith('item-1');
     });
 
-    it('updateItemQuantity revierte la cantidad si falla', async () => {
+    it('updateItemQuantity revierte la cantidad si falla y avisa con toast sin tapar la lista', async () => {
       items['updateQuantity'].mockRejectedValue(new Error('network'));
 
       await facade.updateItemQuantity('item-2', 5);
 
       expect(facade.data()?.list_items[1].quantity).toBe(2);
-      expect(facade.error()).toContain('conexión');
+      expect(facade.error()).toBeNull();
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('conexión')
+      );
+    });
+
+    it.each([
+      [
+        'toggleItemCheck',
+        (f: ShoppingListFacade) => f.toggleItemCheck('item-1', false),
+        'setChecked',
+      ],
+      ['deleteItem', (f: ShoppingListFacade) => f.deleteItem('item-1'), 'remove'],
+      ['addItem (nuevo)', (f: ShoppingListFacade) => f.addItem('list-1', 'p3'), 'add'],
+    ])('%s: si falla, la lista sigue visible y se avisa con toast', async (_, act, repoMethod) => {
+      items[repoMethod].mockRejectedValue(new Error('rls'));
+
+      await act(facade);
+
+      expect(facade.error()).toBeNull();
+      expect(facade.data()).not.toBeNull();
+      expect(toast.error).toHaveBeenCalled();
     });
 
     it('addItem suma cantidad si el producto ya está en la lista', async () => {
@@ -143,6 +170,26 @@ describe('ShoppingListFacade', () => {
         familyId: 'fam-1',
         status: 'active',
       });
+    });
+
+    it('createList desde "sin lista activa" muestra la lista nueva sin recargar', async () => {
+      lists['findLatestActive'].mockResolvedValue(null);
+      await facade.initialize();
+      expect(facade.error()).toBe('NO_ACTIVE_LIST');
+
+      lists['findLatestActive'].mockResolvedValue(list());
+      await facade.createList('Compra de la Semana');
+
+      expect(facade.error()).toBeNull();
+      expect(facade.data()?.id).toBe('list-1');
+    });
+
+    it('createList: si falla, avisa con toast', async () => {
+      lists['create'].mockRejectedValue(new Error('rls'));
+
+      await facade.createList('Compra de la Semana');
+
+      expect(toast.error).toHaveBeenCalled();
     });
 
     it('completeList completa y recarga (queda sin lista activa)', async () => {
@@ -188,6 +235,22 @@ describe('ShoppingListFacade', () => {
     it('cloneListItems no inserta si la lista origen está vacía', async () => {
       await facade.cloneListItems('src', 'dst');
       expect(items['addMany']).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cierre de sesión', () => {
+    it('vacía lista, plantillas y última compra, y deja de observar Realtime', async () => {
+      await facade.initialize();
+      lists['findLastCompleted'].mockResolvedValue(list());
+      lists['findTemplates'].mockResolvedValue([list()]);
+      await facade.loadTemplates();
+
+      TestBed.inject(SessionScopeService).clear();
+
+      expect(facade.data()).toBeNull();
+      expect(facade.templates()).toEqual([]);
+      expect(facade.lastCompletedList()).toBeNull();
+      expect(stopWatching).toHaveBeenCalled();
     });
   });
 });

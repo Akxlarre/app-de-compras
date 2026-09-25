@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ProductSearchFacade } from './product-search.facade';
 import { ProductsRepository } from '../repositories/products.repository';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 describe('ProductSearchFacade', () => {
   let facade: ProductSearchFacade;
@@ -73,5 +74,18 @@ describe('ProductSearchFacade', () => {
       expect(facade.error()).toBe('Error al crear producto');
       expect(facade.isSearching()).toBe(false);
     });
+  });
+
+  it('cierre de sesión: olvida esenciales y resultados, y la próxima sesión los vuelve a pedir', async () => {
+    catalog.findByFamily.mockResolvedValue([{ id: '1', name: 'Pan' }]);
+    await facade.loadEssentials('fam-A');
+    facade.searchResults.set([{ id: '1', name: 'Pan' } as any]);
+
+    TestBed.inject(SessionScopeService).clear();
+
+    expect(facade.essentials()).toEqual([]);
+    expect(facade.searchResults()).toEqual([]);
+    await facade.loadEssentials('fam-C');
+    expect(catalog.findByFamily).toHaveBeenLastCalledWith('fam-C', 8);
   });
 });

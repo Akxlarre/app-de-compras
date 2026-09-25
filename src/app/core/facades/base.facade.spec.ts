@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Injectable } from '@angular/core';
 import { vi } from 'vitest';
 import { BaseFacade } from './base.facade';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 // ── Subclase concreta para tests ──────────────────────────────────────────────
 
@@ -67,6 +68,33 @@ describe('BaseFacade', () => {
       facade.fetchData.mockRejectedValueOnce(new Error('timeout'));
       await facade.initialize(); // segunda llamada con error
       expect(facade.data()).toEqual(['a', 'b', 'c']); // datos stale intactos
+    });
+
+    it('un refresh silencioso exitoso limpia el error anterior (fix-045)', async () => {
+      facade.fetchData.mockRejectedValueOnce(new Error('fail'));
+      await facade.initialize();
+      expect(facade.error()).not.toBeNull();
+
+      await facade.initialize(); // SWR → refreshSilently() exitoso
+
+      expect(facade.data()).toEqual(['a', 'b', 'c']);
+      expect(facade.error()).toBeNull();
+    });
+  });
+
+  // Cierre de sesión (fix-045)
+  describe('SessionScope', () => {
+    it('se limpia al cerrar sesión y el próximo initialize() recarga con skeleton', async () => {
+      await facade.initialize();
+      const dispose = vi.spyOn(facade, 'dispose');
+
+      TestBed.inject(SessionScopeService).clear();
+
+      expect(facade.data()).toBeNull();
+      expect(dispose).toHaveBeenCalled();
+      facade.fetchData.mockClear();
+      await facade.initialize();
+      expect(facade.fetchData).toHaveBeenCalledTimes(1);
     });
   });
 

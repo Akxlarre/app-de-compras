@@ -4,6 +4,7 @@ import { ReceiptScannerFacade } from './receipt-scanner.facade';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 describe('ReceiptScannerFacade', () => {
   let facade: ReceiptScannerFacade;
@@ -116,5 +117,13 @@ describe('ReceiptScannerFacade', () => {
     expect(facade.error()).toBeNull();
     expect(facade.isScanning()).toBe(false);
     expect(facade.isSaving()).toBe(false);
+  });
+
+  it('cierre de sesión: descarta la boleta en revisión', () => {
+    facade.scannedItems.set([{ id: '1', name: 'Pan', price: 990 }]);
+
+    TestBed.inject(SessionScopeService).clear();
+
+    expect(facade.scannedItems()).toEqual([]);
   });
 });
