@@ -1,4 +1,5 @@
-import { signal, computed } from '@angular/core';
+import { signal, computed, inject } from '@angular/core';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 /**
  * BaseFacade<T> — Clase base para todos los Facades de dominio.
@@ -39,6 +40,14 @@ export abstract class BaseFacade<T> {
 
   /** true cuando ya hay datos cacheados (evita mostrar skeleton en re-visitas). */
   readonly hasData = computed(() => this._data() !== null);
+
+  constructor() {
+    // Los datos son del usuario: al cerrar sesión se descartan (y se corta Realtime).
+    inject(SessionScopeService).register(() => {
+      this.dispose();
+      this.reset();
+    });
+  }
 
   // ── Contrato abstracto ────────────────────────────────────────────────────
 
@@ -103,6 +112,7 @@ export abstract class BaseFacade<T> {
   protected async refreshSilently(): Promise<void> {
     try {
       this._data.set(await this.fetchData());
+      this._error.set(null); // el error anterior ya no aplica (p. ej. NO_ACTIVE_LIST tras crear)
     } catch {
       // Fail silencioso — datos stale siguen visibles
     }

@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import type { FamilyInfo } from '../models/family.model';
 import { FamilyRepository } from '../repositories/family.repository';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 export type { FamilyInfo } from '../models/family.model';
 
@@ -11,6 +12,16 @@ export class FamilyFacade {
   readonly currentFamily = signal<FamilyInfo | null>(null);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
+
+  constructor() {
+    inject(SessionScopeService).register(() => this.reset());
+  }
+
+  reset(): void {
+    this.currentFamily.set(null);
+    this.isLoading.set(false);
+    this.error.set(null);
+  }
 
   async loadMyFamily(): Promise<void> {
     this.isLoading.set(true);

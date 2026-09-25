@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { FamilyFacade } from './family.facade';
 import { FamilyRepository } from '../repositories/family.repository';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 describe('FamilyFacade', () => {
   let facade: FamilyFacade;
@@ -16,6 +17,15 @@ describe('FamilyFacade', () => {
       providers: [FamilyFacade, { provide: FamilyRepository, useValue: repo }],
     });
     facade = TestBed.inject(FamilyFacade);
+  });
+
+  it('cierre de sesión: olvida la familia', async () => {
+    await facade.loadMyFamily();
+
+    TestBed.inject(SessionScopeService).clear();
+
+    expect(facade.currentFamily()).toBeNull();
+    expect(facade.error()).toBeNull();
   });
 
   it('loadMyFamily expone la familia del usuario', async () => {

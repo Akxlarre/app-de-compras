@@ -1,10 +1,11 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavController } from '@ionic/angular';
 import type { User } from '@core/models/user.model';
 import { getInitialsFromDisplayName } from '@core/models/user.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ProfilesRepository, type ProfileRow } from '@core/repositories/profiles.repository';
 import { mapAuthError } from '@core/utils/auth-errors.utils';
+import { SessionScopeService } from '@core/services/auth/session-scope.service';
 
 /**
  * AuthFacade - Facade de autenticación con Supabase.
@@ -20,7 +21,9 @@ export class AuthFacade {
   /** Solo sesión (login, eventos, contraseña). Los datos van por Repositories. */
   private supabase = inject(SupabaseService);
   private profiles = inject(ProfilesRepository);
-  private router = inject(Router);
+  private nav = inject(NavController);
+  /** Datos de la familia en memoria (lista, catálogo…): se descartan al cambiar de sesión. */
+  private sessionScope = inject(SessionScopeService);
 
   private _currentUser = signal<User | null>(null);
 
@@ -48,6 +51,7 @@ export class AuthFacade {
         this.loadUserFromSession(session.user);
       } else if (event === 'SIGNED_OUT') {
         this._currentUser.set(null);
+        this.sessionScope.clear(); // sesión expirada o cerrada en otra pestaña
       }
     });
 
@@ -65,7 +69,9 @@ export class AuthFacade {
     user_metadata?: Record<string, unknown>;
   }): Promise<void> {
     // Si ya tenemos el usuario y el ID no ha cambiado, no recargamos
-    if (this._currentUser()?.id === authUser.id) return;
+    const previous = this._currentUser();
+    if (previous?.id === authUser.id) return;
+    if (previous) this.sessionScope.clear(); // otra cuenta sin pasar por logout()
 
     let dbUser: ProfileRow | null = null;
     try {
@@ -149,7 +155,10 @@ export class AuthFacade {
       console.error('[AuthFacade] Error al cerrar sesión en Supabase:', err);
     } finally {
       this._currentUser.set(null);
-      await this.router.navigate(['/login']);
+      this.sessionScope.clear(); // quien entre después en este teléfono no ve estos datos
+      // navigateRoot (no router.navigate): Ionic destruye las páginas de esta sesión en vez de
+      // dejarlas en su stack; al entrar otro usuario se crean de nuevo y cargan sus datos.
+      await this.nav.navigateRoot('/login');
     }
   }
 

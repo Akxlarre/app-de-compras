@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 export interface ScannedItem {
   id: string;
@@ -19,6 +20,10 @@ export class ReceiptScannerFacade {
   readonly isSaving = signal(false);
   readonly scannedItems = signal<ScannedItem[]>([]);
   readonly error = signal<string | null>(null);
+
+  constructor() {
+    inject(SessionScopeService).register(() => this.reset());
+  }
 
   /**
    * Lee una boleta con OCR (Edge Function) y deja los ítems para que el usuario los revise.

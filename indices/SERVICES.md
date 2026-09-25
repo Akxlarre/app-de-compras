@@ -8,6 +8,7 @@
 | `AppUpdateService` | `AppUpdatesRepository`, `HttpClient` | `src/app/core/services/app-update.service.ts` |
 | `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
 | `RoleService` | — | `src/app/core/services/auth/role.service.ts` |
+| `SessionScopeService` | — | `src/app/core/services/auth/session-scope.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
 | `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
 | `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
