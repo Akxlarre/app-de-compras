@@ -5,6 +5,10 @@ Fuente: `supabase/migrations/`. Todo aislado por familia vía `public.get_user_f
 
 Acceso desde la app: **solo** vía `core/repositories/` → ver `indices/REPOSITORIES.md`.
 
+> ⚠️ **Proyecto Supabase compartido** con app-de-entrenamiento (y futuras apps + hub). Antes de crear
+> o cambiar tablas, leer `docs/adr/ADR-001-base-de-datos-compartida.md`: las migraciones nuevas van
+> al repo de base de datos compartida, no a `supabase/migrations/` de esta app.
+
 ## Tablas
 
 | Tabla | Columnas clave | RLS |
