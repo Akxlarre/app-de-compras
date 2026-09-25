@@ -70,19 +70,19 @@ describe('BaseFacade', () => {
       expect(facade.data()).toEqual(['a', 'b', 'c']); // datos stale intactos
     });
 
-    it('un refresh silencioso exitoso limpia el error anterior (fix-045)', async () => {
+    it('un refresh silencioso exitoso limpia el error anterior (0004)', async () => {
       facade.fetchData.mockRejectedValueOnce(new Error('fail'));
       await facade.initialize();
       expect(facade.error()).not.toBeNull();
 
-      await facade.initialize(); // SWR → refreshSilently() exitoso
+      await facade.initialize(); // SWR → refreshSilently() en background
 
+      await vi.waitFor(() => expect(facade.error()).toBeNull());
       expect(facade.data()).toEqual(['a', 'b', 'c']);
-      expect(facade.error()).toBeNull();
     });
   });
 
-  // Cierre de sesión (fix-045)
+  // Cierre de sesión (0004)
   describe('SessionScope', () => {
     it('se limpia al cerrar sesión y el próximo initialize() recarga con skeleton', async () => {
       await facade.initialize();

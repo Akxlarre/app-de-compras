@@ -4,6 +4,7 @@ import type { ActiveShoppingList } from '../models/shopping-list.model';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ListItemsRepository } from '../repositories/list-items.repository';
+import { ToastService } from '../services/ui/toast.service';
 
 export type { ActiveShoppingList, PopulatedListItem } from '../models/shopping-list.model';
 
@@ -14,6 +15,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   private readonly family = inject(FamilyRepository);
   private readonly lists = inject(ShoppingListsRepository);
   private readonly items = inject(ListItemsRepository);
+  private readonly toast = inject(ToastService);
 
   /** Lista observada por Realtime y función para dejar de observarla. */
   private watched: { listId: string; stop: () => void } | null = null;
@@ -30,8 +32,8 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       ]);
       this.lastCompletedList.set(lastCompleted);
       this.templates.set(templates);
-    } catch (e) {
-      this._error.set(ShoppingListFacade.sanitizeError(e));
+    } catch {
+      // Atajos opcionales ("Repetir última compra", plantillas): si fallan, no se muestran.
     }
   }
 
@@ -56,7 +58,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       await this.lists.create({ name, familyId, status: 'active' });
       await this.refreshSilently();
     } catch (e) {
-      this._error.set(ShoppingListFacade.sanitizeError(e));
+      this.notifyError(e);
     }
   }
 
@@ -76,7 +78,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
         await this.items.updateQuantity(existingItem.id, newQuantity);
       } catch (e) {
         this.refreshSilently(); // rollback con el estado del servidor
-        this._error.set(ShoppingListFacade.sanitizeError(e));
+        this.notifyError(e);
       }
       return;
     }
@@ -85,7 +87,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       await this.items.add(listId, productId, quantity);
       await this.refreshSilently();
     } catch (e) {
-      this._error.set(ShoppingListFacade.sanitizeError(e));
+      this.notifyError(e);
     }
   }
 
@@ -103,7 +105,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       await this.items.updateQuantity(itemId, newQuantity);
     } catch (e) {
       this.patchItem(itemId, { quantity: oldQuantity }); // rollback
-      this._error.set(ShoppingListFacade.sanitizeError(e));
+      this.notifyError(e);
     }
   }
 
@@ -114,7 +116,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     try {
       await this.lists.complete(listId);
     } catch (e) {
-      this._error.set(ShoppingListFacade.sanitizeError(e));
+      this.notifyError(e);
       return;
     }
 
@@ -140,7 +142,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       );
       await this.refreshSilently();
     } catch (e) {
-      this._error.set(ShoppingListFacade.sanitizeError(e));
+      this.notifyError(e);
     }
   }
 
@@ -158,7 +160,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       await this.cloneListItems(listId, template.id);
       await this.loadTemplates();
     } catch (e) {
-      this._error.set(ShoppingListFacade.sanitizeError(e));
+      this.notifyError(e);
     }
   }
 
@@ -172,7 +174,8 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
 
     try {
       await this.items.remove(itemId);
-    } catch {
+    } catch (e) {
+      this.notifyError(e);
       await this.refreshSilently(); // rollback con el estado del servidor
     }
   }
@@ -185,7 +188,8 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
 
     try {
       await this.items.setChecked(itemId, !currentStatus);
-    } catch {
+    } catch (e) {
+      this.notifyError(e);
       await this.refreshSilently(); // rollback con el estado del servidor
     }
   }
@@ -193,6 +197,17 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   override dispose(): void {
     this.watched?.stop();
     this.watched = null;
+  }
+
+  override reset(): void {
+    super.reset();
+    this.templates.set([]);
+    this.lastCompletedList.set(null);
+  }
+
+  /** Errores de mutaciones: toast (swr-pattern.md). `_error` es solo de la carga: taparía la lista. */
+  private notifyError(e: unknown): void {
+    this.toast.error('No se pudo guardar el cambio', ShoppingListFacade.sanitizeError(e));
   }
 
   protected static override sanitizeError(e: unknown): string {

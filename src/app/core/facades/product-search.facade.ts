@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import type { Product } from '../models/product.model';
 import { ProductsRepository } from '../repositories/products.repository';
+import { SessionScopeService } from '../services/auth/session-scope.service';
 
 export type { Product } from '../models/product.model';
 
@@ -14,8 +15,19 @@ export class ProductSearchFacade {
 
   readonly essentials = signal<Product[]>([]);
 
+  constructor() {
+    inject(SessionScopeService).register(() => this.reset());
+  }
+
+  /** Cierre de sesión: los esenciales son del catálogo de la familia anterior. */
+  reset(): void {
+    this.essentials.set([]);
+    this.isSearching.set(false);
+    this.clear();
+  }
+
   async loadEssentials(familyId: string): Promise<void> {
-    if (this.essentials().length > 0) return; // Simple cache para la sesión
+    if (this.essentials().length > 0) return; // Caché por sesión (se limpia en reset())
     try {
       // MVP: los primeros 8 en orden alfabético. Idealmente, por frecuencia de compra.
       this.essentials.set(await this.catalog.findByFamily(familyId, 8));

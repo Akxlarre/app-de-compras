@@ -5,7 +5,6 @@ import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ListItemsRepository } from '../repositories/list-items.repository';
-import { ToastService } from '../services/ui/toast.service';
 import { SessionScopeService } from '../services/auth/session-scope.service';
 
 const NOW = new Date('2026-09-25T12:00:00Z');
@@ -17,7 +16,6 @@ describe('ProductsFacade', () => {
   let catalog: { findByFamily: ReturnType<typeof vi.fn>; updatePrice: ReturnType<typeof vi.fn> };
   let lists: { create: ReturnType<typeof vi.fn>; findLatestActive: ReturnType<typeof vi.fn> };
   let items: { addMany: ReturnType<typeof vi.fn> };
-  let toast: { error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -31,7 +29,6 @@ describe('ProductsFacade', () => {
       findLatestActive: vi.fn().mockResolvedValue(null),
     };
     items = { addMany: vi.fn().mockResolvedValue(undefined) };
-    toast = { error: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -40,7 +37,6 @@ describe('ProductsFacade', () => {
         { provide: ProductsRepository, useValue: catalog },
         { provide: ShoppingListsRepository, useValue: lists },
         { provide: ListItemsRepository, useValue: items },
-        { provide: ToastService, useValue: toast },
       ],
     });
     facade = TestBed.inject(ProductsFacade);
@@ -97,13 +93,12 @@ describe('ProductsFacade', () => {
       expect(facade.products()[0].daysSinceUpdate).toBe(12);
     });
 
-    it('no toca el estado local si la BD falla y avisa con toast', async () => {
+    it('no toca el estado local si la BD falla (devuelve false para que la página avise)', async () => {
       catalog.updatePrice.mockRejectedValue(new Error('rls'));
 
       expect(await facade.updatePrice('a', 1990)).toBe(false);
 
       expect(facade.products()[0].daysSinceUpdate).toBe(12);
-      expect(toast.error).toHaveBeenCalled();
     });
   });
 

@@ -20,12 +20,13 @@
 - `core/utils/price.utils.ts` → `parsePrice(raw): number | null` (vacío, NaN, negativo ⇒ null;
   redondea a entero CLP).
 - `ProductsFacade.updatePrice(id, price): Promise<boolean>`: no llama al repository si el precio es
-  igual al actual; toast si falla.
+  igual al actual. La página avisa con toast si falla (el facade queda en 5 `inject()`, ARCH-10).
 - `ProductsPage.onPriceBlur`: `parsePrice`; si es null o no se guardó, restaura el valor mostrado.
 
 ## 4. Lista inteligente
 - `ProductsFacade.generateSmartList()`: `lists.findLatestActive()`; si existe, agrega solo los
-  recomendados que no están en ella; si no, crea "Compra Inteligente".
+  recomendados que no están en ella; si no, crea "Compra Inteligente". Devuelve `boolean`; la
+  página avisa si falla.
 
 ## Orden (commits)
 1. `test`: specs en rojo (scope, base, shopping-list, products, auth, family, search, receipt,
