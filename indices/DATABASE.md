@@ -3,6 +3,8 @@
 Fuente: `supabase/migrations/`. Todo aislado por familia vía `public.get_user_family_ids()`
 (SECURITY DEFINER, devuelve las familias de `auth.uid()`).
 
+Acceso desde la app: **solo** vía `core/repositories/` → ver `indices/REPOSITORIES.md`.
+
 ## Tablas
 
 | Tabla | Columnas clave | RLS |

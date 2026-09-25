@@ -1,5 +1,5 @@
 > id: 0001-capa-repositorios
-> status: in-progress
+> status: done
 > created: 2026-09-25
 
 # Capa de Repositories + guardia arquitectónica
@@ -23,20 +23,35 @@
 - Cambios de UI o de esquema.
 
 ## Acceptance Criteria
-- [ ] AC1: `src/app/architecture.spec.ts` falla si:
+- [x] AC1: `src/app/architecture.spec.ts` falla si:
   - (a) se usa `.client` de `SupabaseService` fuera de `core/repositories/**` o `supabase.service.ts`;
   - (b) `features/`, `shared/` o `layout/` importan `SupabaseService` o un Repository;
   - (c) un facade distinto de `AuthFacade` importa `SupabaseService`;
   - (d) se importa `@supabase/supabase-js` fuera de `core/repositories/`, `core/services/infrastructure/` o `core/models/`;
   - (e) un facade importa otro facade (salvo `BaseFacade`) — regla de `facades.md`. Hoy lo violan
     `ProductsFacade` y `ReceiptScannerFacade` (inyectan `ShoppingListFacade`; el segundo sin usarlo).
-- [ ] AC2: La prueba estaba en rojo antes del refactor y queda en verde después.
-- [ ] AC3: Repositories con un método por operación, tipados, que lanzan en error:
+- [x] AC2: La prueba estaba en rojo antes del refactor y queda en verde después.
+- [x] AC3: Repositories con un método por operación, tipados, que lanzan en error:
   `FamilyRepository`, `ShoppingListsRepository`, `ListItemsRepository`, `ProductsRepository`,
   `ReceiptsRepository`, `AppUpdatesRepository`, `ProfilesRepository` (corregido a `id, email, role_id`).
-- [ ] AC4: La familia se resuelve en un solo lugar (`FamilyRepository.getOrCreateFamilyId()` → RPC).
-- [ ] AC5: `reset-password.page.ts` no toca Supabase; usa `AuthFacade.onPasswordRecovery()` y
+- [x] AC4: La familia se resuelve en un solo lugar (`FamilyRepository.getOrCreateFamilyId()` → RPC).
+- [x] AC5: `reset-password.page.ts` no toca Supabase; usa `AuthFacade.onPasswordRecovery()` y
   cancela la suscripción al destruirse.
-- [ ] AC6: API pública de los facades sin cambios (templates intactos salvo `reset-password`).
-- [ ] AC7: `npm run test:ci`, `npm run lint:arch` y `ng build` en verde.
-- [ ] AC8: `architecture.md` e `indices/` documentan la capa y la guardia.
+- [x] AC6: API pública de los facades sin cambios (templates intactos salvo `reset-password`).
+- [x] AC7: `npm run test:ci`, `npm run lint:arch` y `ng build` en verde.
+- [x] AC8: `architecture.md` e `indices/` documentan la capa y la guardia.
+
+## Evidencia (2026-09-25)
+- AC1/AC2: `architecture.spec.ts` en rojo en f668df8 (9 violaciones), 6/6 verde tras el refactor.
+- AC3: 7 repositories con 41 tests (`src/app/core/repositories/*.spec.ts`).
+- AC4: `FamilyRepository.getOrCreateFamilyId()` único; sin `family_members … limit(1)` en facades.
+- AC5: `reset-password.page.spec.ts` cubre PASSWORD_RECOVERY y la baja al destruir.
+- AC6: sin cambios en templates salvo `reset-password` (solo su clase).
+- AC7: `test:ci` verde, `lint:arch` 0 errores (avisos 4 → 2), `ng build` OK.
+- AC8: `architecture.md`, `facades.md`, `swr-pattern.md`, `database.md`, `models.md`,
+  skill `supabase-data-model`, `indices/REPOSITORIES.md`, `indices/DATABASE.md`.
+
+## Pendiente fuera de alcance
+- `.claude/hooks/pre-write-guard.js` (ARCH-12) busca `.db.from()` y el código usa `.client`:
+  nunca disparaba. Está protegido → debe corregirlo el humano (la guardia de tests ya lo cubre).
+- Espejos de reglas en `.agents/rules/` (protegido) y `.agent/rules/` siguen con los ejemplos viejos.

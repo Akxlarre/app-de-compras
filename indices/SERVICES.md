@@ -5,7 +5,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | Clase | Dependencias | Archivo |
 |-------|-------------|---------|
-| `AppUpdateService` | `SupabaseService`, `HttpClient` | `src/app/core/services/app-update.service.ts` |
+| `AppUpdateService` | `AppUpdatesRepository`, `HttpClient` | `src/app/core/services/app-update.service.ts` |
 | `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
 | `RoleService` | — | `src/app/core/services/auth/role.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
