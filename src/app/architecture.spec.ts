@@ -88,6 +88,18 @@ describe('Arquitectura: acceso a datos', () => {
     ).toEqual([]);
   });
 
+  it('(e) un facade no importa otros facades (componer en el Smart Component)', () => {
+    expect(
+      violations(
+        (f) =>
+          isFacade(f.path) &&
+          [...f.code.matchAll(/import\s[\s\S]*?from\s+['"]([^'"]+)['"]/g)].some(
+            ([, spec]) => /\.facade$/.test(spec) && !/base\.facade$/.test(spec)
+          )
+      )
+    ).toEqual([]);
+  });
+
   it('(d) @supabase/supabase-js solo en repositories, infraestructura y models', () => {
     expect(
       violations(

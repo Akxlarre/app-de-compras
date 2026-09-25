@@ -3,24 +3,15 @@ import { Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { ResetPasswordPage } from './reset-password.page';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { FormsModule } from '@angular/forms';
 
 // globals: true en vitest.config.ts — vi disponible sin importar
 
-const mockSupabase = {
-  client: {
-    auth: {
-      onAuthStateChange: vi.fn().mockReturnValue({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
-    },
-  },
-};
-
+const stopListening = vi.fn();
 const mockAuth = {
   isAuthenticated: signal(false),
   updatePassword: vi.fn(),
+  onPasswordRecovery: vi.fn(() => stopListening),
 };
 
 const mockRouter = { navigate: vi.fn() };
@@ -37,7 +28,6 @@ describe('ResetPasswordPage', () => {
       imports: [ResetPasswordPage, FormsModule],
       providers: [
         { provide: AuthFacade, useValue: mockAuth },
-        { provide: SupabaseService, useValue: mockSupabase },
         { provide: Router, useValue: mockRouter },
       ],
     }).compileComponents();
@@ -48,6 +38,24 @@ describe('ResetPasswordPage', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('token de recuperación', () => {
+    it('PASSWORD_RECOVERY limpia el error de token', () => {
+      component.ngOnInit();
+      component.tokenError.set(true);
+
+      const onRecovery = mockAuth.onPasswordRecovery.mock.calls[0][0] as () => void;
+      onRecovery();
+
+      expect(component.tokenError()).toBe(false);
+    });
+
+    it('al destruir la página cancela la suscripción', () => {
+      component.ngOnInit();
+      fixture.destroy();
+      expect(stopListening).toHaveBeenCalled();
+    });
   });
 
   describe('validate()', () => {

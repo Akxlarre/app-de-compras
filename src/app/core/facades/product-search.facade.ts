@@ -1,16 +1,12 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { SupabaseService } from '../services/infrastructure/supabase.service';
+import type { Product } from '../models/product.model';
+import { ProductsRepository } from '../repositories/products.repository';
 
-export interface Product {
-  id: string;
-  name: string;
-  category: string | null;
-  family_id: string;
-}
+export type { Product } from '../models/product.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProductSearchFacade {
-  private supabase = inject(SupabaseService);
+  private readonly catalog = inject(ProductsRepository);
 
   readonly searchResults = signal<Product[]>([]);
   readonly isSearching = signal(false);
@@ -21,17 +17,8 @@ export class ProductSearchFacade {
   async loadEssentials(familyId: string): Promise<void> {
     if (this.essentials().length > 0) return; // Simple cache para la sesión
     try {
-      const { data, error } = await this.supabase.client
-        .from('products')
-        .select('*')
-        .eq('family_id', familyId)
-        // Idealmente, se ordenaría por frecuencia de uso. 
-        // Como MVP, traemos los primeros 8 en orden alfabético.
-        .order('name')
-        .limit(8);
-
-      if (error) throw error;
-      this.essentials.set(data ?? []);
+      // MVP: los primeros 8 en orden alfabético. Idealmente, por frecuencia de compra.
+      this.essentials.set(await this.catalog.findByFamily(familyId, 8));
     } catch (e) {
       console.error('Error cargando esenciales', e);
     }
@@ -47,15 +34,7 @@ export class ProductSearchFacade {
     this.error.set(null);
 
     try {
-      const { data, error } = await this.supabase.client
-        .from('products')
-        .select('*')
-        .ilike('name', `%${term.trim()}%`)
-        .order('name')
-        .limit(20);
-
-      if (error) throw error;
-      this.searchResults.set(data ?? []);
+      this.searchResults.set(await this.catalog.searchByName(term.trim(), 20));
     } catch (e) {
       this.error.set('Error al buscar productos');
       console.error('Search error', e);
@@ -67,14 +46,7 @@ export class ProductSearchFacade {
   async createProduct(name: string, familyId: string): Promise<Product | null> {
     this.isSearching.set(true);
     try {
-      const { data, error } = await this.supabase.client
-        .from('products')
-        .insert({ name: name.trim(), family_id: familyId })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await this.catalog.create({ name: name.trim(), familyId });
     } catch (e) {
       this.error.set('Error al crear producto');
       console.error('Create product error', e);

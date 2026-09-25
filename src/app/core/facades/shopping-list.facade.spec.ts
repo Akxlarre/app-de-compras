@@ -1,123 +1,193 @@
 import { TestBed } from '@angular/core/testing';
-import { ShoppingListFacade } from './shopping-list.facade';
-import { SupabaseService } from '../services/infrastructure/supabase.service';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { ShoppingListFacade } from './shopping-list.facade';
+import { FamilyRepository } from '../repositories/family.repository';
+import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
+import { ListItemsRepository } from '../repositories/list-items.repository';
+
+const list = (items: any[] = []) =>
+  ({ id: 'list-1', name: 'Semana', status: 'active', list_items: items } as any);
 
 describe('ShoppingListFacade', () => {
   let facade: ShoppingListFacade;
-  let mockSupabase: any;
+  let family: { getOrCreateFamilyId: ReturnType<typeof vi.fn> };
+  let lists: Record<string, ReturnType<typeof vi.fn>>;
+  let items: Record<string, ReturnType<typeof vi.fn>>;
+  let stopWatching: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockSupabase = {
-      client: {
-        from: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        insert: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-      },
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }),
+    stopWatching = vi.fn();
+    family = { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') };
+    lists = {
+      findLatestActive: vi.fn().mockResolvedValue(list()),
+      findLastCompleted: vi.fn().mockResolvedValue(null),
+      findTemplates: vi.fn().mockResolvedValue([]),
+      create: vi.fn().mockResolvedValue({ id: 'new-list' }),
+      complete: vi.fn().mockResolvedValue(undefined),
+    };
+    items = {
+      add: vi.fn().mockResolvedValue(undefined),
+      addMany: vi.fn().mockResolvedValue(undefined),
+      findByList: vi.fn().mockResolvedValue([]),
+      updateQuantity: vi.fn().mockResolvedValue(undefined),
+      setChecked: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+      watchList: vi.fn(() => stopWatching),
     };
 
     TestBed.configureTestingModule({
-      providers: [ShoppingListFacade, { provide: SupabaseService, useValue: mockSupabase }],
+      providers: [
+        ShoppingListFacade,
+        { provide: FamilyRepository, useValue: family },
+        { provide: ShoppingListsRepository, useValue: lists },
+        { provide: ListItemsRepository, useValue: items },
+      ],
     });
-
     facade = TestBed.inject(ShoppingListFacade);
   });
 
-  it('should create', () => {
-    expect(facade).toBeTruthy();
-  });
+  describe('carga y Realtime', () => {
+    it('carga la lista activa y la observa por Realtime una sola vez', async () => {
+      await facade.initialize();
+      await facade.initialize(); // SWR: refresca en background
 
-  it('should toggle item check optimistically', async () => {
-    // Preparar estado inicial
-    facade['_data'].set({
-      id: 'list-1',
-      name: 'Lista Test',
-      status: 'active',
-      list_items: [
-        { id: 'item-1', is_checked: false, quantity: 1, product: { name: 'Manzanas' } } as any,
-      ],
+      expect(facade.data()?.id).toBe('list-1');
+      expect(items['watchList']).toHaveBeenCalledTimes(1);
+      expect(items['watchList']).toHaveBeenCalledWith('list-1', expect.any(Function));
     });
 
-    // Mock DB resolve success
-    mockSupabase.client.eq.mockResolvedValueOnce({ error: null });
+    it('sin lista activa expone NO_ACTIVE_LIST', async () => {
+      lists['findLatestActive'].mockResolvedValue(null);
 
-    // Ejecutar
-    await facade.toggleItemCheck('item-1', false);
+      await facade.initialize();
 
-    // Verificar optimistic update: is_checked debe ser true
-    const currentData = facade.data();
-    expect(currentData?.list_items[0].is_checked).toBe(true);
-
-    // Verificar que se llamó a la base de datos
-    expect(mockSupabase.client.update).toHaveBeenCalledWith({ is_checked: true });
-  });
-
-  it('should delete item optimistically', async () => {
-    // Preparar estado inicial
-    facade['_data'].set({
-      id: 'list-1',
-      name: 'Lista Test',
-      status: 'active',
-      list_items: [
-        { id: 'item-1', is_checked: false, quantity: 1 } as any,
-        { id: 'item-2', is_checked: true, quantity: 2 } as any,
-      ],
+      expect(facade.error()).toBe('NO_ACTIVE_LIST');
+      expect(items['watchList']).not.toHaveBeenCalled();
     });
 
-    mockSupabase.client.eq.mockResolvedValueOnce({ error: null });
+    it('un cambio remoto refresca la lista; dispose deja de observar', async () => {
+      await facade.initialize();
+      const onRemoteChange = items['watchList'].mock.calls[0][1];
+      lists['findLatestActive'].mockResolvedValue(list([{ id: 'i9', quantity: 1 }]));
 
-    // Ejecutar
-    await facade.deleteItem('item-1');
+      await onRemoteChange();
+      expect(facade.data()?.list_items).toHaveLength(1);
 
-    // Verificar optimistic update: item-1 ya no está
-    const currentData = facade.data();
-    expect(currentData?.list_items.length).toBe(1);
-    expect(currentData?.list_items[0].id).toBe('item-2');
+      facade.dispose();
+      expect(stopWatching).toHaveBeenCalled();
+    });
   });
 
-  describe('plantillas (status = template)', () => {
+  describe('mutaciones optimistas', () => {
     beforeEach(() => {
-      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: 'fam-1', error: null });
-      mockSupabase.client.order = vi.fn().mockReturnThis();
-      mockSupabase.client.like = vi.fn().mockReturnThis();
-      mockSupabase.client.single = vi
-        .fn()
-        .mockResolvedValue({ data: { id: 'tpl-1' }, error: null });
+      facade['_data'].set(
+        list([
+          { id: 'item-1', is_checked: false, quantity: 1, product: { id: 'p1' } },
+          { id: 'item-2', is_checked: true, quantity: 2, product: { id: 'p2' } },
+        ])
+      );
     });
 
-    it('loadTemplates filtra por status template y usa la familia de get_or_create_family', async () => {
-      // 1ª cadena (última completada) termina en maybeSingle; 2ª (plantillas) en order.
-      mockSupabase.client.order
-        .mockReturnValueOnce(mockSupabase.client)
-        .mockResolvedValueOnce({ data: [{ id: 'tpl-1', name: 'Asado', list_items: [] }] });
+    it('toggleItemCheck marca al instante y persiste', async () => {
+      await facade.toggleItemCheck('item-1', false);
+
+      expect(facade.data()?.list_items[0].is_checked).toBe(true);
+      expect(items['setChecked']).toHaveBeenCalledWith('item-1', true);
+    });
+
+    it('toggleItemCheck vuelve al estado del servidor si falla', async () => {
+      items['setChecked'].mockRejectedValue(new Error('rls'));
+      lists['findLatestActive'].mockResolvedValue(list([{ id: 'item-1', is_checked: false }]));
+
+      await facade.toggleItemCheck('item-1', false);
+
+      expect(facade.data()?.list_items[0].is_checked).toBe(false);
+    });
+
+    it('deleteItem quita el ítem al instante', async () => {
+      await facade.deleteItem('item-1');
+
+      expect(facade.data()?.list_items.map((i) => i.id)).toEqual(['item-2']);
+      expect(items['remove']).toHaveBeenCalledWith('item-1');
+    });
+
+    it('updateItemQuantity revierte la cantidad si falla', async () => {
+      items['updateQuantity'].mockRejectedValue(new Error('network'));
+
+      await facade.updateItemQuantity('item-2', 5);
+
+      expect(facade.data()?.list_items[1].quantity).toBe(2);
+      expect(facade.error()).toContain('conexión');
+    });
+
+    it('addItem suma cantidad si el producto ya está en la lista', async () => {
+      await facade.addItem('list-1', 'p2', 3);
+
+      expect(facade.data()?.list_items[1].quantity).toBe(5);
+      expect(items['updateQuantity']).toHaveBeenCalledWith('item-2', 5);
+      expect(items['add']).not.toHaveBeenCalled();
+    });
+
+    it('addItem inserta si el producto es nuevo', async () => {
+      await facade.addItem('list-1', 'p3', 1);
+      expect(items['add']).toHaveBeenCalledWith('list-1', 'p3', 1);
+    });
+  });
+
+  describe('listas y plantillas', () => {
+    it('createList crea una lista activa en la familia del usuario', async () => {
+      await facade.createList('Compra de la Semana');
+
+      expect(lists['create']).toHaveBeenCalledWith({
+        name: 'Compra de la Semana',
+        familyId: 'fam-1',
+        status: 'active',
+      });
+    });
+
+    it('completeList completa y recarga (queda sin lista activa)', async () => {
+      lists['findLatestActive'].mockResolvedValue(null);
+
+      await facade.completeList('list-1');
+
+      expect(lists['complete']).toHaveBeenCalledWith('list-1');
+      expect(facade.error()).toBe('NO_ACTIVE_LIST');
+    });
+
+    it('loadTemplates carga última compra y plantillas de la familia', async () => {
+      lists['findLastCompleted'].mockResolvedValue(list());
+      lists['findTemplates'].mockResolvedValue([{ id: 'tpl-1', name: 'Asado', list_items: [] }]);
 
       await facade.loadTemplates();
 
-      expect(mockSupabase.client.rpc).toHaveBeenCalledWith('get_or_create_family');
-      expect(mockSupabase.client.eq).toHaveBeenCalledWith('family_id', 'fam-1');
-      expect(mockSupabase.client.eq).toHaveBeenCalledWith('status', 'template');
-      expect(mockSupabase.client.like).not.toHaveBeenCalled();
+      expect(lists['findLastCompleted']).toHaveBeenCalledWith('fam-1');
+      expect(lists['findTemplates']).toHaveBeenCalledWith('fam-1');
+      expect(facade.lastCompletedList()?.id).toBe('list-1');
       expect(facade.templates()[0].name).toBe('Asado');
     });
 
-    it('saveAsTemplate crea la lista con status template y sin prefijo en el nombre', async () => {
+    it('saveAsTemplate crea la plantilla, copia los ítems y recarga', async () => {
+      lists['create'].mockResolvedValue({ id: 'tpl-1' });
+      items['findByList'].mockResolvedValue([{ product_id: 'p1', quantity: 2 }]);
       const loadSpy = vi.spyOn(facade, 'loadTemplates').mockResolvedValue();
-      mockSupabase.client.eq.mockResolvedValueOnce({ data: [], error: null });
 
       await facade.saveAsTemplate('list-1', 'Asado');
 
-      expect(mockSupabase.client.insert).toHaveBeenCalledWith({
+      expect(lists['create']).toHaveBeenCalledWith({
         name: 'Asado',
-        family_id: 'fam-1',
+        familyId: 'fam-1',
         status: 'template',
       });
+      expect(items['findByList']).toHaveBeenCalledWith('list-1');
+      expect(items['addMany']).toHaveBeenCalledWith([
+        { list_id: 'tpl-1', product_id: 'p1', quantity: 2 },
+      ]);
       expect(loadSpy).toHaveBeenCalled();
+    });
+
+    it('cloneListItems no inserta si la lista origen está vacía', async () => {
+      await facade.cloneListItems('src', 'dst');
+      expect(items['addMany']).not.toHaveBeenCalled();
     });
   });
 });

@@ -27,7 +27,9 @@
   - (a) se usa `.client` de `SupabaseService` fuera de `core/repositories/**` o `supabase.service.ts`;
   - (b) `features/`, `shared/` o `layout/` importan `SupabaseService` o un Repository;
   - (c) un facade distinto de `AuthFacade` importa `SupabaseService`;
-  - (d) se importa `@supabase/supabase-js` fuera de `core/repositories/`, `core/services/infrastructure/` o `core/models/`.
+  - (d) se importa `@supabase/supabase-js` fuera de `core/repositories/`, `core/services/infrastructure/` o `core/models/`;
+  - (e) un facade importa otro facade (salvo `BaseFacade`) — regla de `facades.md`. Hoy lo violan
+    `ProductsFacade` y `ReceiptScannerFacade` (inyectan `ShoppingListFacade`; el segundo sin usarlo).
 - [ ] AC2: La prueba estaba en rojo antes del refactor y queda en verde después.
 - [ ] AC3: Repositories con un método por operación, tipados, que lanzan en error:
   `FamilyRepository`, `ShoppingListsRepository`, `ListItemsRepository`, `ProductsRepository`,

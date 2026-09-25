@@ -1,9 +1,14 @@
-import { Injectable, signal } from "@angular/core";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { environment } from "../../../../environments/environment";
+import { Injectable, signal } from '@angular/core';
+import {
+  createClient,
+  type AuthChangeEvent,
+  type Session,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
-  providedIn: "root",
+  providedIn: 'root',
 })
 export class SupabaseService {
   private supabase: SupabaseClient;
@@ -11,17 +16,13 @@ export class SupabaseService {
   public readonly session = this._session.asReadonly();
 
   constructor() {
-    this.supabase = createClient(
-      environment.supabase.url,
-      environment.supabase.anonKey,
-      {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true,
-        },
-      }
-    );
+    this.supabase = createClient(environment.supabase.url, environment.supabase.anonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    });
 
     // Escuchar cambios de sesión de forma centralizada
     this.supabase.auth.onAuthStateChange((event, session) => {
@@ -34,16 +35,28 @@ export class SupabaseService {
     });
   }
 
+  /**
+   * Cliente crudo. SOLO para `core/repositories/**` (lo verifica `src/app/architecture.spec.ts`).
+   * Facades y UI usan Repositories o los métodos de sesión de este servicio.
+   */
   get client() {
     return this.supabase;
   }
 
+  /** Suscribe a eventos de sesión. @returns función que cancela la suscripción. */
+  onAuthStateChange(
+    callback: (event: AuthChangeEvent, session: Session | null) => void
+  ): () => void {
+    const { data } = this.supabase.auth.onAuthStateChange(callback);
+    return () => data.subscription.unsubscribe();
+  }
+
+  async updatePassword(password: string) {
+    return await this.supabase.auth.updateUser({ password });
+  }
+
   // Auth
-  async signUp(
-    email: string,
-    password: string,
-    options?: { data?: Record<string, unknown> },
-  ) {
+  async signUp(email: string, password: string, options?: { data?: Record<string, unknown> }) {
     return await this.supabase.auth.signUp({ email, password, options });
   }
 

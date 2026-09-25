@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import type { User } from '@core/models/user.model';
 import { getInitialsFromDisplayName } from '@core/models/user.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ProfilesRepository, type ProfileRow } from '@core/repositories/profiles.repository';
 import { mapAuthError } from '@core/utils/auth-errors.utils';
 
 /**
@@ -16,7 +17,9 @@ import { mapAuthError } from '@core/utils/auth-errors.utils';
   providedIn: 'root',
 })
 export class AuthFacade {
+  /** Solo sesión (login, eventos, contraseña). Los datos van por Repositories. */
   private supabase = inject(SupabaseService);
+  private profiles = inject(ProfilesRepository);
   private router = inject(Router);
 
   private _currentUser = signal<User | null>(null);
@@ -37,7 +40,7 @@ export class AuthFacade {
     const timeout = new Promise<void>((resolve) => setTimeout(resolve, 5000));
     this.whenReady = Promise.race([readyPromise, timeout]);
 
-    this.supabase.client.auth.onAuthStateChange((event: any, session: any) => {
+    this.supabase.onAuthStateChange((event, session) => {
       if (
         (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
         session?.user
@@ -64,23 +67,11 @@ export class AuthFacade {
     // Si ya tenemos el usuario y el ID no ha cambiado, no recargamos
     if (this._currentUser()?.id === authUser.id) return;
 
-    // Definimos la interfaz para la respuesta del JOIN con roles
-    interface UserProfile {
-      id: string;
-      email: string;
-      role_id: number;
-    }
-
-    const result = await this.supabase.client
-      .from('profiles')
-      .select('id, email, role_id')
-      .eq('id', authUser.id)
-      .maybeSingle();
-
-    const dbUser = result.data as unknown as UserProfile | null;
-    const error = result.error;
-
-    if (error) {
+    let dbUser: ProfileRow | null = null;
+    try {
+      dbUser = await this.profiles.findById(authUser.id);
+    } catch (error) {
+      // Sin perfil igual dejamos entrar: el rol queda 'unknown'.
       console.error('Error fetching user profile:', error);
     }
 
@@ -167,7 +158,17 @@ export class AuthFacade {
   }
 
   async updatePassword(password: string): Promise<{ error: Error | null }> {
-    const { error } = await this.supabase.client.auth.updateUser({ password });
+    const { error } = await this.supabase.updatePassword(password);
     return { error: error ?? null };
+  }
+
+  /**
+   * Avisa cuando Supabase detecta el token de recuperación en la URL (evento PASSWORD_RECOVERY).
+   * @returns función que cancela la suscripción (llamarla al destruir la página).
+   */
+  onPasswordRecovery(callback: () => void): () => void {
+    return this.supabase.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') callback();
+    });
   }
 }
