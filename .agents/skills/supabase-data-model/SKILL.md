@@ -61,31 +61,33 @@ CREATE POLICY "Users can read own profile"
 ## Patrón de query en Angular
 
 ```typescript
-// CORRECTO: siempre en un FacadeService o CoreService, nunca en componente UI
-const { data, error } = await this.supabase.client
-  .from('tabla')
-  .select('*, relacion(columna)')
-  .order('created_at', { ascending: false });
-
-if (error) throw error;
+// CORRECTO: SOLO en core/repositories/*.repository.ts — nunca en Facades, servicios ni UI.
+// src/app/architecture.spec.ts (test:ci) falla si supabase.client aparece fuera de ahí.
+async findAll(): Promise<Tabla[]> {
+  const { data, error } = await this.supabase.client
+    .from('tabla')
+    .select('*, relacion(columna)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as Tabla[] | null) ?? [];
+}
 ```
 
 ## Realtime
 
 ```typescript
-// En un CoreService — suscribirse y exponer vía toSignal()
-const channel = this.supabase.client
-  .channel('tabla-changes')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'tabla' }, payload => {
-    // actualizar signal interno
-    this._items.update(items => [...items]); // trigger re-read
-  })
-  .subscribe();
-
-// Cancelar en ngOnDestroy
-ngOnDestroy(): void {
-  this.supabase.client.removeChannel(channel);
+// En el Repository: devuelve la función de baja
+watchAll(onChange: () => void): () => void {
+  const client = this.supabase.client;
+  const channel = client
+    .channel('tabla-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tabla' }, () => onChange())
+    .subscribe();
+  return () => { client.removeChannel(channel); };
 }
+
+// En el Facade: this.stop = this.repo.watchAll(() => this.refreshSilently());
+// y en dispose(): this.stop?.();
 ```
 
 ## RLS — Checklist para tabla nueva

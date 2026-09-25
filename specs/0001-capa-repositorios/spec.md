@@ -61,6 +61,4 @@
   node --test .claude/tests/arch-12-repository-boundary.test.js
   ```
   Mientras tanto `src/app/architecture.spec.ts` cubre lo mismo en `test:ci`.
-- **Espejo `.agents/`** (protegido): copiar `architecture, database, facades, models, swr-pattern`
-  de `.claude/rules/` a `.agents/rules/` y `.claude/skills/supabase-data-model/SKILL.md` a
-  `.agents/skills/supabase-data-model/`. (`.agent/` ya quedó sincronizado.)
+- Espejos `.agent/` y `.agents/`: sincronizados con `.claude/` (hecho, con permiso del humano).

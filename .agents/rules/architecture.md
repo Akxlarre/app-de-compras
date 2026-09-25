@@ -38,13 +38,28 @@ UI (features/ shared/)  →  Facade (core/facades/)  →  Repository (core/repos
 
 - La UI **NUNCA** inyecta `SupabaseService` ni Repositories directamente.
 - Los **Facades** son la única puerta de entrada para la UI. Gestionan estado vía Signals.
-- Los **Repositories** son la única capa que llama `.client.from()`. Un método por query. Retornan tipos, no objetos Supabase raw.
-- `SupabaseService` expone `.db` **solo para los Repositories** (queries de tabla) y `onAuthStateChange()` para `AuthFacade` (auth events). No existe `.client` público.
+- Los **Repositories** son la única capa que toca `supabase.client` (`.from()`, `.rpc()`, `.channel()`, `.storage`, `.functions`). Un método por operación. Retornan tipos de `core/models/` (nunca `{ data, error }`) y **lanzan** el error de Supabase. Realtime: `watchX(id, cb): () => void`.
+- `SupabaseService.client` es **solo para Repositories**. `AuthFacade` usa su API de sesión (`signIn`, `onAuthStateChange(cb) → baja`, `updatePassword`, …).
+- Un Facade **no** inyecta otro Facade: la composición entre dominios vive en el Smart Component.
+
+### Guardia automática — `src/app/architecture.spec.ts`
+
+Corre en `npm run test:ci` (y en CI). Falla si:
+
+| Regla | Qué detecta |
+|---|---|
+| (a) | `supabase.client` fuera de `core/repositories/**` o `supabase.service.ts` |
+| (b) | `features/`, `shared/` o `layout/` importan `SupabaseService` o un Repository |
+| (c) | un facade (salvo `AuthFacade`) importa `SupabaseService` |
+| (d) | `@supabase/supabase-js` importado fuera de repositories / infraestructura / models |
+| (e) | un facade importa otro facade (salvo `BaseFacade`) |
+
+Si una regla te bloquea, **no la relajes**: crea o amplía el Repository que corresponda.
 
 ## Patrón Facade y Núcleo Funcional (Functional Core)
 
 - **SIEMPRE** extender `BaseFacade<T>` de `@core/facades/base.facade` para Facades de dominio.
-- **NUNCA** llamar `.client.from()` en un Facade — usar un Repository.
+- **NUNCA** tocar `supabase.client` en un Facade — usar un Repository.
 - **NÚCLEO FUNCIONAL (Functional Core):** Extrae la lógica compleja y transformaciones de datos a **funciones puras** en `core/utils/`. Sin `inject()`, sin `signal()`. Testeable instantáneamente sin Angular.
 
 ## Funciones Puras (`core/utils/`)
