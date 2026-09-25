@@ -51,14 +51,8 @@
 - AC8: `architecture.md`, `facades.md`, `swr-pattern.md`, `database.md`, `models.md`,
   skill `supabase-data-model`, `indices/REPOSITORIES.md`, `indices/DATABASE.md`.
 
-## Pendiente para el humano (archivos de guardrails; el agente no puede modificarlos)
+## Seguimiento (cerrado)
 - **Hook ARCH-12** (`.claude/hooks/pre-write-guard.js`): solo detectaba `client.from(` en una
-  línea; el código real encadena en varias o usa rpc/channel/functions → nunca disparaba.
-  Parche listo en `arch-12-hook.patch` y tests en `arch-12-repository-boundary.test.js`:
-  ```bash
-  git apply specs/0001-capa-repositorios/arch-12-hook.patch
-  mv specs/0001-capa-repositorios/arch-12-repository-boundary.test.js .claude/tests/
-  node --test .claude/tests/arch-12-repository-boundary.test.js
-  ```
-  Mientras tanto `src/app/architecture.spec.ts` cubre lo mismo en `test:ci`.
-- Espejos `.agent/` y `.agents/`: sincronizados con `.claude/` (hecho, con permiso del humano).
+  línea. Corregido por el humano en `main` (6e4fba8); tests de contrato en
+  `.claude/tests/arch-12-repository-boundary.test.js` (6/6, corren con `npm run claude:test-hooks`).
+- Espejos `.agent/` y `.agents/`: sincronizados con `.claude/`.
