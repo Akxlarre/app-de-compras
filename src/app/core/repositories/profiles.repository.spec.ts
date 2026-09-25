@@ -1,67 +1,41 @@
 import { TestBed } from '@angular/core/testing';
-import { vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ProfilesRepository } from './profiles.repository';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-
-// ── Builder del mock de la cadena Supabase ────────────────────────────────────
-
-function buildClientMock(maybeSingleResult: { data: unknown }) {
-  return {
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue(maybeSingleResult),
-        }),
-      }),
-    }),
-  };
-}
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
+import { queryMock, supabaseServiceMock } from '../../../testing/supabase-query.mock';
 
 describe('ProfilesRepository', () => {
   let repo: ProfilesRepository;
-  let clientMock: ReturnType<typeof buildClientMock>;
+  let mock: ReturnType<typeof supabaseServiceMock>;
 
   beforeEach(() => {
-    clientMock = buildClientMock({ data: null });
-
+    mock = supabaseServiceMock();
     TestBed.configureTestingModule({
-      providers: [
-        { provide: SupabaseService, useValue: { db: clientMock } },
-      ],
+      providers: [{ provide: SupabaseService, useValue: mock.service }],
     });
-
     repo = TestBed.inject(ProfilesRepository);
   });
 
-  it('should be created', () => {
-    expect(repo).toBeTruthy();
+  it('findById consulta las columnas reales de profiles filtrando por id', async () => {
+    const q = queryMock({ data: { id: 'u1', email: 'a@b.cl', role_id: 1 } });
+    mock.client.from.mockReturnValue(q);
+
+    const profile = await repo.findById('u1');
+
+    expect(mock.client.from).toHaveBeenCalledWith('profiles');
+    expect(q.select).toHaveBeenCalledWith('id, email, role_id');
+    expect(q.eq).toHaveBeenCalledWith('id', 'u1');
+    expect(profile).toEqual({ id: 'u1', email: 'a@b.cl', role_id: 1 });
   });
 
-  describe('findById()', () => {
-    it('should query the profiles table with the given userId', async () => {
-      expect(true).toBeTruthy();
-    });
+  it('findById devuelve null si no existe', async () => {
+    mock.client.from.mockReturnValue(queryMock({ data: null }));
+    expect(await repo.findById('u1')).toBeNull();
+  });
 
-    it('should select display_name, avatar_url and role columns', async () => {
-      expect(true).toBeTruthy();
-    });
-
-    it('should filter by the given userId', async () => {
-      expect(true).toBeTruthy();
-    });
-
-    it('should return the profile data when found', async () => {
-      expect(true).toBeTruthy();
-    });
-
-    it('should return null when no profile is found', async () => {
-      expect(true).toBeTruthy();
-    });
-
-    it('should return null when the query throws', async () => {
-      expect(true).toBeTruthy();
-    });
+  it('findById lanza el error de Supabase', async () => {
+    const error = { message: 'rls' };
+    mock.client.from.mockReturnValue(queryMock({ error }));
+    await expect(repo.findById('u1')).rejects.toBe(error);
   });
 });

@@ -4,6 +4,9 @@ export interface Family {
   created_at: string;
 }
 
+/** Lo que la UI muestra de la familia actual. */
+export type FamilyInfo = Pick<Family, 'id' | 'name'>;
+
 export type FamilyRole = 'owner' | 'member';
 
 export interface FamilyMember {
