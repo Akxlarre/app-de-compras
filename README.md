@@ -81,7 +81,14 @@ están en [plataforma-db](https://github.com/Akxlarre/plataforma-db) (ADR-001): 
    npm install --legacy-peer-deps
    ```
 
-2. Levantar Supabase local **desde [plataforma-db](https://github.com/Akxlarre/plataforma-db)**
+2. **Opción A — contra staging (recomendado, sin Docker):** copiar `.env.staging.example` a
+   `.env.staging` con la URL y la clave publicable del proyecto de staging, y levantar:
+   ```bash
+   npm run start:staging   # genera environment.staging.ts (no versionado) y hace ng serve
+   ```
+   Staging tiene el mismo esquema que producción pero sin datos: crea tu usuario desde la app.
+
+   **Opción B — Supabase local** desde [plataforma-db](https://github.com/Akxlarre/plataforma-db)
    (ahí están las migraciones; expone `shop` en la API local):
    ```bash
    git clone https://github.com/Akxlarre/plataforma-db.git && cd plataforma-db
