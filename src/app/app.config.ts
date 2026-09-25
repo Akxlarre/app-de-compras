@@ -18,7 +18,7 @@ import {
   ArrowRight,
   BarChart2,
   CheckCircle,
-  Dumbbell,
+  ShoppingCart,
   Zap,
   Target,
   Bot,
@@ -90,7 +90,7 @@ import {
   Sun,
   List,
   ListChecks,
-  // ── Entrenamiento ──
+  // ── Varios ──
   ClipboardList,
   Play,
   Brain,
@@ -147,7 +147,7 @@ export const appConfig: ApplicationConfig = {
         ArrowRight,
         BarChart2,
         CheckCircle,
-        Dumbbell,
+        ShoppingCart,
         Zap,
         Target,
         Bot,
@@ -219,7 +219,7 @@ export const appConfig: ApplicationConfig = {
         Sun,
         List,
         ListChecks,
-        // Entrenamiento
+        // Varios
         ClipboardList,
         Play,
         Brain,
