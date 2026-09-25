@@ -17,13 +17,10 @@ paths:
 ```typescript
 @Injectable({ providedIn: 'root' })
 export class ProductosFacade extends BaseFacade<Producto[]> {
-  private supabase = inject(SupabaseService);
+  private repo = inject(ProductosRepository); // NUNCA SupabaseService (architecture.spec.ts)
 
   protected override async fetchData(): Promise<Producto[]> {
-    const { data, error } = await this.supabase.client
-      .from('productos').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data ?? [];
+    return this.repo.findAll(); // el repository lanza si Supabase falla
   }
 }
 ```
@@ -91,12 +88,7 @@ Extraer la lógica de fetch a un método reutilizable que solo obtiene y setea d
 
 ```typescript
 private async fetchData(): Promise<void> {
-  const { data, error } = await this.supabase.client
-    .from('tabla')
-    .select('...');
-
-  if (error) throw error;
-  this._data.set(data);
+  this._data.set(await this.repo.findAll()); // query en el Repository
 }
 ```
 
@@ -116,21 +108,27 @@ async crearRegistro(payload: Payload): Promise<boolean> {
 
 Para recursos compartidos (agenda, notificaciones), combinar SWR con Supabase Realtime:
 
-### Suscripción
+### Suscripción (el canal vive en el Repository)
 
 ```typescript
-private realtimeChannel: RealtimeChannel | null = null;
+// core/repositories/tabla.repository.ts
+watchAll(onChange: () => void): () => void {
+  const client = this.supabase.client;
+  const channel = client
+    .channel('nombre-canal')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tabla_base' }, () => onChange())
+    .subscribe();
+  return () => { client.removeChannel(channel); };
+}
+```
+
+```typescript
+// core/facades/tabla.facade.ts
+private stopWatching: (() => void) | null = null;
 
 private subscribeRealtime(): void {
   this.disposeRealtime();
-  this.realtimeChannel = this.supabase.client
-    .channel('nombre-canal')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'tabla_base' },
-      () => this.refreshSilently(),
-    )
-    .subscribe();
+  this.stopWatching = this.repo.watchAll(() => this.refreshSilently());
 }
 ```
 
@@ -142,12 +140,12 @@ dispose(): void {
 }
 
 private disposeRealtime(): void {
-  if (this.realtimeChannel) {
-    this.supabase.client.removeChannel(this.realtimeChannel);
-    this.realtimeChannel = null;
-  }
+  this.stopWatching?.();
+  this.stopWatching = null;
 }
 ```
+
+Ejemplo real: `ListItemsRepository.watchList()` + `ShoppingListFacade.watchList()`.
 
 ### Lifecycle en Smart Components
 
@@ -185,9 +183,7 @@ async crearProducto(payload: NuevoProducto): Promise<boolean> {
   this._data.update(items => [optimisticItem, ...(items ?? [])]);
 
   try {
-    const { data, error } = await this.supabase.client
-      .from('productos').insert(payload).select().single();
-    if (error) throw error;
+    const data = await this.repo.create(payload); // lanza si falla
     // Reemplazar el ítem optimístico con el real (id correcto del servidor)
     this._data.update(items => items?.map(i => i.id === optimisticItem.id ? data : i) ?? []);
     return true;
@@ -208,9 +204,7 @@ async actualizarProducto(id: string, patch: Partial<Producto>): Promise<boolean>
   this._data.update(items => items?.map(i => i.id === id ? { ...i, ...patch } : i) ?? []);
 
   try {
-    const { error } = await this.supabase.client
-      .from('productos').update(patch).eq('id', id);
-    if (error) throw error;
+    await this.repo.update(id, patch); // lanza si falla
     await this.refreshSilently(); // sync final con BD
     return true;
   } catch {
@@ -230,9 +224,7 @@ async eliminarProducto(id: string): Promise<boolean> {
   this._data.update(items => items?.filter(i => i.id !== id) ?? []);
 
   try {
-    const { error } = await this.supabase.client
-      .from('productos').delete().eq('id', id);
-    if (error) throw error;
+    await this.repo.remove(id); // lanza si falla
     return true;
   } catch {
     this._data.set(prev); // Rollback

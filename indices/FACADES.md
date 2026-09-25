@@ -6,12 +6,12 @@
 | Clase | Dependencias | Signals expuestos | Archivo |
 |-------|-------------|------------------|---------|
 | `AppUpdateFacade` | `AppUpdateService`, `ToastService` | — | `src/app/core/facades/app-update.facade.ts` |
-| `AuthFacade` | `SupabaseService`, `Router` | — | `src/app/core/facades/auth.facade.ts` |
-| `ProductosFacade` | `SupabaseService` | — | `src/app/core/facades/base.facade.ts` |
-| `FamilyFacade` | `SupabaseService` | — | `src/app/core/facades/family.facade.ts` |
-| `ProductSearchFacade` | `SupabaseService` | — | `src/app/core/facades/product-search.facade.ts` |
-| `ProductsFacade` | `SupabaseService`, `ShoppingListFacade` | — | `src/app/core/facades/products.facade.ts` |
-| `ReceiptScannerFacade` | `SupabaseService`, `ShoppingListFacade` | — | `src/app/core/facades/receipt-scanner.facade.ts` |
-| `ShoppingListFacade` | `SupabaseService` | — | `src/app/core/facades/shopping-list.facade.ts` |
+| `AuthFacade` | `SupabaseService`, `ProfilesRepository`, `Router` | — | `src/app/core/facades/auth.facade.ts` |
+| `ProductosFacade` | `ProductosRepository` | — | `src/app/core/facades/base.facade.ts` |
+| `FamilyFacade` | `FamilyRepository` | — | `src/app/core/facades/family.facade.ts` |
+| `ProductSearchFacade` | `ProductsRepository` | — | `src/app/core/facades/product-search.facade.ts` |
+| `ProductsFacade` | `FamilyRepository`, `ProductsRepository`, `ShoppingListsRepository`, `ListItemsRepository` | — | `src/app/core/facades/products.facade.ts` |
+| `ReceiptScannerFacade` | `FamilyRepository`, `ProductsRepository`, `ReceiptsRepository` | — | `src/app/core/facades/receipt-scanner.facade.ts` |
+| `ShoppingListFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ListItemsRepository` | — | `src/app/core/facades/shopping-list.facade.ts` |
 
 <!-- AUTO-GENERATED:END -->

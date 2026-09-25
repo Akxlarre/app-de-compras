@@ -65,9 +65,15 @@ Toda migración nueva debe incluir un bloque spec al inicio del archivo:
 ## Patrón de query
 
 ```typescript
-// CORRECTO: en un FacadeService o CoreService
-const { data, error } = await this.supabase.client
-  .from('tabla')
-  .select('*')
-  .order('created_at', { ascending: false });
+// CORRECTO: SOLO en core/repositories/*.repository.ts (lo verifica src/app/architecture.spec.ts)
+async findAll(): Promise<Tabla[]> {
+  const { data, error } = await this.supabase.client
+    .from('tabla')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as Tabla[] | null) ?? [];
+}
 ```
+
+Facades y servicios nunca llaman a `supabase.client`: inyectan el Repository.

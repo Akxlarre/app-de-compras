@@ -11,12 +11,10 @@ import { signal, computed } from '@angular/core';
  * ```ts
  * @Injectable({ providedIn: 'root' })
  * export class ProductosFacade extends BaseFacade<Producto[]> {
- *   private repo = inject(SupabaseService);
+ *   private repo = inject(ProductosRepository); // nunca SupabaseService (ver architecture.spec.ts)
  *
  *   protected override async fetchData(): Promise<Producto[]> {
- *     const { data, error } = await this.repo.findAll();
- *     if (error) throw error;
- *     return data ?? [];
+ *     return this.repo.findAll(); // el repository lanza si Supabase falla
  *   }
  * }
  * ```
@@ -87,7 +85,12 @@ export abstract class BaseFacade<T> {
     const msg = e.message.toLowerCase();
     if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch'))
       return 'Error de conexión. Verifica tu internet e intenta de nuevo.';
-    if (msg.includes('permission') || msg.includes('policy') || msg.includes('rls') || msg.includes('403'))
+    if (
+      msg.includes('permission') ||
+      msg.includes('policy') ||
+      msg.includes('rls') ||
+      msg.includes('403')
+    )
       return 'No tienes permisos para realizar esta acción.';
     return 'Error al cargar los datos. Intenta de nuevo.';
   }

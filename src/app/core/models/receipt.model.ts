@@ -10,3 +10,9 @@ export interface Receipt {
   uploaded_by?: string;
   created_at: string;
 }
+
+/** Ítem tal como lo devuelve la Edge Function `process-receipt` (sin normalizar). */
+export interface OcrReceiptItem {
+  name?: string | null;
+  price?: number | null;
+}

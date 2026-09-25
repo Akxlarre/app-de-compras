@@ -5,14 +5,14 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { Capacitor } from '@capacitor/core';
 import { Observable, from } from 'rxjs';
-import { SupabaseService } from './infrastructure/supabase.service';
+import { AppUpdatesRepository } from '../repositories/app-updates.repository';
 import { AppUpdate } from '../models/app-update.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AppUpdateService {
-  private supabase = inject(SupabaseService);
+  private updates = inject(AppUpdatesRepository);
   private http = inject(HttpClient);
 
   /**
@@ -36,30 +36,19 @@ export class AppUpdateService {
    * Consulta a Supabase por la última actualización
    */
   async getLatestUpdate(): Promise<AppUpdate | null> {
-    const { data, error } = await this.supabase.client
-      .from('app_updates')
-      .select('*')
-      .eq('app_target', 'shop')
-      .order('build_number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
+    try {
+      return await this.updates.findLatest('shop');
+    } catch (error) {
       console.error('Error fetching latest update:', error);
       return null;
     }
-
-    return data as AppUpdate | null;
   }
 
   /**
-   * Obtiene una URL firmada o pública para descargar el APK
+   * Obtiene la URL pública (bucket `releases`) para descargar el APK
    */
   async getApkDownloadUrl(apkPath: string): Promise<string | null> {
-    // Si el bucket es público (como lo configuramos), getPublicUrl funciona.
-    const { data } = this.supabase.client.storage.from('releases').getPublicUrl(apkPath);
-
-    return data?.publicUrl || null;
+    return this.updates.getApkPublicUrl(apkPath);
   }
 
   /**

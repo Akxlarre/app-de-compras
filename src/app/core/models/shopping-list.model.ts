@@ -1,3 +1,5 @@
+import type { Product } from './product.model';
+
 export type ShoppingListStatus = 'active' | 'completed' | 'archived' | 'template';
 
 export interface ShoppingList {
@@ -19,4 +21,14 @@ export interface ListItem {
   checked_at?: string;
   checked_by?: string;
   created_at: string;
+}
+
+/** Ítem con el producto embebido (`list_items(*, product:products(...))`). */
+export interface PopulatedListItem extends ListItem {
+  product?: Partial<Product>;
+}
+
+/** Lista con sus ítems poblados: la forma que consume la UI. */
+export interface ActiveShoppingList extends ShoppingList {
+  list_items: PopulatedListItem[];
 }
