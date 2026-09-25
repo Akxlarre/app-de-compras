@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "vitest run",
     "start:raw": "ng serve",
+    "start:staging": "node --env-file=.env.staging scripts/set-env.js --target staging && ng serve --configuration staging",
     "build:raw": "ng build",
     "test:watch": "vitest",
     "test:ci": "vitest run",
