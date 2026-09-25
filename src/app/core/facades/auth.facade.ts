@@ -129,7 +129,7 @@ export class AuthFacade {
   async signUp(
     email: string,
     password: string,
-    options?: { data?: Record<string, unknown> },
+    options?: { data?: Record<string, unknown> }
   ): Promise<{
     data: { user?: { id: string } | null; session?: unknown } | null;
     error: Error | null;
@@ -168,26 +168,6 @@ export class AuthFacade {
 
   async updatePassword(password: string): Promise<{ error: Error | null }> {
     const { error } = await this.supabase.client.auth.updateUser({ password });
-    if (error) return { error };
-
-    // Utilizamos un RPC (Stored Procedure) porque las políticas RLS
-    // de la tabla "users" impiden que los no-admin hagan UPDATE directamente.
-    const { error: dbError } = await this.supabase.client.rpc('user_complete_first_login');
-
-    if (dbError) {
-      console.error('Error clearing first_login via RPC:', dbError);
-      return {
-        error: new Error(
-          'Contraseña actualizada, pero hubo un error al sincronizar. Por favor, contacta al administrador.',
-        ),
-      };
-    }
-
-    // SOLO si el RPC fue exitoso, actualizamos el estado del Signal en el cliente.
-    const user = this._currentUser();
-    if (user) {
-      this._currentUser.set({ ...user, firstLogin: false });
-    }
-    return { error: null };
+    return { error: error ?? null };
   }
 }

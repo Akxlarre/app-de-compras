@@ -63,4 +63,29 @@ describe('AuthFacade', () => {
     expect(facade.currentUser()).toBeNull();
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
   });
+
+  describe('updatePassword', () => {
+    it('solo usa auth.updateUser: sin RPC heredada de primer login', async () => {
+      const rpc = vi.fn();
+      (mockSupabase.client as any).rpc = rpc;
+      mockSupabase.client.auth.updateUser.mockResolvedValue({ error: null });
+
+      const result = await facade.updatePassword('nueva-clave-123');
+
+      expect(mockSupabase.client.auth.updateUser).toHaveBeenCalledWith({
+        password: 'nueva-clave-123',
+      });
+      expect(rpc).not.toHaveBeenCalled();
+      expect(result.error).toBeNull();
+    });
+
+    it('propaga el error de auth.updateUser', async () => {
+      const authError = new Error('Contraseña débil.');
+      mockSupabase.client.auth.updateUser.mockResolvedValue({ error: authError });
+
+      const result = await facade.updatePassword('123');
+
+      expect(result.error).toBe(authError);
+    });
+  });
 });
