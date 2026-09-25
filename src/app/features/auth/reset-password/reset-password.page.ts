@@ -51,15 +51,15 @@ const PASSWORD_MIN_LENGTH = 8;
         <div
           class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-b from-[var(--ds-brand)]/20 to-[var(--color-primary-dark)]/5 border border-[var(--ds-brand)]/30 mb-3 shadow-lg shadow-[var(--ds-brand)]/10"
         >
-          <app-icon name="dumbbell" [size]="24" [color]="'var(--ds-brand)'" />
+          <app-icon name="shopping-cart" [size]="24" [color]="'var(--ds-brand)'" />
         </div>
         <h1 class="m-0 text-3xl font-normal font-display tracking-tighter text-primary sm:text-4xl">
-          <span class="text-[var(--ds-brand)]">FIT</span>TRACK
+          APP DE <span class="text-[var(--ds-brand)]">COMPRAS</span>
         </h1>
         <p
           class="m-0 mt-1 text-[var(--text-floor,13px)] font-medium uppercase tracking-widest text-muted"
         >
-          Tu diario de entrenamiento y fuerza
+          La lista del súper, en familia
         </p>
       </div>
 

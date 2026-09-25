@@ -8,5 +8,5 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('koa-tmp-app-de-entrenamiento-934c46560e95e62c');
+  protected readonly title = signal('app-de-compras');
 }

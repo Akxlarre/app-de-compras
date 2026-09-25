@@ -177,7 +177,7 @@ const PROVIDED_ICONS = new Set([
   'bus',
   'car',
   'circle',
-  'dumbbell',
+  'shopping-cart',
   'mouse-pointer-click',
   'flask-conical',
   'gauge',

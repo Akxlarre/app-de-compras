@@ -31,6 +31,24 @@ jobs:
           echo "project_ref=$REF" >> $GITHUB_OUTPUT
           echo "📦 Project ref extraído: $REF"
 
+      # La key de Gemini NO va en el APK: vive como secreto del proyecto Supabase y solo la
+      # lee process-receipt. El proyecto es compartido con app-de-entrenamiento (usa la misma
+      # key), así que publicarla desde acá es idempotente.
+      - name: Publicar GEMINI_API_KEY como secreto de Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "❌ Falta el secreto GEMINI_API_KEY en el repositorio."
+            echo "   Sin él, process-receipt se despliega pero devuelve 500 al escanear boletas."
+            echo "   Configúralo en Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          supabase secrets set GEMINI_API_KEY="$GEMINI_API_KEY" \
+            --project-ref ${{ steps.extract_ref.outputs.project_ref }}
+          echo "✅ GEMINI_API_KEY publicada en el proyecto Supabase."
+
       # process-receipt valida el JWT por su cuenta (y responde el preflight CORS).
       - name: Deploy Edge Function (process-receipt)
         env:
@@ -68,7 +86,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: node scripts/set-env.js
 
       - name: Build Web (Angular)

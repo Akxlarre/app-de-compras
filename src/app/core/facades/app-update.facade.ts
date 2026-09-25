@@ -71,7 +71,7 @@ export class AppUpdateFacade {
         if (avisar) {
           // Info y no success: el verde significa "logrado", y estar al día
           // es un estado, no un logro.
-          this.toast.info('Estás al día', 'Ya tenés la última versión de FitTrack.');
+          this.toast.info('Estás al día', 'Ya tienes la última versión de App de Compras.');
         }
       }
     } catch (err) {

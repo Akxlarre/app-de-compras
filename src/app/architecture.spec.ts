@@ -100,6 +100,23 @@ describe('Arquitectura: acceso a datos', () => {
     ).toEqual([]);
   });
 
+  it('(f) los environment*.ts solo tienen configuración pública (van dentro del bundle/APK)', () => {
+    // Todo lo que esté en environment.ts termina en el JS que descarga el usuario. Las API keys
+    // privadas (Gemini, service_role, …) viven como secretos de Supabase / Edge Functions.
+    const envDir = join(process.cwd(), 'src', 'environments');
+    const allowed = new Set(['production', 'supabase', 'url', 'anonKey']);
+    const offending = readdirSync(envDir)
+      .filter((f) => /^environment.*\.ts$/.test(f))
+      .flatMap((f) => {
+        const code = stripComments(readFileSync(join(envDir, f), 'utf-8'));
+        return [...code.matchAll(/^\s*([A-Za-z_$][\w$]*)\s*:/gm)]
+          .map(([, key]) => key)
+          .filter((key) => !allowed.has(key))
+          .map((key) => `${f}: ${key}`);
+      });
+    expect(offending).toEqual([]);
+  });
+
   it('(d) @supabase/supabase-js solo en repositories, infraestructura y models', () => {
     expect(
       violations(
