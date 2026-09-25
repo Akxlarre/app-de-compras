@@ -16,11 +16,11 @@ describe('ShoppingListFacade', () => {
   let lists: Record<string, ReturnType<typeof vi.fn>>;
   let items: Record<string, ReturnType<typeof vi.fn>>;
   let stopWatching: ReturnType<typeof vi.fn>;
-  let toast: { error: ReturnType<typeof vi.fn> };
+  let toast: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     stopWatching = vi.fn();
-    toast = { error: vi.fn() };
+    toast = { error: vi.fn(), success: vi.fn() };
     family = { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') };
     lists = {
       findLatestActive: vi.fn().mockResolvedValue(list()),
@@ -192,13 +192,51 @@ describe('ShoppingListFacade', () => {
       expect(toast.error).toHaveBeenCalled();
     });
 
-    it('completeList completa y recarga (queda sin lista activa)', async () => {
+    it('completeList descartando pendientes: finaliza, avisa y queda sin lista activa', async () => {
+      lists['complete'].mockResolvedValue(null);
       lists['findLatestActive'].mockResolvedValue(null);
 
-      await facade.completeList('list-1');
+      expect(await facade.completeList('list-1', false)).toBe(true);
 
-      expect(lists['complete']).toHaveBeenCalledWith('list-1');
+      expect(lists['complete']).toHaveBeenCalledWith('list-1', false);
       expect(facade.error()).toBe('NO_ACTIVE_LIST');
+      expect(toast.success).toHaveBeenCalled();
+    });
+
+    it('completeList pasando pendientes: muestra la lista que los recibió', async () => {
+      lists['complete'].mockResolvedValue('list-2');
+      lists['findLatestActive'].mockResolvedValue({ ...list([{ id: 'p' }]), id: 'list-2' });
+
+      expect(await facade.completeList('list-1', true)).toBe(true);
+
+      expect(lists['complete']).toHaveBeenCalledWith('list-1', true);
+      expect(facade.data()?.id).toBe('list-2');
+      expect(items['watchList']).toHaveBeenCalledWith('list-2', expect.any(Function));
+    });
+
+    it('completeList recarga "Repetir última compra" con la compra recién finalizada', async () => {
+      lists['complete'].mockResolvedValue(null);
+      lists['findLatestActive'].mockResolvedValue(null);
+      lists['findLastCompleted'].mockResolvedValue({
+        ...list(),
+        id: 'list-1',
+        status: 'completed',
+      });
+
+      await facade.completeList('list-1', false);
+
+      expect(facade.lastCompletedList()?.id).toBe('list-1');
+    });
+
+    it('completeList: si la RPC falla, avisa con toast y la lista sigue visible', async () => {
+      facade['_data'].set(list([{ id: 'item-1' }]));
+      lists['complete'].mockRejectedValue(new Error('list_not_active'));
+
+      expect(await facade.completeList('list-1', true)).toBe(false);
+
+      expect(toast.error).toHaveBeenCalled();
+      expect(facade.data()?.id).toBe('list-1');
+      expect(facade.error()).toBeNull();
     });
 
     it('loadTemplates carga última compra y plantillas de la familia', async () => {

@@ -45,20 +45,32 @@ describe('ProductsFacade', () => {
   afterEach(() => vi.useRealTimers());
 
   describe('loadProducts', () => {
-    it('calcula daysSinceUpdate y recomienda los de más de 7 días', async () => {
+    it('calcula daysSincePurchase desde la última compra (no desde el cambio de precio)', async () => {
       catalog.findByFamily.mockResolvedValue([
-        { id: 'a', name: 'Arroz', updated_at: daysAgo(10) },
-        { id: 'b', name: 'Pan', updated_at: daysAgo(2) },
-        { id: 'c', name: 'Sal', created_at: daysAgo(30) },
+        { id: 'a', name: 'Arroz', last_purchased_at: daysAgo(10), updated_at: daysAgo(0) },
+        { id: 'b', name: 'Pan', last_purchased_at: daysAgo(2), updated_at: daysAgo(40) },
+        { id: 'c', name: 'Sal', last_purchased_at: null, created_at: daysAgo(30) },
       ]);
 
       await facade.loadProducts();
 
       expect(catalog.findByFamily).toHaveBeenCalledWith('fam-1');
-      const byId = Object.fromEntries(facade.products().map((p) => [p.id, p.daysSinceUpdate]));
-      expect(byId).toEqual({ a: 10, b: 2, c: 30 });
-      expect(facade.recommendedProducts().map((p) => p.id)).toEqual(['a', 'c']);
+      const byId = Object.fromEntries(facade.products().map((p) => [p.id, p.daysSincePurchase]));
+      expect(byId).toEqual({ a: 10, b: 2, c: null });
       expect(facade.isLoading()).toBe(false);
+    });
+
+    it('recomienda reponer según la duración estimada; nunca comprado no se recomienda', async () => {
+      catalog.findByFamily.mockResolvedValue([
+        { id: 'a', name: 'Arroz', last_purchased_at: daysAgo(10) },
+        { id: 'b', name: 'Pan', last_purchased_at: daysAgo(3), estimated_duration_days: 2 },
+        { id: 'c', name: 'Aceite', last_purchased_at: daysAgo(10), estimated_duration_days: 45 },
+        { id: 'd', name: 'Sal', last_purchased_at: null },
+      ]);
+
+      await facade.loadProducts();
+
+      expect(facade.recommendedProducts().map((p) => p.id)).toEqual(['a', 'b']);
     });
 
     it('setea error si falla la carga', async () => {
@@ -75,22 +87,21 @@ describe('ProductsFacade', () => {
   describe('updatePrice', () => {
     beforeEach(() => {
       facade.products.set([
-        { id: 'a', name: 'Arroz', last_price: 1290, daysSinceUpdate: 12 } as any,
+        { id: 'a', name: 'Arroz', last_price: 1290, daysSincePurchase: 12 } as any,
       ]);
     });
 
-    it('persiste y resetea daysSinceUpdate en el estado local', async () => {
+    it('persiste el precio sin tocar la fecha de compra', async () => {
       expect(await facade.updatePrice('a', 1990)).toBe(true);
 
       expect(catalog.updatePrice).toHaveBeenCalledWith('a', 1990);
-      expect(facade.products()[0]).toMatchObject({ last_price: 1990, daysSinceUpdate: 0 });
+      expect(facade.products()[0]).toMatchObject({ last_price: 1990, daysSincePurchase: 12 });
     });
 
-    it('no guarda si el precio no cambió (no reinicia "Hace N días")', async () => {
+    it('no guarda si el precio no cambió', async () => {
       expect(await facade.updatePrice('a', 1290)).toBe(false);
 
       expect(catalog.updatePrice).not.toHaveBeenCalled();
-      expect(facade.products()[0].daysSinceUpdate).toBe(12);
     });
 
     it('no toca el estado local si la BD falla (devuelve false para que la página avise)', async () => {
@@ -98,13 +109,17 @@ describe('ProductsFacade', () => {
 
       expect(await facade.updatePrice('a', 1990)).toBe(false);
 
-      expect(facade.products()[0].daysSinceUpdate).toBe(12);
+      expect(facade.products()[0].last_price).toBe(1290);
     });
   });
 
   describe('generateSmartList', () => {
+    // Recomendado = comprado hace ≥ 7 días (sin duración estimada).
+    const due = (id: string) => ({ id, last_purchased_at: daysAgo(9) } as any);
+    const fresh = (id: string) => ({ id, last_purchased_at: daysAgo(1) } as any);
+
     it('no crea lista si no hay recomendados', async () => {
-      facade.products.set([{ id: 'b', daysSinceUpdate: 1 } as any]);
+      facade.products.set([fresh('b')]);
 
       await facade.generateSmartList();
 
@@ -116,10 +131,7 @@ describe('ProductsFacade', () => {
         id: 'activa',
         list_items: [{ id: 'i1', product: { id: 'a' } }],
       });
-      facade.products.set([
-        { id: 'a', daysSinceUpdate: 9 } as any,
-        { id: 'c', daysSinceUpdate: 20 } as any,
-      ]);
+      facade.products.set([due('a'), due('c')]);
 
       await facade.generateSmartList();
 
@@ -130,11 +142,7 @@ describe('ProductsFacade', () => {
     });
 
     it('sin lista activa, crea "Compra Inteligente" con los recomendados en un solo insert', async () => {
-      facade.products.set([
-        { id: 'a', daysSinceUpdate: 9 } as any,
-        { id: 'b', daysSinceUpdate: 1 } as any,
-        { id: 'c', daysSinceUpdate: 20 } as any,
-      ]);
+      facade.products.set([due('a'), fresh('b'), due('c')]);
 
       await facade.generateSmartList();
 
