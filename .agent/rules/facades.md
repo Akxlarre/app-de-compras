@@ -14,7 +14,7 @@ El Facade es el corazón del "Flujo de Datos" y la única forma permitida para q
 Un Facade es un Servicio de Angular (`@Injectable`) que actúa como el **único punto de entrada** para un "Dominio" o "Feature" (Ej: Productos, Usuarios, Dashboard).
 
 Su responsabilidad doble y estricta es:
-1. **Orquestar datos:** Inyecta Repositories (`core/repositories/`) para leer y escribir en Supabase. **NUNCA llama `.db.from()` directamente** — eso es responsabilidad exclusiva del Repository.
+1. **Orquestar datos:** Inyecta Repositories (`core/repositories/`) para leer y escribir en Supabase. **NUNCA inyecta `SupabaseService` ni toca `supabase.client`** (queries, RPC, Realtime, Storage, Edge Functions) — eso es responsabilidad exclusiva del Repository. Tampoco inyecta otros Facades. Lo verifica `src/app/architecture.spec.ts` en `test:ci`.
 2. **Gestionar el Estado:** Mantiene en memoria el estado reactivo sincrónico usando `Signals` (a través de `BaseFacade<T>`).
 
 ```
@@ -48,19 +48,16 @@ y el ciclo de vida (`initialize`, `refreshSilently`, `reset`, `dispose`) de form
 ```typescript
 import { Injectable, inject, computed } from '@angular/core';
 import { BaseFacade } from '@core/facades/base.facade';
-import { SupabaseService } from '@core/services/supabase.service';
+import { ProductosRepository } from '@core/repositories/productos.repository';
 import type { Producto } from '@core/models/producto.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProductosFacade extends BaseFacade<Producto[]> {
-  private supabase = inject(SupabaseService);
+  private repo = inject(ProductosRepository); // NUNCA SupabaseService
 
   // ── fetchData (contrato obligatorio) ──────────────────────────────────────
   protected override async fetchData(): Promise<Producto[]> {
-    const { data, error } = await this.supabase.client
-      .from('productos').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data ?? [];
+    return this.repo.findAll(); // el repository lanza si Supabase falla
   }
 
   // ── Computed signals de dominio (opcionales) ──────────────────────────────

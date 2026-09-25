@@ -51,7 +51,16 @@
 - AC8: `architecture.md`, `facades.md`, `swr-pattern.md`, `database.md`, `models.md`,
   skill `supabase-data-model`, `indices/REPOSITORIES.md`, `indices/DATABASE.md`.
 
-## Pendiente fuera de alcance
-- `.claude/hooks/pre-write-guard.js` (ARCH-12) busca `.db.from()` y el código usa `.client`:
-  nunca disparaba. Está protegido → debe corregirlo el humano (la guardia de tests ya lo cubre).
-- Espejos de reglas en `.agents/rules/` (protegido) y `.agent/rules/` siguen con los ejemplos viejos.
+## Pendiente para el humano (archivos de guardrails; el agente no puede modificarlos)
+- **Hook ARCH-12** (`.claude/hooks/pre-write-guard.js`): solo detectaba `client.from(` en una
+  línea; el código real encadena en varias o usa rpc/channel/functions → nunca disparaba.
+  Parche listo en `arch-12-hook.patch` y tests en `arch-12-repository-boundary.test.js`:
+  ```bash
+  git apply specs/0001-capa-repositorios/arch-12-hook.patch
+  mv specs/0001-capa-repositorios/arch-12-repository-boundary.test.js .claude/tests/
+  node --test .claude/tests/arch-12-repository-boundary.test.js
+  ```
+  Mientras tanto `src/app/architecture.spec.ts` cubre lo mismo en `test:ci`.
+- **Espejo `.agents/`** (protegido): copiar `architecture, database, facades, models, swr-pattern`
+  de `.claude/rules/` a `.agents/rules/` y `.claude/skills/supabase-data-model/SKILL.md` a
+  `.agents/skills/supabase-data-model/`. (`.agent/` ya quedó sincronizado.)

@@ -56,12 +56,8 @@ import type { User as UserDto } from '@core/models/dto/user.model';   // campos 
 import type { User as UserUi } from '@core/models/ui/user.model';     // campos camelCase para la vista
 
 private async loadUserFromSession(authUser: SupabaseUser): Promise<void> {
-  // 1. Lee de BD -> recibe el DTO crudo
-  const { data: dbUser } = await this.supabase.client
-    .from('users')
-    .select('id, first_names, paternal_last_name, branch_id, ...')
-    .eq('supabase_uid', authUser.id)
-    .maybeSingle();
+  // 1. Lee de BD vía Repository -> recibe el DTO crudo (la query vive en core/repositories/)
+  const dbUser = await this.usersRepo.findBySupabaseUid(authUser.id);
 
   // 2. Mapeo DTO -> UI Model (esta es la responsabilidad del Facade)
   const user: UserUi = {
