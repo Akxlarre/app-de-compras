@@ -1,6 +1,6 @@
 # ADR-001 — Base de datos compartida entre apps y hub
 
-- **Estado:** propuesto (pendiente de las decisiones marcadas con ❓)
+- **Estado:** aceptado (2026-09-25) — ver §5 para las decisiones tomadas
 - **Fecha:** 2026-09-25
 - **Alcance:** todas las apps del ecosistema (app-de-compras, app-de-entrenamiento, futuras) y el hub
 
@@ -36,7 +36,7 @@ Estado actual, revisado en ambos repos:
 
 ### D1 — Un repo único dueño de la base de datos
 
-Crear **`plataforma-db`** ❓(nombre). Es el **único** repo con `supabase/migrations/`,
+Crear **`plataforma-db`**. Es el **único** repo con `supabase/migrations/`,
 `supabase/config.toml` y `seed.sql`. Las apps (y el hub) **no** tienen migraciones: consumen el
 esquema y generan sus tipos.
 
@@ -74,7 +74,7 @@ esquema y generan sus tipos.
 
 En `plataforma-db`:
 - **PR** → `supabase db lint` + levantar la base local con todas las migraciones y correr los tests SQL.
-- **Merge a `main`** → `supabase db push` al proyecto (y a staging primero si existe, ❓ D6).
+- **Merge a `main`** → `supabase db push` al proyecto (primero a staging, después a producción — D6).
 - **Tipos**: `supabase gen types typescript --schema core,shop,gym,hub` se publican como artefacto del
   repo. Cada app copia los tipos de su schema a `src/app/core/models/supabase.types.ts` con un script
   (`npm run db:types`).
@@ -85,7 +85,7 @@ Desde que exista `plataforma-db`, las carpetas `supabase/migrations/` de las app
 lectura (historial) y se borran en la fase 1. Un check de CI en cada app falla si alguien agrega una
 migración nueva ahí.
 
-### D6 — Entornos ❓
+### D6 — Entornos (decidido: staging)
 
 Recomendado: un **segundo proyecto de Supabase para staging** (plan gratuito), con la misma
 secuencia de migraciones. Alternativa: Supabase Branching, que es de pago. Sin staging, cada migración
@@ -100,7 +100,7 @@ se prueba directo en producción.
 | **2** | `core`: mover `profiles`, `handle_new_user` y `app_updates` a `core` y endurecer la RLS de `profiles` (D3). | Medio | Vistas de compatibilidad en `public` durante la transición (ver abajo). |
 | **3** | `shop`: las tablas **nuevas** de compras (por ejemplo `receipt_items` para la feature de boletas) nacen en `shop`. Mover las existentes. | Medio | La feature de boletas puede avanzar en paralelo creando sus tablas en `shop`. |
 | **4** | `gym`: igual que la fase 3, para entrenamiento. | Medio | |
-| **5** | `hub`: vistas y RPCs de lectura para el hub. | Bajo | Se diseña cuando se defina qué muestra el hub ❓. |
+| **5** | `hub`: vistas y RPCs de lectura para el hub. | Bajo | Se diseña cuando se defina qué muestra el hub (pospuesto). |
 
 ### Cómo mover una tabla sin romper APKs ya instalados
 
@@ -128,14 +128,14 @@ Por eso conviene que esa ventana sea corta y con actualización forzada.
 - Fases 2 a 4 requieren publicar versiones con actualización forzada.
 - `supabase db push` desde CI necesita `SUPABASE_ACCESS_TOKEN` y la contraseña de la base (`SUPABASE_DB_PASSWORD`) como secrets del repo nuevo.
 
-## 5. Decisiones abiertas ❓
+## 5. Decisiones (dueño, 2026-09-25)
 
-1. **Nombre del repo**: ¿`plataforma-db`? ¿otro?
-2. **Staging (D6)**: ¿creamos un segundo proyecto de Supabase?
-3. **Hub**: ¿qué información debe mostrar primero? Define las vistas y RPCs de la fase 5.
-4. **Auth compartido**: un mismo usuario entra a todas las apps con la misma cuenta (un solo pool de
-   `auth.users`). ¿Es lo deseado? Implica que las *Redirect URLs* de Auth deben incluir los dominios
-   o esquemas de todas las apps (por ejemplo el `reset-password` de cada una).
+1. **Nombre del repo**: ✅ `plataforma-db`.
+2. **Staging (D6)**: ✅ sí, un segundo proyecto de Supabase (plan gratuito). El pipeline aplica
+   primero en staging y después en producción.
+3. **Hub**: ⏸ futuro. La fase 5 queda sin diseñar; el schema `hub` no se crea hasta definir qué muestra.
+4. **Auth compartido**: ✅ sí, una sola cuenta para todas las apps (un solo `auth.users`). Las
+   *Redirect URLs* de Auth deben incluir las de todas las apps (por ejemplo el `reset-password` de cada una).
 
 ## 6. Qué puede hacer el agente y qué no
 
