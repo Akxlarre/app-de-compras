@@ -30,7 +30,8 @@ bazel-out/
 .claude/logs/
 .claude/temp/
 .gemini/
-indices/
+# indices/ se versiona: las sesiones en la nube arrancan con repo limpio y el
+# Discovery Gate bloquea escrituras hasta que exista.
 
 # Contexto privado del agente (dominio, sesión, decisiones)
 context/
