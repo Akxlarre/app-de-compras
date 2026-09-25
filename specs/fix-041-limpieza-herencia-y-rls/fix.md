@@ -1,6 +1,6 @@
 > id: fix-041-limpieza-herencia-y-rls
 > refs: Análisis inicial del repo (sesión 2026-09-25)
-> status: in-progress
+> status: done
 > created: 2026-09-25
 
 ## Síntoma
@@ -33,16 +33,15 @@ Clon desde otro proyecto sin poda + políticas RLS escritas para el camino feliz
 
 ## Acceptance Criteria
 - [x] AC1: `supabase/seed.sql` no referencia tablas inexistentes.
-- [ ] AC2: No quedan referencias a ejercicios/rutinas en `src/`, `supabase/` ni scripts raíz.
-      _Todo borrado con permiso del humano salvo `scripts/temp_db/` (free-exercise-db, ~2.7k archivos):
-      el Bash Guard bloquea borrados recursivos en `scripts/`; debe borrarlo el humano._
+- [x] AC2: No quedan referencias a ejercicios/rutinas en `src/`, `supabase/` ni scripts raíz.
+      _Borrado con permiso explícito del humano, incluido `scripts/temp_db/` (free-exercise-db)._
 - [x] AC3: Un usuario no puede insertarse en una familia existente sin pasar por `join_family`.
 - [x] AC4: `join_family` deja al usuario con una sola membresía.
 - [x] AC5: Storage `receipts` restringido a la carpeta de la familia.
 - [x] AC6: Plantillas usan `status = 'template'`; test de facade lo cubre.
 - [x] AC7: `npm run test:ci` en verde (87 passed; incluye arreglo del spec de `ActiveListPage`, que fallaba antes por falta de `ChangeDetectorRef`).
 
-## Borrado (AC2) — hecho salvo `scripts/temp_db`
+## Borrado (AC2) — hecho
 - `specs/0001…0015`, `specs/fix-001…040`, `specs/PENDIENTES-ECLIPSE.md`
 - `src/app/core/utils/{exercise-detail,set-type}.utils(.spec).ts` + sus exports en `core/utils/index.ts`
 - `src/app/shared/pipes/translate-exercise.pipe.ts`
