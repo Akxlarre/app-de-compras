@@ -57,21 +57,29 @@
   `complete_list` mueve pendientes (lista nueva o activa existente, sumando cantidades), descarta con
   `false`, fija `unit_price` y `last_purchased_at`, y rechaza listas de otra familia o no activas.
   CI de plataforma-db en verde.
-- [ ] AC2: `ShoppingListsRepository.complete` llama a la RPC `complete_list` con `p_carry_pending`;
+- [x] AC2: `ShoppingListsRepository.complete` llama a la RPC `complete_list` con `p_carry_pending`;
   `findCompleted` trae las listas `completed` de la familia, más recientes primero.
-- [ ] AC3: `ShoppingListFacade.completeList(id, carry)`: si la RPC falla, toast de error y la lista
+- [x] AC3: `ShoppingListFacade.completeList(id, carry)`: si la RPC falla, toast de error y la lista
   sigue; si sale bien, recarga la lista activa y la última compra.
-- [ ] AC4: Mi Lista ofrece pasar o descartar pendientes cuando los hay; sin pendientes, confirmación
+- [x] AC4: Mi Lista ofrece pasar o descartar pendientes cuando los hay; sin pendientes, confirmación
   simple.
-- [ ] AC5: `PurchaseHistoryFacade` + `purchase-history.utils`: total = Σ cantidad × `unit_price` de lo
+- [x] AC5: `PurchaseHistoryFacade` + `purchase-history.utils`: total = Σ cantidad × `unit_price` de lo
   marcado; gasto del mes cuenta solo compras del mes en curso.
-- [ ] AC6: Página Historial en `/app/history`, accesible desde Mi Lista, con estados de carga, vacío
+- [x] AC6: Página Historial en `/app/history`, accesible desde Mi Lista, con estados de carga, vacío
   y error.
-- [ ] AC7: Reponer por fecha de compra (`needsRestock`) y textos "Comprado hace N días" con singular
+- [x] AC7: Reponer por fecha de compra (`needsRestock`) y textos "Comprado hace N días" con singular
   correcto.
 - [ ] AC8: Verificación en staging (Chromium): finalizar con pendientes → aparecen en la lista nueva;
   la compra aparece en Historial con su total; `checked_by` queda con el usuario.
-- [ ] AC9: `npm run test:ci`, `npm run lint:arch` y `ng build` en verde; índices actualizados.
+- [x] AC9: `npm run test:ci`, `npm run lint:arch` y `ng build` en verde; índices actualizados.
+
+## Evidencia (2026-09-25)
+- AC1 (parcial): migración + 22 tests pgTAP en plataforma-db (commit local `5dde022`), en verde en
+  Postgres 16 local con stubs de `auth`/pgTAP. Falta: push, CI de plataforma-db, merge → staging.
+- AC2–AC7: `04f1750` en rojo (22 fallos) → `30f0010` en verde.
+- AC9: `test:ci` 221/221, `lint:arch` 0 errores (2 avisos previos), `ng build` OK; índices
+  (FACADES, MODELS, DATABASE, REPOSITORIES, DOMAIN_DICTIONARY) actualizados.
+- AC8: pendiente — requiere la migración aplicada en staging y `complete_list` expuesta.
 
 ## Tests
 `restock.utils.spec.ts`, `purchase-history.utils.spec.ts`, `date.utils.spec.ts`,

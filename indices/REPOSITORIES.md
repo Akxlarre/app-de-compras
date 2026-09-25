@@ -10,7 +10,7 @@
 | Repository | Métodos | Tabla / recurso | Archivo |
 |---|---|---|---|
 | `FamilyRepository` | `getOrCreateFamilyId()`, `join(familyId)`, `findMine()` | RPC `get_or_create_family`, `join_family`; `family_members` | `src/app/core/repositories/family.repository.ts` |
-| `ShoppingListsRepository` | `findLatestActive()`, `findLastCompleted(familyId)`, `findTemplates(familyId)`, `create({name, familyId, status})`, `complete(listId)` | `shopping_lists` (+ `list_items`, `products` embebidos) | `src/app/core/repositories/shopping-lists.repository.ts` |
+| `ShoppingListsRepository` | `findLatestActive()`, `findLastCompleted(familyId)`, `findTemplates(familyId)`, `findCompleted(familyId, limit?)`, `create({name, familyId, status})`, `complete(listId, carryPending)` | `shopping_lists` (+ `list_items`, `products` embebidos); RPC `complete_list` | `src/app/core/repositories/shopping-lists.repository.ts` |
 | `ListItemsRepository` | `add()`, `addMany()`, `findByList()`, `updateQuantity()`, `setChecked()`, `remove()`, `watchList(listId, cb) → baja` | `list_items` + Realtime | `src/app/core/repositories/list-items.repository.ts` |
 | `ProductsRepository` | `findByFamily(familyId, limit?)`, `searchByName(term, limit)`, `create({name, familyId, lastPrice?})`, `findIdByName()`, `updatePrice()` | `products` | `src/app/core/repositories/products.repository.ts` |
 | `ReceiptsRepository` | `extractItems(imageBase64, mimeType)` | Edge Function `process-receipt` | `src/app/core/repositories/receipts.repository.ts` |
@@ -23,6 +23,7 @@
 |---|---|
 | `ShoppingListFacade` | Family, ShoppingLists, ListItems |
 | `ProductsFacade` | Family, Products, ShoppingLists, ListItems |
+| `PurchaseHistoryFacade` | Family, ShoppingLists |
 | `ProductSearchFacade` | Products |
 | `ReceiptScannerFacade` | Family, Products, Receipts |
 | `FamilyFacade` | Family |
