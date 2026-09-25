@@ -5,13 +5,13 @@ import { ProductsRepository } from '../repositories/products.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ListItemsRepository } from '../repositories/list-items.repository';
 import { SessionScopeService } from '../services/auth/session-scope.service';
+import { daysSince } from '../utils/date.utils';
+import { needsRestock } from '../utils/restock.utils';
 
 export interface ProductWithStatus extends Product {
-  // Aquí podemos agregar lógica en el futuro para predecir compras
-  daysSinceUpdate: number;
+  /** Días desde la última compra finalizada; null si nunca se compró. */
+  daysSincePurchase: number | null;
 }
-
-const DAY_MS = 1000 * 60 * 60 * 24;
 
 @Injectable({ providedIn: 'root' })
 export class ProductsFacade {
@@ -34,10 +34,8 @@ export class ProductsFacade {
     this.error.set(null);
   }
 
-  // Opciones simples de predicción: productos que no se actualizan hace > 7 días
-  readonly recommendedProducts = computed(() => {
-    return this.products().filter((p) => p.daysSinceUpdate > 7);
-  });
+  /** "Es momento de reponer": comprados hace al menos su duración estimada. */
+  readonly recommendedProducts = computed(() => this.products().filter((p) => needsRestock(p)));
 
   async loadProducts(): Promise<void> {
     this.isLoading.set(true);
@@ -47,12 +45,11 @@ export class ProductsFacade {
       const familyId = await this.family.getOrCreateFamilyId();
       const rows = await this.catalog.findByFamily(familyId);
 
-      const now = Date.now();
       this.products.set(
-        rows.map((p) => {
-          const updated = new Date(p.updated_at || p.created_at || now).getTime();
-          return { ...p, daysSinceUpdate: Math.ceil(Math.abs(now - updated) / DAY_MS) };
-        })
+        rows.map((p) => ({
+          ...p,
+          daysSincePurchase: p.last_purchased_at ? daysSince(p.last_purchased_at) : null,
+        }))
       );
     } catch (e) {
       console.error(e);
@@ -63,7 +60,7 @@ export class ProductsFacade {
   }
 
   /**
-   * Guarda el precio. Si no cambió no escribe (actualizar `updated_at` reinicia "Hace N días").
+   * Guarda el precio. Si no cambió no escribe.
    * @returns true si quedó guardado un precio nuevo; false si no cambió o falló (la página avisa).
    */
   async updatePrice(productId: string, newPrice: number): Promise<boolean> {
@@ -73,9 +70,7 @@ export class ProductsFacade {
     try {
       await this.catalog.updatePrice(productId, newPrice);
       this.products.update((list) =>
-        list.map((p) =>
-          p.id === productId ? { ...p, last_price: newPrice, daysSinceUpdate: 0 } : p
-        )
+        list.map((p) => (p.id === productId ? { ...p, last_price: newPrice } : p))
       );
       return true;
     } catch (e) {

@@ -1,0 +1,88 @@
+<div class="h-full flex flex-col bg-base" data-testid="history-page">
+  <app-header title="Historial" [showBrand]="false" [showBack]="true" (backClicked)="back()" />
+
+  <main class="flex-1 overflow-y-auto px-4 pb-32">
+    @if (facade.isLoading() && !facade.hasData()) {
+    <div class="flex flex-col gap-3 mt-2">
+      <app-skeleton-block variant="rect" width="100%" height="96px" />
+      <app-skeleton-block variant="rect" width="100%" height="72px" />
+      <app-skeleton-block variant="rect" width="100%" height="72px" />
+    </div>
+    } @else if (facade.error()) {
+    <app-error-state
+      [title]="'No se pudo cargar el historial'"
+      [message]="facade.error()!"
+      retryLabel="Reintentar"
+      (retry)="facade.retryLoad()"
+    />
+    } @else if (purchases().length === 0) {
+    <app-empty-state
+      icon="history"
+      message="Aún no hay compras finalizadas"
+      subtitle="Cuando finalices una lista, aparecerá aquí con lo que compraste y cuánto gastaste."
+    />
+    } @else {
+    <div class="flex flex-col gap-5 mt-2">
+      <!-- Gasto del mes -->
+      <section class="bg-surface border border-border-default rounded-2xl p-5">
+        <p class="kpi-label">Gastado en {{ monthLabel }}</p>
+        <p class="kpi-value text-brand mt-1">${{ facade.thisMonth().total | number : '1.0-0' }}</p>
+        <p class="text-sm text-text-muted mt-1">
+          {{ facade.thisMonth().count }} {{ facade.thisMonth().count === 1 ? 'compra' : 'compras' }}
+        </p>
+      </section>
+
+      <!-- Compras -->
+      <ul class="flex flex-col gap-3">
+        @for (purchase of purchases(); track purchase.id) {
+        <li class="bg-surface border border-border-default rounded-2xl overflow-hidden">
+          <button
+            class="w-full flex items-center gap-3 p-4 text-left active:bg-border-subtle transition-colors"
+            [attr.aria-expanded]="openId() === purchase.id"
+            (click)="toggle(purchase.id)"
+          >
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-text-primary truncate">{{ purchase.name }}</p>
+              <p class="text-xs text-text-muted mt-0.5">
+                {{ purchase.dateLabel }} · {{ purchase.itemCount }}
+                {{ purchase.itemCount === 1 ? 'producto' : 'productos' }}
+              </p>
+            </div>
+            <span class="font-bold text-text-primary shrink-0"
+              >${{ purchase.total | number : '1.0-0' }}</span
+            >
+            <app-icon
+              [name]="openId() === purchase.id ? 'chevron-up' : 'chevron-down'"
+              [size]="18"
+              class="text-text-muted shrink-0"
+              [attr.aria-label]="openId() === purchase.id ? 'Ocultar detalle' : 'Ver detalle'"
+            />
+          </button>
+
+          @if (openId() === purchase.id) {
+          <ul class="border-t border-border-subtle px-4 py-2">
+            @for (item of purchase.items; track $index) {
+            <li class="flex items-center gap-3 py-2 text-sm">
+              <span class="flex-1 min-w-0 text-text-primary truncate">{{ item.name }}</span>
+              <span class="text-text-muted shrink-0">
+                {{ item.quantity }} × @if (item.unitPrice !== null) { ${{
+                  item.unitPrice | number : '1.0-0'
+                }}
+                } @else { sin precio }
+              </span>
+              <span class="w-20 text-right font-semibold text-text-primary shrink-0"
+                >${{ item.subtotal | number : '1.0-0' }}</span
+              >
+            </li>
+            } @empty {
+            <li class="py-2 text-sm text-text-muted">No se marcó ningún producto.</li>
+            }
+          </ul>
+          }
+        </li>
+        }
+      </ul>
+    </div>
+    }
+  </main>
+</div>

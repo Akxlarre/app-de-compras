@@ -110,19 +110,29 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   }
 
   /**
-   * Finaliza la compra: la lista pasa a `completed`.
+   * Finaliza la compra: queda en el Historial con lo marcado. Los pendientes pasan a la lista
+   * activa (`carryPending`) o se descartan.
+   * @returns false si falló (la lista sigue como estaba).
    */
-  async completeList(listId: string): Promise<void> {
+  async completeList(listId: string, carryPending: boolean): Promise<boolean> {
+    let carriedTo: string | null;
     try {
-      await this.lists.complete(listId);
+      carriedTo = await this.lists.complete(listId, carryPending);
     } catch (e) {
       this.notifyError(e);
-      return;
+      return false;
     }
 
-    // Resetear y forzar fetch. Como la lista ya no es 'active', lanzará NO_ACTIVE_LIST
+    this.toast.success(
+      'Compra finalizada',
+      carriedTo ? 'Los pendientes pasaron a tu próxima lista.' : 'Quedó guardada en tu historial.'
+    );
+
+    // Carga completa: la lista activa ahora es la que recibió los pendientes (o no hay ninguna).
+    this.dispose();
     this.reset();
-    await this.initialize();
+    await Promise.all([this.initialize(), this.loadTemplates()]);
+    return true;
   }
 
   /**

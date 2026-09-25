@@ -71,11 +71,30 @@ export class ShoppingListsRepository {
     return data as ShoppingList;
   }
 
-  async complete(listId: string): Promise<void> {
-    const { error } = await this.db
+  /** Compras finalizadas de la familia, más recientes primero (para el Historial). */
+  async findCompleted(familyId: string, limit = 50): Promise<ActiveShoppingList[]> {
+    const { data, error } = await this.db
       .from('shopping_lists')
-      .update({ status: 'completed', completed_at: new Date().toISOString() })
-      .eq('id', listId);
+      .select(WITH_ITEMS)
+      .eq('family_id', familyId)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .limit(limit);
     if (error) throw error;
+    return (data as ActiveShoppingList[] | null) ?? [];
+  }
+
+  /**
+   * Finaliza la compra en una transacción (RPC `complete_list`): guarda el precio pagado y la
+   * fecha de compra de lo marcado; los pendientes pasan a la lista activa o se descartan.
+   * @returns id de la lista que recibió los pendientes, o null si no hubo o se descartaron.
+   */
+  async complete(listId: string, carryPending: boolean): Promise<string | null> {
+    const { data, error } = await this.db.rpc('complete_list', {
+      p_list_id: listId,
+      p_carry_pending: carryPending,
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
   }
 }
