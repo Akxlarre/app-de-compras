@@ -1,0 +1,689 @@
+/* ============================================================
+   Design System Tokens — Sistema visual "Eclipse"
+   Angular + Ionic + PrimeNG
+   ============================================================
+
+   ARQUITECTURA DE CAPAS:
+   ┌─────────────────────────────────────────────────────────┐
+   │  CAPA 1 — Escala       Colores, espaciados, radios      │
+   │  CAPA 2 — Semántica    Superficies, texto, bordes       │
+   │  CAPA 3 — Marca        Brand, gradientes, acciones      │
+   │  CAPA 4 — Componentes  Btn, input, card, motion         │
+   └─────────────────────────────────────────────────────────┘
+
+   REGLAS:
+   - Los tokens de escala describen el universo visual.
+     No se usan directamente en componentes.
+   - Los tokens de componente referencian tokens de escala.
+     Si un token de componente tiene un valor fijo (#hex o px),
+     no sobrevivirá un cambio de tema.
+   - --action-* / --ds-brand / --color-primary → acciones de marca.
+   - --text-* → jerarquía tipográfica. NUNCA mezclar con --action-*.
+   - Tokens de motion guardan VALORES, no propiedades CSS.
+     ✓ --card-hover-lift-y: -2px (componible)
+     ✗ --card-hover-lift: translateY(-2px) (no componible)
+
+   TEMA ÚNICO (spec 0001):
+   La app es dark-only. index.html fuerza el modo oscuro y ninguna
+   vista llama a setColorMode(), así que la paleta clara era código
+   inalcanzable. Los valores viven directo en :root — ya no hay un
+   segundo bloque de tema que mantener sincronizado.
+   ============================================================ */
+
+:root {
+  /* color-scheme: dark le dice al navegador que pinte inputs, selects y
+     scrollbars nativos con su paleta oscura, en vez de forzar la clara. */
+  color-scheme: dark;
+
+  /* ──────────────────────────────────────────
+     CAPA 1 — ESCALA PRIMITIVA
+     Valores base del universo visual.
+     No referencian otros tokens.
+     No se usan directamente en componentes.
+   ────────────────────────────────────────── */
+
+  /* Paleta Fresh/Rappi Dark
+     Ratios medidos sobre --bg-base (#09090b): */
+  --brand-ink: #09090b;       /* Zinc 950 - Fondo profundo */
+  --brand-bone: #f8fafc;      /* Slate 50 - Texto crujiente */
+  --brand-crimson: #10b981;   /* Emerald 500 - (Usado donde antes iba el crimson, ahora es el verde frescura) */
+  --brand-ember: #f59e0b;     /* Amber 500 - Alertas, notificaciones */
+  --brand-gold: #3b82f6;      /* Blue 500 - Botones secundarios/links */
+  --brand-iron: #27272a;      /* Zinc 800 - Superficies y bordes */
+
+  /* Escala de radio (Cornershop Vibe: Muy redondeado) */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-2xl: 40px;
+  --radius-full: 9999px;
+
+  /* Escala de espaciado (base 4px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Ergonomía — pisos duros, no criterio.
+     target-min           objetivos táctiles en Tier 1 y 2
+     target-min-critical  Tier 3 (sesión activa): dedos húmedos,
+                          en movimiento, con pulso alto
+     text-floor           ningún texto de la app baja de acá */
+  --target-min: 44px;
+  --target-min-critical: 56px;
+  --text-floor: 13px;
+
+  /* Grosor de borde por tier — la densidad gráfica baja a medida que
+     sube la repetición del elemento en pantalla. */
+  --border-tier1: 3px;
+  --border-tier2: 2px;
+  --border-tier3: 1px;
+
+  /* Escala tipográfica */
+  --text-xs: 0.8125rem;
+  /* 13px — piso absoluto del sistema */
+  --text-sm: 0.875rem;
+  /* 14px */
+  --text-base: 1rem;
+  /* 16px */
+  --text-lg: 1.125rem;
+  /* 18px */
+  --text-xl: 1.25rem;
+  /* 20px */
+  --text-2xl: 1.5rem;
+  /* 24px */
+  --text-3xl: 1.875rem;
+  /* 30px */
+  --text-4xl: 2.25rem;
+  /* 36px */
+  --text-5xl: 3rem;
+  /* 48px */
+
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  /* Familias tipográficas — tres roles, cargadas en index.html.
+     (Antes apuntaban a Bricolage Grotesque, que ningún <link> cargaba:
+     la app venía cayendo a system-ui desde siempre.)
+
+     display  Anton   — impacto. Piso 28px. PROHIBIDO en datos, en
+                        etiquetas y en Tier 3.
+     data     Oswald  — números y todo lo comparable. Siempre con
+                        font-variant-numeric: tabular-nums.
+     body     Archivo — microcopy, botones, cualquier cosa que el
+                        usuario tenga que leer rápido sin pensar. */
+  --font-display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --font-data: 'Oswald', 'Arial Narrow', Arial, sans-serif;
+  --font-body: 'Archivo', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Piso de la tipografía de impacto. Anton por debajo de esto deja de
+     ser legible: es condensada y muy pesada. */
+  --font-display-floor: 28px;
+
+  /* Escala de duración */
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-normal: 300ms;
+  --duration-slow: 450ms;
+  --duration-slower: 600ms;
+  --duration-page-out: 200ms;
+  --duration-page-in: 320ms;
+  /* Asimetría: salida ágil, entrada más visible y suave */
+  --duration-login-out: 250ms;
+  --duration-login-in: 400ms;
+  /* Login → App: transición más dramática que la navegación intra-app */
+  --duration-theme: 220ms;
+  --duration-toast-life: 3s;
+  /* Sincronizado con ToastService duración por defecto */
+  --duration-toast-enter: 250ms;
+  --duration-toast-leave: 180ms;
+
+  /* Escala de easing */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ──────────────────────────────────────────
+     CAPA 2 — SEMÁNTICA DE SUPERFICIE
+     Describen roles visuales, no valores.
+     Jerarquía de luminosidad garantizada.
+   ────────────────────────────────────────── */
+
+  /* Fondos y superficies — la escala arranca en tinta y sube en pasos
+     parejos, conservando el subtono cálido de la dirección de arte.
+     bg-base     tinta — fondo de la app
+     bg-surface  tarjetas, modales, hojas
+     bg-elevated hover de filas, áreas diferenciadas
+     bg-subtle   hierro — inputs, chips, separadores */
+  --bg-base: var(--brand-ink);
+  --bg-surface: #140e11;
+  --bg-elevated: #1e1418;
+  --bg-subtle: var(--brand-iron);
+  --shimmer-highlight: rgba(245, 240, 230, 0.08);
+
+  /* Puente para color-mix */
+  --bg-surface-mix: #1e1418;
+  --bg-glass-surface: rgba(20, 14, 17, 0.85);
+
+  /* Tipografía — jerarquía de texto
+     NUNCA usar para fondos ni acciones.
+     Ratios sobre --bg-surface: primary 16.8:1 · secondary 6.2:1 · muted 4.6:1 */
+  --text-primary: var(--brand-bone);
+  --text-secondary: #9c9189;
+  --text-muted: #857a73;
+  --text-disabled: #4a433e;
+
+  /* Bordes */
+  --border-subtle: rgba(245, 240, 230, 0.06);
+  --border-default: rgba(245, 240, 230, 0.12);
+  --border-strong: rgba(245, 240, 230, 0.24);
+
+  /* Sombras — en fondo oscuro el micro-borde comunica elevación
+     mejor que el desenfoque. */
+  --shadow-sm: 0 0 0 1px var(--border-subtle);
+  --shadow-md: 0 0 0 1px var(--border-default), 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 0 0 1px var(--border-default), 0 8px 32px rgba(0, 0, 0, 0.7);
+
+  --shadow-layout-topbar: 0 1px 0 0 var(--border-subtle);
+  --shadow-layout-sidebar: 1px 0 0 0 var(--border-subtle);
+  --shadow-layout-divider: 1px 0 0 0 var(--border-subtle);
+  --overlay-backdrop: rgba(10, 6, 8, 0.78);
+
+  /* Estados semánticos
+     state-* = resultado de acciones del sistema.
+
+     REGLA CRÍTICA — la forma manda, no el tono.
+     Los cuatro estados se reconocen por ícono, textura de borde y
+     posición. El tono es refuerzo, nunca la señal única: tres de los
+     acentos de marca son cálidos y ~8% de hombres no los separa.
+
+       error    ícono ✕ en círculo relleno  · borde sólido
+       success  ícono ✓ en círculo relleno  · borde sólido
+       warning  ícono ! en círculo CONTORNO · borde discontinuo
+       info     ícono i en círculo relleno  · borde doble
+
+     El oro de marca es siempre relleno o resplandor.
+     El oro semántico (warning) es siempre contorno. Así conviven.
+
+     El verde NO aparece en ningún otro lugar de la app:
+     si hay verde, algo se logró.
+
+     Ratios sobre --bg-surface:
+       success 7.5:1 · warning 12.3:1 · error 4.9:1 · info 11.1:1 */
+  --state-success: #10b981;
+  --state-success-bg: rgba(16, 185, 129, 0.12);
+  --state-success-border: rgba(16, 185, 129, 0.34);
+
+  --state-warning: var(--brand-gold);
+  --state-warning-bg: rgba(255, 200, 61, 0.1);
+  --state-warning-border: rgba(255, 200, 61, 0.38);
+
+  --state-error: #e8455a;
+  --state-error-bg: rgba(232, 69, 90, 0.12);
+  --state-error-border: rgba(232, 69, 90, 0.36);
+
+  --state-info: #2bd9e8;
+  --state-info-bg: rgba(43, 217, 232, 0.1);
+  --state-info-border: rgba(43, 217, 232, 0.34);
+
+  /* ──────────────────────────────────────────
+     CAPA 3 — MARCA Y COLOR PRIMARIO
+     --color-primary SIEMPRE es el ember de marca.
+     Nunca apunta a --text-primary.
+   ────────────────────────────────────────── */
+
+  /* La marca es el verde fresco */
+  --ds-brand: var(--brand-crimson);
+  --color-primary: var(--brand-crimson);
+  --color-primary-hover: #10b981;
+  --color-primary-dark: #059669;
+  --color-primary-muted: rgba(16, 185, 129, 0.15);
+  --color-primary-tint: rgba(16, 185, 129, 0.07);
+
+  /* Blanco sobre Emerald 500 */
+  --color-primary-text: var(--brand-bone);
+
+  /* Hueso presionado: el CTA en hueso del bloque de arranque, sobre el
+     suelo carmesí, se enciende a blanco al tocarlo (fix-031). */
+  --bone-pressed: #ffffff;
+  --accent-border: rgba(255, 106, 26, 0.3);
+  --accent-glow: rgba(255, 106, 26, 0.28);
+  --shadow-focus: 0 0 0 3px rgba(255, 106, 26, 0.35);
+
+  /* Gradientes
+     gradient-hero  → suelo de ceremonia (Tier 1). Texto SIEMPRE en bone:
+                      6.9:1 en el extremo más claro del degradado.
+     gradient-flame → relleno de arcos de progreso y clips de texto.
+     gradient-subtle→ tinte de marca sobre superficies. */
+  --gradient-hero: linear-gradient(168deg, #a50e22 0%, #6b0715 62%, #240509 100%);
+  --gradient-flame: linear-gradient(175deg, #ffc83d 4%, #ff6a1a 48%, #a50e22 96%);
+  --gradient-primary: linear-gradient(135deg, #ff6a1a 0%, #a50e22 100%);
+  --gradient-subtle: linear-gradient(
+    135deg,
+    rgba(255, 106, 26, 0.12) 0%,
+    rgba(255, 106, 26, 0.03) 100%
+  );
+
+  /* Aliases semánticos — separación: acción ≠ texto */
+  --action-primary: var(--ds-brand);
+  --action-primary-hover: var(--color-primary-hover);
+  --action-primary-text: var(--color-primary-text);
+  --color-brand: var(--ds-brand);
+
+  /* ──────────────────────────────────────────
+     CAPA 4 — COMPONENTES
+     Cero valores fijos — todo referencia tokens
+     de escala para soportar theming.
+   ────────────────────────────────────────── */
+
+  /* ── Botón primario ── */
+  --btn-primary-bg: var(--ds-brand);
+  --btn-primary-bg-hover: var(--color-primary-hover);
+  --btn-primary-text: var(--color-primary-text);
+  --btn-primary-radius: var(--radius-md);
+  --btn-primary-padding-x: var(--space-4);
+  --btn-primary-padding-y: var(--space-3);
+  --btn-primary-shadow: var(--shadow-sm);
+  --btn-primary-shadow-hover: var(--shadow-md);
+
+  /* ── Botón secundario ── */
+  --btn-secondary-bg: transparent;
+  --btn-secondary-bg-hover: var(--color-primary-muted);
+  --btn-secondary-border: var(--border-default);
+  --btn-secondary-text: var(--color-primary);
+  --btn-secondary-radius: var(--radius-md);
+
+  /* ── Botón ghost / terciario ── */
+  --btn-ghost-bg: transparent;
+  --btn-ghost-bg-hover: var(--bg-subtle);
+  --btn-ghost-text: var(--text-secondary);
+  --btn-ghost-text-hover: var(--text-primary);
+  --btn-ghost-radius: var(--radius-md);
+
+  /* ── Input ──
+     --input-bg referencia --bg-subtle (visible sobre --bg-elevated).
+     Incluye todos los estados: default, focus, error, success, disabled. */
+  --input-bg: var(--bg-subtle);
+  --input-text: var(--text-primary);
+  --input-placeholder: var(--text-muted);
+  --input-radius: var(--radius-md);
+  --input-padding-x: var(--space-4);
+  --input-padding-y: var(--space-3);
+
+  --input-border-default: var(--border-default);
+  --input-border-focus: var(--color-primary);
+  --input-border-error: var(--state-error);
+  --input-border-success: var(--state-success);
+
+  /* Focus: crítico para navegación por teclado.
+     Ningún componente suprime outline nativo sin reemplazar con este token. */
+  --input-shadow-focus-neutral: var(--shadow-focus);
+  --input-shadow-focus-error: 0 0 0 3px var(--state-error-bg);
+  --input-shadow-focus-success: 0 0 0 3px var(--state-success-bg);
+
+  --input-disabled-bg: var(--bg-elevated);
+  --input-disabled-text: var(--text-disabled);
+  --input-disabled-opacity: 0.6;
+
+  /* ── Card ── */
+  --card-bg: var(--bg-surface);
+  --card-border: var(--border-subtle);
+  --card-radius: var(--radius-lg);
+  --card-shadow: var(--shadow-md);
+  --card-shadow-hover: var(--shadow-lg);
+  --card-padding: var(--space-6);
+  --accent-border-width: var(--border-tier1);
+
+  /* ── Badge ── */
+  --badge-radius: var(--radius-full);
+  --badge-padding-x: var(--space-3);
+  --badge-padding-y: var(--space-1);
+
+  /* ── Overlay / Modal ── */
+  --modal-bg: var(--bg-surface);
+  --modal-radius: var(--radius-xl);
+  --modal-shadow: var(--shadow-lg);
+  --modal-padding: var(--space-8);
+
+  /* ── Motion de componentes ──
+     Tokens guardan VALORES, no propiedades CSS.
+     El componente construye la propiedad CSS usando el valor.
+
+     Uso correcto:
+     .card:hover { transform: translateY(var(--card-hover-lift-y)); } */
+  --btn-press-scale-value: 0.97;
+  --card-hover-lift-y: -2px;
+  --card-hover-scale: 1.005;
+
+  --transition-btn:
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+
+  --transition-input:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+
+  --transition-card:
+    box-shadow var(--duration-normal) var(--ease-standard),
+    transform var(--duration-normal) var(--ease-standard);
+
+  --transition-color:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+
+  /* ── Scrollbar ── */
+  --scrollbar-width: 6px;
+  --scrollbar-width-hover: 10px;
+  --scrollbar-thumb: var(--text-muted);
+  --scrollbar-thumb-hover: var(--text-secondary);
+  --scrollbar-track: transparent;
+  --scrollbar-radius: var(--radius-full);
+}
+
+/* ============================================================
+   ESTILOS BASE
+   ============================================================ */
+
+
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Anton solo existe en un peso (400). Cuando un componente le pide
+     700/800/900, el navegador fabrica la negrita engordando el glifo a
+     la fuerza y el título sale con un fantasma sucio. Esto le dice que
+     no invente: si el peso no existe, usa el que hay.
+     Oswald y Archivo sí cargan sus pesos reales, así que no les afecta.
+     Se usa -weight y no `font-synthesis: none` para no perder la
+     cursiva sintética donde haga falta. */
+  font-synthesis-weight: none;
+  transition:
+    background-color var(--duration-theme) var(--ease-standard),
+    color var(--duration-theme) var(--ease-standard),
+    border-color var(--duration-theme) var(--ease-standard);
+}
+
+/* ============================================================
+   GUÍA DE USO — REGLAS DEL SISTEMA
+
+   REGLA 1 — Color de acción
+   Usar --action-primary / --ds-brand / --color-primary
+   para botones, CTAs, links, iconos de acción.
+
+   REGLA 2 — Color de texto
+   Usar --text-primary / --text-secondary / --text-muted
+   NUNCA mezclar con --action-* o --color-primary.
+
+   REGLA 3 — Estados del sistema
+   Usar state-success / state-error / state-warning / state-info
+   para feedback de acciones ("guardado", "error de formulario").
+   El tono NUNCA es la única señal: ícono + borde + posición.
+
+   REGLA 4 — Motion
+   Usar --transition-btn / --transition-input / --transition-card.
+   Para valores numéricos de transform:
+     transform: translateY(var(--card-hover-lift-y));
+
+   REGLA 5 — Accesibilidad (WCAG obligatorio)
+   Texto interactivo: ratio mínimo 4.5:1 (AA).
+   Componentes UI: ratio mínimo 3:1 (1.4.11).
+   Ningún texto por debajo de --text-floor (13px).
+   Objetivos táctiles: --target-min; en sesión activa --target-min-critical.
+   NUNCA suprimir outline sin reemplazar con:
+     box-shadow: var(--input-shadow-focus-neutral);
+
+   REGLA 6 — Theming (cero valores fijos en componentes)
+   Todo token de componente debe referenciar un token de escala.
+
+   REGLA 7 — Presupuesto gráfico (sistema Eclipse)
+   El presupuesto gráfico de una pantalla es inversamente proporcional
+   a la atención que le queda al usuario.
+     Tier 1 Ceremonia → gradient-hero, carmesí, borde tier1
+     Tier 2 Trabajo   → bg-base, borde tier2, un acento de estado
+     Tier 3 Dato      → bone sobre tinta, borde tier3, cero decoración
+
+   JERARQUÍA DE SUPERFICIES:
+   bg-base → bg-surface → bg-elevated → bg-subtle
+
+   EASING DISPONIBLE:
+   --ease-standard  Transiciones generales de UI
+   --ease-spring    Celebración, badges, contadores
+   --ease-out       Elementos que entran a pantalla
+   --ease-in        Elementos que salen de pantalla
+   ============================================================ */
+
+/* ============================================================
+   UTILIDADES SEMÁNTICAS — KPI, Superficies, Actividad
+
+   REGLA: Estas clases son OBLIGATORIAS en su contexto.
+   No reemplazarlas con clases de Tailwind planas.
+
+   .kpi-value / .kpi-label → datos numéricos en dashboards
+   .surface-hero            → suelo de ceremonia (Tier 1)
+   .surface-glass           → overlays flotantes, panels vidrio
+   .indicator-live          → dot pulsante de actividad en vivo
+   .badge-pulse             → badge con pulso de atención
+   ============================================================ */
+
+/* ── KPI — Tipografía de datos ───────────────────────────────
+   Contraste tipográfico dramático para métricas numéricas.
+   OBLIGATORIO en KPIs. PROHIBIDO usar text-4xl font-bold plano.
+
+   Uso:
+   <div class="card-tinted">
+     <span class="kpi-label">Usuarios activos</span>
+     <span class="kpi-value">24.8K</span>
+   </div>
+   ─────────────────────────────────────────────────────────── */
+
+/* Un KPI es un dato, no un título: usa --font-data (Oswald), no la
+   tipografía de impacto. Anton está prohibido sobre números. */
+.kpi-value {
+  font-family: var(--font-data);
+  font-size: var(--text-4xl);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Jerarquía de Superficies ────────────────────────────────
+   surface-hero:  Suelo de ceremonia (Tier 1). Carmesí quemado.
+                  El texto encima va SIEMPRE en --text-primary (bone),
+                  que da 6.9:1 sobre el extremo más claro del degradado.
+                  Tinta encima reprobaría (2.6:1).
+   surface-glass: Overlays flotantes, tooltips ricos, panels glass.
+   ─────────────────────────────────────────────────────────── */
+
+.surface-hero {
+  background: var(--gradient-hero);
+  color: var(--text-primary);
+  position: relative;
+  overflow: hidden;
+
+  /* Resplandor de ember en la base — la corona del eclipse */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(90% 130% at 50% 118%, var(--accent-glow) 0%, transparent 62%);
+    pointer-events: none;
+  }
+}
+
+.surface-glass {
+  background: var(--bg-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+
+  /* Optimización para móviles: el backdrop-filter es extremadamente pesado en la GPU */
+  @media (max-width: 768px) {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    /* Fondo sólido ligeramente más oscuro para mantener contraste al quitar el blur */
+    background: rgba(20, 14, 17, 0.95);
+  }
+}
+
+/* ── Indicadores de Actividad ────────────────────────────────
+   indicator-live: Dot ember pulsante.
+                   Indica sistema activo, conexión online, real-time.
+                   Usa ember y no verde: en este sistema el verde
+                   significa "logrado" y nada más.
+   badge-pulse:    Pulso de atención en un badge/chip.
+
+   REGLA GSAP: Las animaciones de entrada usan GsapAnimationsService.
+   Estas utilidades son SOLO para animaciones de estado continuo (loops).
+   ─────────────────────────────────────────────────────────── */
+
+@keyframes ds-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+
+  70% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes ds-badge-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.1);
+  }
+
+  70% {
+    transform: scale(0.97);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.indicator-live {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  &:empty {
+    width: 8px;
+    height: 8px;
+    justify-content: center;
+    &::before {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+  }
+
+  /* Dot base */
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--ds-brand);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Onda pulsante */
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--ds-brand);
+    animation: ds-pulse-ring 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    z-index: 0;
+  }
+}
+
+.badge-pulse {
+  animation: ds-badge-pop 2.8s var(--ease-spring) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator-live::after,
+  .badge-pulse {
+    animation: none;
+  }
+}
+
+/* ── Cards — Clases globales de tarjeta ────────────────────────
+   Usadas en toda la app (stubs, wrappers de tabla, drawers).
+   .card         → base con fondo, borde, radio y sombra
+   .card-tinted  → gradiente sutil de marca sobre card-bg
+   .card-accent  → borde superior con ds-brand (1 por sección)
+   ─────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: var(--card-padding);
+}
+
+.card-tinted {
+  background: var(--gradient-subtle), var(--card-bg);
+}
+
+.card-accent {
+  border-top: var(--accent-border-width) solid var(--ds-brand);
+}

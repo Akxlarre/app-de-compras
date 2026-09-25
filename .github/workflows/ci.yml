@@ -1,0 +1,33 @@
+name: CI - Integración Continua
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar Dependencias
+        run: npm install --legacy-peer-deps
+
+      - name: Auditoría de Arquitectura
+        run: npm run lint:arch
+
+      - name: Pruebas Unitarias
+        run: npm run test:ci
+
+      - name: Build Web (Angular)
+        run: npm run build:raw

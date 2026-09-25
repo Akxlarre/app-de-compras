@@ -1,0 +1,168 @@
+/* ============================================================
+   TIERS DE INTENSIDAD — Sistema visual "Eclipse"
+   ============================================================
+
+   PRINCIPIO
+   El presupuesto gráfico de una pantalla es inversamente
+   proporcional a la atención que le queda al usuario.
+
+   Nadie mira una app de gimnasio en calma: se mira con pulso
+   alto, una mano ocupada y veinte segundos entre series. Ese
+   contexto define cuánta identidad aguanta cada vista.
+
+   LOS TRES NIVELES
+
+   .tier-ceremonia  Hay tiempo, se mira de frente.
+                    Antes de empezar y después de terminar.
+                    Es lo que la gente captura y comparte.
+                    → resumen de sesión, inicio de rutina,
+                      mesociclo, login, logros
+
+   .tier-trabajo    Atención parcial, se navega.
+                    Buscar, revisar, configurar.
+                    → catálogo, historial, perfil, coach, shell
+
+   .tier-dato       Pulso alto, se ejecuta.
+                    El diseño se aparta y deja trabajar.
+                    → sesión activa, y solo esa
+
+   CÓMO SE USA
+   La clase va en el contenedor raíz de la vista. Expone
+   variables locales que los hijos consumen, de modo que el
+   mismo componente se adapta a su contexto sin duplicarse:
+
+     <ion-content class="tier-dato"> … </ion-content>
+
+     .mi-tarjeta {
+       border-width: var(--tier-border);
+       padding: var(--tier-pad);
+       min-height: var(--tier-target);
+     }
+
+   REGLA DE DENSIDAD
+   Lo que se repite más de 3 veces en pantalla pierde el
+   tratamiento gráfico y se queda con separador. Una tarjeta
+   con borde grueso se ve increíble; veinticuatro seguidas
+   son ruido. Para eso está .tier-repetido.
+   ============================================================ */
+
+/* ── Tier 1 — Ceremonia ─────────────────────────────────── */
+.tier-ceremonia {
+  --tier-border: var(--border-tier1);
+  --tier-pad: var(--space-6);
+  --tier-gap: var(--space-5);
+  --tier-target: var(--target-min);
+  --tier-surface: var(--bg-surface);
+  --tier-accent: var(--ds-brand);
+
+  /* Solo este tier puede usar el suelo carmesí y el degradado
+     de llama. En Tier 2 y 3 están prohibidos. */
+  --tier-ground: var(--gradient-hero);
+  --tier-flame: var(--gradient-flame);
+
+  background: var(--bg-base);
+}
+
+/* ── Tier 2 — Trabajo ───────────────────────────────────── */
+.tier-trabajo {
+  --tier-border: var(--border-tier2);
+  --tier-pad: var(--space-4);
+  --tier-gap: var(--space-3);
+  --tier-target: var(--target-min);
+  --tier-surface: var(--bg-surface);
+  --tier-accent: var(--ds-brand);
+
+  /* Sin suelo ceremonial ni llama: en este tier el color solo
+     marca estado, nunca decora. */
+  --tier-ground: none;
+  --tier-flame: none;
+
+  background: var(--bg-base);
+}
+
+/* ── Tier 3 — Dato ──────────────────────────────────────── */
+.tier-dato {
+  --tier-border: var(--border-tier3);
+  --tier-pad: var(--space-3);
+  --tier-gap: var(--space-2);
+
+  /* Piso táctil más alto: dedos húmedos, en movimiento,
+     con pulso alto. 44px no alcanza acá. */
+  --tier-target: var(--target-min-critical);
+  --tier-surface: transparent;
+  --tier-accent: var(--ds-brand);
+  --tier-ground: none;
+  --tier-flame: none;
+
+  background: var(--bg-base);
+
+  /* Cero decoración compitiendo con el dato. Lo único que se
+     mueve en esta pantalla es el cronómetro, que se excluye
+     explícitamente con .tier-cronometro. */
+  *:not(.tier-cronometro):not(.tier-cronometro *) {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ── Elemento repetido ──────────────────────────────────────
+   Aplicar a filas que aparecen más de 3 veces en pantalla.
+   Cambia borde por separador y quita relleno de superficie. */
+.tier-repetido {
+  border: none;
+  border-top: 1px solid var(--border-default);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tier-repetido:first-child {
+  border-top: none;
+}
+
+/* ── Objetivo táctil ────────────────────────────────────────
+   Garantiza el piso del tier en cualquier control. Usar en
+   botones, filas clicables e inputs. */
+.tier-target {
+  min-height: var(--tier-target, var(--target-min));
+  min-width: var(--tier-target, var(--target-min));
+}
+
+/* ── Superficie de ceremonia ────────────────────────────────
+   Solo tiene efecto dentro de .tier-ceremonia: en los otros
+   tiers --tier-ground es `none` y la regla no pinta nada.
+   El presupuesto gráfico se hace cumplir por CSS, no por
+   disciplina del que escribe la vista. */
+.tier-ground {
+  background: var(--tier-ground, none);
+  color: var(--text-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Piso tipográfico ───────────────────────────────────────
+   Ningún texto de la app baja de --text-floor (13px), y la
+   tipografía de impacto no se usa por debajo de su propio
+   piso porque deja de ser legible. */
+.tier-ceremonia,
+.tier-trabajo,
+.tier-dato {
+  font-size: max(var(--text-floor), 1rem);
+}
+
+/* Anton está prohibido sobre datos y en Tier 3 completo. */
+.tier-dato .kpi-value,
+.tier-dato h1,
+.tier-dato h2 {
+  font-family: var(--font-data);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-ceremonia *,
+  .tier-trabajo *,
+  .tier-dato * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

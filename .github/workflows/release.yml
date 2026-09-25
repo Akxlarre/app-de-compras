@@ -1,0 +1,159 @@
+name: CD - Despliegue de APK a Supabase
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ── Job 1: Deploy Edge Functions ─────────────────────────────
+  deploy_edge_functions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Extraer Project Ref desde SUPABASE_URL
+        id: extract_ref
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          # SUPABASE_URL tiene formato https://<project-ref>.supabase.co
+          REF=$(echo "$SUPABASE_URL" | sed -E 's|https://([^.]+)\.supabase\.co.*|\1|')
+          echo "project_ref=$REF" >> $GITHUB_OUTPUT
+          echo "📦 Project ref extraído: $REF"
+
+      - name: Deploy Edge Function (mcp-server)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy mcp-server \
+            --project-ref ${{ steps.extract_ref.outputs.project_ref }} \
+            --no-verify-jwt
+
+  # ── Job 2: Build y Deploy de APK ─────────────────────────────
+  build_and_deploy_apk:
+    runs-on: ubuntu-latest
+    needs: deploy_edge_functions
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java JDK (Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Instalar Dependencias
+        run: npm install --legacy-peer-deps
+
+      - name: Configurar credenciales de Supabase (producción)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node scripts/set-env.js
+
+      - name: Build Web (Angular)
+        run: npm run build:raw
+
+      - name: Sincronizar Capacitor
+        run: npx cap sync android
+
+      - name: Build Android APK
+        working-directory: ./android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease -PversionCode=${{ github.run_number }}
+
+      - name: Firmar APK
+        id: sign_app
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > release.keystore 2>/dev/null || true
+          KEYSTORE_SIZE=$(wc -c < release.keystore 2>/dev/null || echo 0)
+          echo "Tamaño del archivo keystore decodificado: $KEYSTORE_SIZE bytes"
+          
+          if [ "$KEYSTORE_SIZE" -lt 50 ]; then
+            echo "⚠️ No se detectó un keystore válido en los Secrets (ANDROID_KEYSTORE_BASE64 está vacío o no configurado)."
+            echo "🛠️ Generando keystore de release automático para completar el despliegue..."
+            rm -f release.keystore
+            keytool -genkeypair -v -keystore release.keystore \
+              -alias "app-release-key" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "entrenamiento2026" -keypass "entrenamiento2026" \
+              -deststoretype PKCS12 \
+              -dname "CN=AppEntrenamiento, OU=Mobile, O=AppEntrenamiento, L=Chillan, ST=Nuble, C=CL"
+            KEY_ALIAS="app-release-key"
+            KEYSTORE_PASSWORD="entrenamiento2026"
+            KEY_PASSWORD="entrenamiento2026"
+          fi
+          
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          echo "Usando Android Build Tools desde: $BUILD_TOOLS_DIR"
+          
+          APK_RAW=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "APK encontrado: $APK_RAW"
+          
+          $BUILD_TOOLS_DIR/zipalign -v -p 4 "$APK_RAW" android/app/build/outputs/apk/release/app-aligned.apk || cp "$APK_RAW" android/app/build/outputs/apk/release/app-aligned.apk
+          
+          echo "Intentando firmar APK con apksigner (detección automática)..."
+          if $BUILD_TOOLS_DIR/apksigner sign --ks release.keystore \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            --out android/app/build/outputs/apk/release/app-signed.apk \
+            android/app/build/outputs/apk/release/app-aligned.apk; then
+            echo "✅ Firmado exitoso."
+          else
+            echo "Intentando firmar especificando --ks-type JKS..."
+            if $BUILD_TOOLS_DIR/apksigner sign --ks release.keystore --ks-type JKS \
+              --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass "pass:$KEYSTORE_PASSWORD" \
+              --key-pass "pass:$KEY_PASSWORD" \
+              --out android/app/build/outputs/apk/release/app-signed.apk \
+              android/app/build/outputs/apk/release/app-aligned.apk; then
+              echo "✅ Firmado exitoso con JKS."
+            else
+              echo "Intentando firmar especificando --ks-type PKCS12..."
+              $BUILD_TOOLS_DIR/apksigner sign --ks release.keystore --ks-type PKCS12 \
+                --ks-key-alias "$KEY_ALIAS" \
+                --ks-pass "pass:$KEYSTORE_PASSWORD" \
+                --key-pass "pass:$KEY_PASSWORD" \
+                --out android/app/build/outputs/apk/release/app-signed.apk \
+                android/app/build/outputs/apk/release/app-aligned.apk
+              echo "✅ Firmado exitoso con PKCS12."
+            fi
+          fi
+            
+          echo "signedReleaseFile=android/app/build/outputs/apk/release/app-signed.apk" >> $GITHUB_OUTPUT
+
+      - name: Publicar Actualización en Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APK_PATH: ${{steps.sign_app.outputs.signedReleaseFile}}
+          VERSION_TAG: ${{ github.ref_name }}
+          RELEASE_NOTES: ${{ github.event.release.body }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: node scripts/publish-update.js

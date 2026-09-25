@@ -1,0 +1,102 @@
+/* Design System Tokens */
+@use './styles/tokens/variables';
+
+/* PrimeNG overrides (design system tokens + toast position) */
+@use './styles/vendors/primeng-overrides';
+
+/* Layouts */
+@use './styles/layout/bento-grid';
+@use './styles/layout/page-shell';
+@use './styles/layout/tiers';
+
+/* Motion — View Transitions API (page navigation) */
+@use './styles/motion/view-transitions';
+
+/* ============================================================
+   GLOBAL UI POLISH — Dark Premium Theme
+   ============================================================ */
+
+/* Ocultar spinners nativos en inputs numéricos */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Scrollbar dark sutil */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Smooth scrolling global */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Fondo de toda vista: la tinta de Eclipse, vía el mapeo de Ionic en
+   theme/variables.css. Sin respaldo: la variable siempre está definida. */
+ion-content {
+  --background: var(--ion-background-color);
+}
+
+ion-modal {
+  --background: #0d0d11;
+  --height: 94%;
+  --border-radius: 24px 24px 0 0;
+  --box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  align-items: flex-end;
+}
+
+ion-modal::part(content) {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+}
+
+/* Typography — Anton (impacto) / Oswald (datos) / Archivo (microcopy)
+   Cargadas con <link preconnect> en index.html (NO @import — evita bloquear
+   el render). Referenciadas por --font-display / --font-data / --font-body
+   en _variables.scss.
+
+   Nota: este comentario antes decía "Bricolage Grotesque", pero ese <link>
+   nunca existió en index.html — la app venía cayendo a system-ui. */
+
+/* Bloqueo de scroll (drawer mobile, modales) */
+body.layout-drawer-open,
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Modal overlay wrapper — estilos globales.
+   El div se crea via document.createElement (fuera de encapsulación Angular),
+   por lo que necesita !important para garantizar posicionamiento. */
+.modal-overlay__wrapper {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+  overflow: auto;
+}
+
+.modal-overlay__wrapper > * {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+}

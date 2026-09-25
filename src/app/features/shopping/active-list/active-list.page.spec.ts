@@ -1,0 +1,60 @@
+import { TestBed } from '@angular/core/testing';
+import { ActiveListPage } from './active-list.page';
+import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
+import { ConfirmationService } from 'primeng/api';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { signal } from '@angular/core';
+
+describe('ActiveListPage', () => {
+  let component: ActiveListPage;
+  let mockFacade: any;
+
+  beforeEach(() => {
+    // Mock del Facade y su Signal 'data'
+    mockFacade = {
+      data: signal(null),
+      isLoading: signal(false),
+      error: signal(null),
+      initialize: vi.fn(),
+      toggleItemCheck: vi.fn(),
+      deleteItem: vi.fn(),
+      completeList: vi.fn()
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        ActiveListPage,
+        { provide: ShoppingListFacade, useValue: mockFacade },
+        { provide: ConfirmationService, useValue: { confirm: vi.fn() } }
+      ]
+    });
+
+    component = TestBed.inject(ActiveListPage);
+  });
+
+  it('should calculate KPIs correctly via Computed Signals', () => {
+    // Escenario 1: Sin data
+    expect(component.listSummary()).toEqual({
+      total: 0, checked: 0, pending: 0, estimatedCost: 0
+    });
+
+    // Escenario 2: Lista con ítems mixtos y precios
+    mockFacade.data.set({
+      id: 'list-1',
+      list_items: [
+        { id: '1', is_checked: false, quantity: 2, product: { last_price: 1000 } },
+        { id: '2', is_checked: true, quantity: 1, product: { last_price: 500 } },
+        { id: '3', is_checked: false, quantity: 3, product: null } // Producto sin precio guardado
+      ]
+    });
+
+    const kpis = component.listSummary();
+    
+    expect(kpis.total).toBe(3); // 3 tipos de productos
+    expect(kpis.checked).toBe(1); // 1 tickeado
+    expect(kpis.pending).toBe(2); // 2 pendientes
+    
+    // Costo estimado: (2 * 1000) + (1 * 500) + (3 * 0) = 2500
+    expect(kpis.estimatedCost).toBe(2500);
+  });
+});

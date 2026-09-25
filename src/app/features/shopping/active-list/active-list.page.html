@@ -1,0 +1,225 @@
+<div class="h-full flex flex-col bg-base">
+  <app-header title="Lista de Compras" [showBrand]="true" />
+
+  <main class="flex-1 overflow-y-auto px-4 pb-32">
+    <div class="flex flex-col gap-6">
+      @if (facade.isLoading() && !facade.hasData()) {
+        <!-- Skeleton Loading SWR -->
+        <div class="flex flex-col gap-4 mt-4">
+          <app-skeleton-block variant="text" width="40%" height="24px" />
+          <div class="flex flex-col gap-3">
+            <app-skeleton-block variant="rect" width="100%" height="70px" />
+            <app-skeleton-block variant="rect" width="100%" height="70px" />
+            <app-skeleton-block variant="rect" width="100%" height="70px" />
+          </div>
+        </div>
+      } @else if (facade.error()) {
+        
+        @if (facade.error() === 'NO_ACTIVE_LIST') {
+          <app-empty-state
+            icon="shopping-cart"
+            message="No hay ninguna lista activa"
+            subtitle="Crea una lista nueva para empezar a agregar productos al carrito."
+            actionLabel="Crear Lista"
+            actionIcon="plus"
+            (action)="createNewList()"
+          />
+        } @else {
+          <app-error-state
+            [title]="'Error al cargar la lista'"
+            [message]="facade.error()!"
+            retryLabel="Reintentar"
+            (retry)="facade.retryLoad()"
+          />
+        }
+
+      } @else if (facade.data(); as list) {
+        
+        <div class="flex flex-col gap-5 mt-2 relative overflow-hidden">
+          
+          <!-- Header and Actions -->
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold text-text-primary">{{ list.name }}</h2>
+              <p class="text-sm text-text-muted mt-1">Est. Costo: <span class="text-brand font-semibold">${{ listSummary().estimatedCost | number:'1.0-0' }}</span></p>
+            </div>
+            @if (listSummary().total > 0) {
+                <div class="flex flex-col items-end gap-2">
+                  <button 
+                    class="px-5 py-2 bg-brand text-brand-contrast rounded-full text-sm font-bold shadow-md shadow-brand/20 transition-transform active:scale-95"
+                    (click)="completeList(list.id)"
+                  >
+                    Finalizar
+                  </button>
+                  <button 
+                    class="text-xs text-text-muted font-medium hover:text-text-primary active:scale-95 transition-all flex items-center gap-1"
+                    (click)="saveTemplate()"
+                  >
+                    <app-icon name="bookmark" [size]="12" />
+                    Guardar Plantilla
+                  </button>
+                </div>
+              }
+          </div>
+
+          <!-- Progress / KPIs minimalistas (Sin cajas) -->
+          <div class="flex gap-4 mb-2 px-2">
+            <div class="flex-1 flex flex-col items-start justify-center">
+              <span class="text-3xl font-black text-text-primary">{{ listSummary().pending }}</span>
+              <span class="text-[11px] uppercase tracking-widest text-text-muted font-bold mt-1">Pendientes</span>
+            </div>
+            <div class="flex-1 flex flex-col items-start justify-center">
+              <span class="text-3xl font-black text-text-primary">{{ listSummary().checked }}</span>
+              <span class="text-[11px] uppercase tracking-widest text-text-muted font-bold mt-1">En carrito</span>
+            </div>
+          </div>
+
+          <!-- Lista de Productos -->
+          @if (list.list_items.length === 0) {
+            <div class="py-8 flex flex-col items-center justify-center text-center px-4">
+              <app-icon name="sparkles" [size]="40" class="text-brand mb-4 opacity-80" />
+              <h3 class="text-text-primary font-bold text-xl">Lista Vacía</h3>
+              <p class="text-sm text-text-muted mt-2 max-w-[250px] mb-8">Empieza desde cero tocando el `+` o usa un atajo rápido.</p>
+              
+              <div class="w-full flex flex-col gap-3">
+                @if (facade.lastCompletedList(); as lastList) {
+                  <button 
+                    class="w-full bg-surface border border-brand/40 p-4 rounded-2xl flex items-center justify-between active:scale-95 transition-transform shadow-sm"
+                    (click)="cloneList(lastList.id)"
+                  >
+                    <div class="text-left flex-1">
+                      <p class="font-bold text-text-primary text-base">🔄 Repetir última compra</p>
+                      <p class="text-xs text-text-muted mt-1">{{ lastList.list_items.length }} ítems guardados</p>
+                    </div>
+                    <app-icon name="chevron-right" [size]="20" class="text-text-muted" />
+                  </button>
+                }
+
+                @for (template of facade.templates(); track template.id) {
+                  <button 
+                    class="w-full bg-surface border border-border-default p-4 rounded-2xl flex items-center justify-between active:scale-95 transition-transform"
+                    (click)="cloneList(template.id)"
+                  >
+                    <div class="text-left flex-1">
+                      <p class="font-bold text-text-primary text-base">📝 {{ template.name.replace('[TEMPLATE] ', '') }}</p>
+                      <p class="text-xs text-text-muted mt-1">{{ template.list_items.length }} ítems</p>
+                    </div>
+                    <app-icon name="chevron-right" [size]="20" class="text-text-muted" />
+                  </button>
+                }
+              </div>
+            </div>
+          } @else {
+            <ion-list #ionList style="background: transparent;" class="m-0 p-0">
+              @for (item of sortedListItems(); track item.id; let last = $last) {
+                <ion-item-sliding 
+                  class="rounded-2xl overflow-hidden transition-shadow duration-200"
+                  [class.mb-4]="!last"
+                  [class.shadow-sm]="!item.is_checked"
+                  style="background: transparent;"
+                >
+                  <ion-item 
+                    lines="none" 
+                    [style.--background]="item.is_checked ? 'transparent' : 'var(--bg-surface)'"
+                    style="--padding-start: 0; --padding-end: 0; --inner-padding-end: 0; transition: --background 0.2s ease;"
+                  >
+                    <div 
+                      class="w-full flex items-center gap-4 p-4 transition-colors duration-200 cursor-pointer"
+                      (click)="toggleItem(item.id, item.is_checked)">
+                      
+                      <!-- Botón circular gigante para fácil touch -->
+                      <div 
+                        class="w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors pointer-events-none shrink-0"
+                        [class.border-brand]="!item.is_checked"
+                        [class.bg-brand]="item.is_checked"
+                        [class.border-transparent]="item.is_checked"
+                      >
+                        @if (item.is_checked) {
+                          <app-icon name="check" [size]="16" class="text-brand-contrast" />
+                        }
+                      </div>
+
+                      <div class="flex-1 flex flex-col min-w-0 transition-opacity duration-200" [class.opacity-40]="item.is_checked">
+                        <span class="font-semibold text-lg truncate transition-colors duration-200" 
+                              [class.line-through]="item.is_checked" 
+                              [class.text-text-muted]="item.is_checked" 
+                              [class.text-text-primary]="!item.is_checked">
+                          {{ item.product?.name || 'Producto sin nombre' }}
+                        </span>
+                        
+                        <div class="flex items-center gap-2 text-xs text-text-muted mt-0.5">
+                          @if (item.product?.category) {
+                            <span class="truncate">{{ item.product?.category }}</span>
+                          }
+                          @if (item.product?.last_price) {
+                            <span>•</span>
+                            <span>${{ item.product?.last_price }}</span>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- Stepper Pulgar-First -->
+                      <div 
+                        class="flex items-center bg-base rounded-full border border-border-subtle overflow-hidden z-10 shrink-0 transition-opacity duration-200" 
+                        [class.opacity-40]="item.is_checked"
+                        [class.pointer-events-none]="item.is_checked"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <button 
+                          class="w-12 h-12 flex items-center justify-center text-text-muted hover:bg-surface active:bg-border-subtle transition-colors disabled:opacity-30"
+                          [disabled]="(item.quantity || 1) <= 1"
+                          (click)="updateQuantity(item.id, item.quantity || 1, -1, $event)"
+                        >
+                          <app-icon name="minus" [size]="20" />
+                        </button>
+                        <div class="w-8 flex justify-center font-black text-base text-text-primary">{{ item.quantity || 1 }}</div>
+                        <button 
+                          class="w-12 h-12 flex items-center justify-center text-brand hover:bg-surface active:bg-border-subtle transition-colors"
+                          (click)="updateQuantity(item.id, item.quantity || 1, 1, $event)"
+                        >
+                          <app-icon name="plus" [size]="20" />
+                        </button>
+                      </div>
+                    </div>
+                  </ion-item>
+
+                  <ion-item-options side="end">
+                    <ion-item-option color="danger" (click)="deleteItem(item.id)">
+                      <div class="flex flex-col items-center justify-center w-full h-full px-4">
+                        <app-icon name="trash-2" [size]="24" class="text-white mb-1" />
+                        <span class="text-[10px] uppercase font-bold text-white">Borrar</span>
+                      </div>
+                    </ion-item-option>
+                  </ion-item-options>
+                </ion-item-sliding>
+              }
+            </ion-list>
+          }
+        </div>
+        
+      }
+    </div>
+  </main>
+  
+  <!-- Botón flotante Global (Fixed) -->
+  @if (facade.data()) {
+    <button 
+      class="fixed bottom-[calc(env(safe-area-inset-bottom)+100px)] right-5 w-16 h-16 bg-brand text-brand-contrast rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] flex items-center justify-center hover:scale-105 transition-transform z-50"
+      (click)="isSearchOpen.set(true)"
+    >
+      <app-icon name="plus" [size]="28" />
+    </button>
+  }
+</div>
+
+<app-product-search
+  [visible]="isSearchOpen()"
+  (visibleChange)="isSearchOpen.set($event)"
+/>
+
+
+
+
+
+
+

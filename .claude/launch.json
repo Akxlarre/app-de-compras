@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "app-de-entrenamiento",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:raw"],
+      "port": 4200
+    }
+  ]
+}

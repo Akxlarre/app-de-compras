@@ -1,0 +1,36 @@
+{
+  "koa-guardrails": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node adapters/antigravity-bridge.js pre",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "view_file|write_to_file|replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node adapters/antigravity-bridge.js post",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node adapters/antigravity-bridge.js stop",
+        "timeout": 30
+      }
+    ]
+  }
+}

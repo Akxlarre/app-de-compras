@@ -1,0 +1,76 @@
+/**
+ * Tema de Ionic — Eclipse
+ * -----------------------------------------------------
+ * Eclipse es un tema oscuro único: Ionic no sigue el modo del teléfono.
+ * dark.system.css envolvía la paleta en prefers-color-scheme: dark, y con
+ * el teléfono en modo claro Ionic se quedaba sin paleta (fix-028).
+ */
+@import '@ionic/angular/css/palettes/dark.always.css';
+
+/* Variables de aplicación de Ionic apuntando a los tokens de Eclipse.
+   Mismos selectores que la paleta importada (:root, :root.ios, :root.md):
+   ganan por venir después, sin subir la especificidad.
+   Los canales -rgb van en literal porque CSS no puede extraerlos de un
+   var(): son los de --brand-ink (#0a0608) y --brand-bone (#f5f0e6). */
+:root,
+:root.ios,
+:root.md {
+  --ion-background-color: var(--bg-base);
+  --ion-background-color-rgb: 10, 6, 8;
+  --ion-text-color: var(--text-primary);
+  --ion-text-color-rgb: 245, 240, 230;
+  --ion-item-background: var(--bg-surface);
+  --ion-toolbar-background: var(--bg-surface);
+  --ion-tab-bar-background: var(--bg-surface);
+  --ion-tab-bar-background-focused: var(--bg-elevated);
+  --ion-card-background: var(--bg-surface);
+
+  /* ion-content fija font-family: var(--ion-font-family) en su :host,
+     y Ionic la deja en Roboto (md) o en la del sistema (iOS): sin esto,
+     casi todo el texto de la app salía en Roboto (fix-037). */
+  --ion-font-family: var(--font-body);
+}
+
+/* Colores con nombre de Ionic (color="primary", "danger"...) en la paleta
+   Eclipse (fix-030). El texto encima va en tinta en los cinco: todos pasan
+   AA con tinta, y blanco sobre ember reprueba (2.9:1).
+   -shade y -tint siguen la fórmula de Ionic: 12% hacia negro y 10% hacia
+   blanco. Los canales -rgb van en literal, igual que arriba. */
+:root,
+:root.ios,
+:root.md {
+  --ion-color-primary: var(--color-primary);
+  --ion-color-primary-rgb: 255, 106, 26;
+  --ion-color-primary-contrast: var(--brand-ink);
+  --ion-color-primary-contrast-rgb: 10, 6, 8;
+  --ion-color-primary-shade: #e05d17;
+  --ion-color-primary-tint: var(--color-primary-hover);
+
+  --ion-color-medium: var(--text-muted);
+  --ion-color-medium-rgb: 133, 122, 115;
+  --ion-color-medium-contrast: var(--brand-ink);
+  --ion-color-medium-contrast-rgb: 10, 6, 8;
+  --ion-color-medium-shade: #756b65;
+  --ion-color-medium-tint: #918781;
+
+  --ion-color-danger: var(--state-error);
+  --ion-color-danger-rgb: 232, 69, 90;
+  --ion-color-danger-contrast: var(--brand-ink);
+  --ion-color-danger-contrast-rgb: 10, 6, 8;
+  --ion-color-danger-shade: #cc3d4f;
+  --ion-color-danger-tint: #ea586b;
+
+  --ion-color-success: var(--state-success);
+  --ion-color-success-rgb: 16, 185, 129;
+  --ion-color-success-contrast: var(--brand-ink);
+  --ion-color-success-contrast-rgb: 10, 6, 8;
+  --ion-color-success-shade: #0ea372;
+  --ion-color-success-tint: #28c08e;
+
+  --ion-color-warning: var(--state-warning);
+  --ion-color-warning-rgb: 255, 200, 61;
+  --ion-color-warning-contrast: var(--brand-ink);
+  --ion-color-warning-contrast-rgb: 10, 6, 8;
+  --ion-color-warning-shade: #e0b036;
+  --ion-color-warning-tint: #ffce50;
+}
