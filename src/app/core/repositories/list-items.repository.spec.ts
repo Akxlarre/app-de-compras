@@ -18,21 +18,21 @@ describe('ListItemsRepository', () => {
 
   it('add inserta el ítem', async () => {
     const q = queryMock();
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     await repo.add('l1', 'p1', 2);
 
-    expect(mock.client.from).toHaveBeenCalledWith('list_items');
+    expect(mock.shop.from).toHaveBeenCalledWith('list_items');
     expect(q.insert).toHaveBeenCalledWith({ list_id: 'l1', product_id: 'p1', quantity: 2 });
   });
 
   it('addMany inserta en lote y no consulta si la lista está vacía', async () => {
     const q = queryMock();
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
     const items = [{ list_id: 'l1', product_id: 'p1', quantity: 1 }];
 
     await repo.addMany([]);
-    expect(mock.client.from).not.toHaveBeenCalled();
+    expect(mock.shop.from).not.toHaveBeenCalled();
 
     await repo.addMany(items);
     expect(q.insert).toHaveBeenCalledWith(items);
@@ -40,7 +40,7 @@ describe('ListItemsRepository', () => {
 
   it('findByList devuelve product_id y quantity', async () => {
     const q = queryMock({ data: [{ product_id: 'p1', quantity: 3 }] });
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     expect(await repo.findByList('l1')).toEqual([{ product_id: 'p1', quantity: 3 }]);
     expect(q.select).toHaveBeenCalledWith('product_id, quantity');
@@ -52,7 +52,7 @@ describe('ListItemsRepository', () => {
     ['setChecked', (r: ListItemsRepository) => r.setChecked('i1', true), { is_checked: true }],
   ])('%s actualiza por id', async (_, act, patch) => {
     const q = queryMock();
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     await act(repo);
 
@@ -62,7 +62,7 @@ describe('ListItemsRepository', () => {
 
   it('remove borra por id', async () => {
     const q = queryMock();
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     await repo.remove('i1');
 
@@ -72,7 +72,7 @@ describe('ListItemsRepository', () => {
 
   it('lanza el error de Supabase', async () => {
     const error = { message: 'rls' };
-    mock.client.from.mockReturnValue(queryMock({ error }));
+    mock.shop.from.mockReturnValue(queryMock({ error }));
     await expect(repo.remove('i1')).rejects.toBe(error);
   });
 
@@ -86,7 +86,7 @@ describe('ListItemsRepository', () => {
     expect(event).toBe('postgres_changes');
     expect(filter).toEqual({
       event: '*',
-      schema: 'public',
+      schema: 'shop',
       table: 'list_items',
       filter: 'list_id=eq.l1',
     });

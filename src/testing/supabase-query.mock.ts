@@ -33,10 +33,19 @@ export function queryMock(result: { data?: unknown; error?: unknown } = {}): Que
   return builder;
 }
 
-/** `SupabaseService` falso con un `client` cuyas piezas se configuran por test. */
+/**
+ * `SupabaseService` falso con un `client` cuyas piezas se configuran por test.
+ * `client.from/rpc` son el schema `public`; `shop.from/rpc` solo se alcanzan vía
+ * `client.schema('shop')`, así un repository que olvide el schema no llama a `shop.*`.
+ */
 export function supabaseServiceMock() {
   const channel: any = { on: vi.fn(() => channel), subscribe: vi.fn(() => channel) };
+  const shop = { from: vi.fn(), rpc: vi.fn() };
   const client = {
+    schema: vi.fn((name: string) => {
+      if (name !== 'shop') throw new Error(`schema inesperado en el mock: ${name}`);
+      return shop;
+    }),
     from: vi.fn(),
     rpc: vi.fn(),
     functions: { invoke: vi.fn() },
@@ -44,5 +53,5 @@ export function supabaseServiceMock() {
     channel: vi.fn(() => channel),
     removeChannel: vi.fn(),
   };
-  return { service: { client }, client, channel };
+  return { service: { client }, client, shop, channel };
 }

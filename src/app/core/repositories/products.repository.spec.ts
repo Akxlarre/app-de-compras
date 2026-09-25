@@ -18,10 +18,10 @@ describe('ProductsRepository', () => {
 
   it('findByFamily filtra por familia, ordena por nombre y respeta el límite', async () => {
     const q = queryMock({ data: [{ id: 'p1' }] });
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     expect(await repo.findByFamily('fam-1', 8)).toEqual([{ id: 'p1' }]);
-    expect(mock.client.from).toHaveBeenCalledWith('products');
+    expect(mock.shop.from).toHaveBeenCalledWith('products');
     expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
     expect(q.order).toHaveBeenCalledWith('name');
     expect(q.limit).toHaveBeenCalledWith(8);
@@ -29,7 +29,7 @@ describe('ProductsRepository', () => {
 
   it('findByFamily sin límite no llama a limit', async () => {
     const q = queryMock({ data: null });
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     expect(await repo.findByFamily('fam-1')).toEqual([]);
     expect(q.limit).not.toHaveBeenCalled();
@@ -37,7 +37,7 @@ describe('ProductsRepository', () => {
 
   it('searchByName usa ilike con comodines', async () => {
     const q = queryMock({ data: [] });
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     await repo.searchByName('lec', 20);
 
@@ -47,7 +47,7 @@ describe('ProductsRepository', () => {
 
   it('create inserta (con precio opcional) y devuelve el producto', async () => {
     const q = queryMock({ data: { id: 'p9', name: 'Pan' } });
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     expect(await repo.create({ name: 'Pan', familyId: 'fam-1', lastPrice: 900 })).toEqual({
       id: 'p9',
@@ -61,7 +61,7 @@ describe('ProductsRepository', () => {
 
   it('findIdByName busca sin distinguir mayúsculas dentro de la familia', async () => {
     const q = queryMock({ data: { id: 'p1' } });
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     expect(await repo.findIdByName('fam-1', 'Leche')).toBe('p1');
     expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
@@ -70,13 +70,13 @@ describe('ProductsRepository', () => {
   });
 
   it('findIdByName devuelve null si no existe', async () => {
-    mock.client.from.mockReturnValue(queryMock({ data: null }));
+    mock.shop.from.mockReturnValue(queryMock({ data: null }));
     expect(await repo.findIdByName('fam-1', 'x')).toBeNull();
   });
 
   it('updatePrice actualiza last_price y updated_at', async () => {
     const q = queryMock();
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     await repo.updatePrice('p1', 1990);
 
@@ -86,7 +86,7 @@ describe('ProductsRepository', () => {
 
   it('lanza el error de Supabase', async () => {
     const error = { message: 'boom' };
-    mock.client.from.mockReturnValue(queryMock({ error }));
+    mock.shop.from.mockReturnValue(queryMock({ error }));
     await expect(repo.searchByName('x', 1)).rejects.toBe(error);
   });
 });

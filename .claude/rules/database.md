@@ -10,7 +10,8 @@ paths:
 
 ## Migraciones
 
-- Todo DDL en `supabase/migrations/`
+- Todo DDL va en [plataforma-db](https://github.com/Akxlarre/plataforma-db) (`supabase/migrations/` de ese repo). **Esta app no tiene migraciones** (ADR-001).
+- Tablas de compras en el schema `shop` (repositories: `client.schema('shop')`); `profiles` y `app_updates` en `public`.
 - Naming: `YYYYMMDDHHMMSS_<dominio>_<tipo>_<descripcion>.sql`
 - **NUNCA** alterar la BD desde el Dashboard de Supabase manualmente
 - Los scripts deben ser idempotentes (`CREATE TABLE IF NOT EXISTS`, etc.)

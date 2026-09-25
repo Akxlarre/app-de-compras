@@ -8,17 +8,17 @@ export interface NewProduct {
   lastPrice?: number;
 }
 
-/** Acceso tipado al catálogo `products`. Lanza el error de Supabase. */
+/** Acceso tipado al catálogo `shop.products`. Lanza el error de Supabase. */
 @Injectable({ providedIn: 'root' })
 export class ProductsRepository {
   private readonly supabase = inject(SupabaseService);
 
+  private get db() {
+    return this.supabase.client.schema('shop');
+  }
+
   async findByFamily(familyId: string, limit?: number): Promise<Product[]> {
-    let query = this.supabase.client
-      .from('products')
-      .select('*')
-      .eq('family_id', familyId)
-      .order('name');
+    let query = this.db.from('products').select('*').eq('family_id', familyId).order('name');
     if (limit !== undefined) query = query.limit(limit);
 
     const { data, error } = await query;
@@ -28,7 +28,7 @@ export class ProductsRepository {
 
   /** Búsqueda por nombre parcial (RLS limita a mi familia). */
   async searchByName(term: string, limit: number): Promise<Product[]> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.db
       .from('products')
       .select('*')
       .ilike('name', `%${term}%`)
@@ -42,18 +42,14 @@ export class ProductsRepository {
     const row: Record<string, unknown> = { name: input.name, family_id: input.familyId };
     if (input.lastPrice !== undefined) row['last_price'] = input.lastPrice;
 
-    const { data, error } = await this.supabase.client
-      .from('products')
-      .insert(row)
-      .select()
-      .single();
+    const { data, error } = await this.db.from('products').insert(row).select().single();
     if (error) throw error;
     return data as Product;
   }
 
   /** Id del producto con ese nombre exacto (sin distinguir mayúsculas), o null. */
   async findIdByName(familyId: string, name: string): Promise<string | null> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.db
       .from('products')
       .select('id')
       .eq('family_id', familyId)
@@ -65,7 +61,7 @@ export class ProductsRepository {
   }
 
   async updatePrice(productId: string, price: number): Promise<void> {
-    const { error } = await this.supabase.client
+    const { error } = await this.db
       .from('products')
       .update({ last_price: price, updated_at: new Date().toISOString() })
       .eq('id', productId);

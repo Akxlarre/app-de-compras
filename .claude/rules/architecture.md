@@ -27,7 +27,7 @@ src/
 │   ├── tokens/            # SCSS variables — NUNCA hardcodear en componentes
 │   └── vendors/           # PrimeNG overrides
 supabase/
-└── migrations/            # SQL idempotentes — NUNCA alterar BD manualmente
+└── functions/             # Edge Functions de la app (el esquema vive en plataforma-db)
 ```
 
 ## Capas de acceso a datos (de arriba a abajo)
@@ -53,6 +53,8 @@ Corre en `npm run test:ci` (y en CI). Falla si:
 | (c) | un facade (salvo `AuthFacade`) importa `SupabaseService` |
 | (d) | `@supabase/supabase-js` importado fuera de repositories / infraestructura / models |
 | (e) | un facade importa otro facade (salvo `BaseFacade`) |
+| (f) | `environment*.ts` con claves que no sean `production`/`supabase.url`/`supabase.anonKey` |
+| (g) | un repository de compras usa `client.from/rpc` directo o `schema: 'public'` (compras vive en `shop`; excepción: `profiles`, `app-updates`) |
 
 Si una regla te bloquea, **no la relajes**: crea o amplía el Repository que corresponda.
 

@@ -3,6 +3,8 @@
 > Única capa que toca `SupabaseService.client` (queries, RPC, Realtime, Storage, Edge Functions).
 > Contrato: un método por operación, retornan modelos de `core/models/`, **lanzan** el error de Supabase.
 > Guardia: `src/app/architecture.spec.ts` (corre en `npm run test:ci` / CI).
+> Schema: `FamilyRepository`, `ShoppingListsRepository`, `ListItemsRepository` y `ProductsRepository`
+> consultan `shop` (`client.schema('shop')`, regla g); `profiles` y `app_updates` siguen en `public`.
 > Mantener a mano: `npm run indices:sync` no escanea `core/repositories/`.
 
 | Repository | Métodos | Tabla / recurso | Archivo |
