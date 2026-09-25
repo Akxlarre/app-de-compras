@@ -26,7 +26,6 @@
  */
 export const environment = {
   production: true,
-  geminiApiKey: '',
   supabase: {
     // Reemplazar por el script set-env.js en CI — no usar process.env directamente
     url: '',

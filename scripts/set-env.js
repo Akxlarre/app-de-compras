@@ -21,7 +21,6 @@ const envProdPath = path.join(__dirname, '..', 'src', 'environments', 'environme
 
 const url = process.env.SUPABASE_URL;
 const anonKey = process.env.SUPABASE_ANON_KEY;
-const geminiApiKey = process.env.GEMINI_API_KEY || '';
 
 if (!url || !anonKey) {
   console.error('❌  set-env.js: faltan variables de entorno requeridas.');
@@ -32,13 +31,12 @@ if (!url || !anonKey) {
   process.exit(1);
 }
 
-if (!geminiApiKey) {
-  console.warn('⚠️  GEMINI_API_KEY no está seteada — el Coach Virtual IA (Gemini) no funcionará en este build.');
-}
+// GEMINI_API_KEY NO se inyecta acá: iría dentro del APK y quedaría extraíble. Vive como
+// secreto del proyecto Supabase y solo la lee la Edge Function `process-receipt`
+// (release.yml la publica con `supabase secrets set`).
 
 const content = `export const environment = {
   production: true,
-  geminiApiKey: '${geminiApiKey}',
   supabase: {
     url: '${url}',
     anonKey: '${anonKey}',
@@ -50,4 +48,3 @@ fs.writeFileSync(envProdPath, content, 'utf8');
 console.log('✅  environment.prod.ts configurado correctamente.');
 console.log('   SUPABASE_URL:', url);
 console.log('   SUPABASE_ANON_KEY:', anonKey.slice(0, 12) + '...');
-console.log('   GEMINI_API_KEY:', geminiApiKey ? '✓ configurada' : '(no configurada)');
