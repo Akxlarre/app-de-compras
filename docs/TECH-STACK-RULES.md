@@ -82,7 +82,7 @@ Antes de crear un componente presentacional, consulta en este orden:
 3. Componente Custom: Solo escríbelo si los pasos 1 y 2 no cubrieron la necesidad.
 
 ## 4. Base de Datos & Base de Trabajo (Supabase Migrations)
-- Todo esquema DDL va en la carpeta `supabase/migrations/` (Naming convention: `YYYYMMDDHHMMSS_<dominio>_<tipo>_<descripcion>.sql`).
+- Todo esquema DDL va en [plataforma-db](https://github.com/Akxlarre/plataforma-db) (`supabase/migrations/` de ese repo; ADR-001) (Naming convention: `YYYYMMDDHHMMSS_<dominio>_<tipo>_<descripcion>.sql`).
 - SIEMPRE documentar en `indices/DATABASE.md` cada nueva tabla y su política de Row Level Security (RLS).
 - Si usas Supabase realtime, actualiza tus servicios usando RxJS `Observable` -> `toSignal()`.
 

@@ -18,7 +18,7 @@ paths:
 
 ## Cuándo activar
 
-- Crear o modificar migraciones SQL en `supabase/migrations/`
+- Crear o modificar migraciones SQL (en el repo [plataforma-db](https://github.com/Akxlarre/plataforma-db), no en esta app)
 - Añadir tablas, columnas, índices o políticas RLS
 - Implementar servicios Angular que consulten Supabase
 - Configurar Realtime subscriptions
@@ -30,7 +30,7 @@ paths:
 |---|---|
 | Índice de tablas | `indices/DATABASE.md` |
 | SupabaseService | `src/app/core/services/supabase.service.ts` |
-| Migraciones | `supabase/migrations/` |
+| Migraciones | [plataforma-db](https://github.com/Akxlarre/plataforma-db) → `supabase/migrations/` |
 
 ## Convención de migraciones
 

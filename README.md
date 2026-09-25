@@ -39,8 +39,7 @@ src/styles/
 ├── layout/      Clases base de estructura
 └── vendors/     Overrides de Ionic / PrimeNG
 supabase/
-├── migrations/  Esquema versionado (SQL idempotente)
-└── functions/   Edge Functions (ej. process-receipt)
+└── functions/   Edge Functions (ej. process-receipt). El esquema vive en plataforma-db.
 ```
 
 ### Patrón Facade
@@ -57,11 +56,12 @@ Todas las tablas están protegidas por RLS. El aislamiento se logra mediante `fa
 |---|---|
 | `families` / `family_members` | Gestión multi-tenant. Agrupa usuarios en familias. |
 | `products` | Catálogo de productos. Aprende duraciones estimadas (`estimated_duration_days`). |
-| `shopping_lists` | Las listas. Poseen estados: `active`, `completed`, `archived`. |
+| `shopping_lists` | Las listas. Poseen estados: `active`, `completed`, `archived`, `template`. |
 | `list_items` | Los ítems de la lista. `is_checked` lanza actualizaciones Realtime. |
 | `receipts` | Boletas y tickets (para control de gastos y OCR). |
 
-El esquema completo está en [`supabase/migrations/`](supabase/migrations/).
+Las tablas viven en el schema `shop` del proyecto Supabase compartido. El esquema y sus migraciones
+están en [plataforma-db](https://github.com/Akxlarre/plataforma-db) (ADR-001): esta app **no** tiene migraciones propias.
 
 ---
 
@@ -81,9 +81,11 @@ El esquema completo está en [`supabase/migrations/`](supabase/migrations/).
    npm install --legacy-peer-deps
    ```
 
-2. Levantar Supabase local. Aplica las migraciones automáticamente:
+2. Levantar Supabase local **desde [plataforma-db](https://github.com/Akxlarre/plataforma-db)**
+   (ahí están las migraciones; expone `shop` en la API local):
    ```bash
-   npm run supabase:start
+   git clone https://github.com/Akxlarre/plataforma-db.git && cd plataforma-db
+   npx supabase start   # API en http://localhost:54351
    ```
 
 3. Variables de entorno:
