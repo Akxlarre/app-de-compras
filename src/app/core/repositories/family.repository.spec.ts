@@ -17,29 +17,29 @@ describe('FamilyRepository', () => {
   });
 
   it('getOrCreateFamilyId llama a la RPC y devuelve el id', async () => {
-    mock.client.rpc.mockResolvedValue({ data: 'fam-1', error: null });
+    mock.shop.rpc.mockResolvedValue({ data: 'fam-1', error: null });
 
     expect(await repo.getOrCreateFamilyId()).toBe('fam-1');
-    expect(mock.client.rpc).toHaveBeenCalledWith('get_or_create_family');
+    expect(mock.shop.rpc).toHaveBeenCalledWith('get_or_create_family');
   });
 
   it('getOrCreateFamilyId lanza si la RPC falla', async () => {
     const error = { message: 'not_authenticated' };
-    mock.client.rpc.mockResolvedValue({ data: null, error });
+    mock.shop.rpc.mockResolvedValue({ data: null, error });
     await expect(repo.getOrCreateFamilyId()).rejects.toBe(error);
   });
 
   it('join llama a join_family con el id recortado', async () => {
-    mock.client.rpc.mockResolvedValue({ data: 'fam-2', error: null });
+    mock.shop.rpc.mockResolvedValue({ data: 'fam-2', error: null });
 
     await repo.join('  fam-2 ');
 
-    expect(mock.client.rpc).toHaveBeenCalledWith('join_family', { p_family_id: 'fam-2' });
+    expect(mock.shop.rpc).toHaveBeenCalledWith('join_family', { p_family_id: 'fam-2' });
   });
 
   it('join lanza si la RPC falla', async () => {
     const error = { message: 'invalid_family_code' };
-    mock.client.rpc.mockResolvedValue({ data: null, error });
+    mock.shop.rpc.mockResolvedValue({ data: null, error });
     await expect(repo.join('x')).rejects.toBe(error);
   });
 
@@ -48,14 +48,14 @@ describe('FamilyRepository', () => {
     ['arreglo', [{ id: 'f', name: 'Casa' }]],
   ])('findMine normaliza la relación families cuando viene como %s', async (_, families) => {
     const q = queryMock({ data: { families } });
-    mock.client.from.mockReturnValue(q);
+    mock.shop.from.mockReturnValue(q);
 
     expect(await repo.findMine()).toEqual({ id: 'f', name: 'Casa' });
-    expect(mock.client.from).toHaveBeenCalledWith('family_members');
+    expect(mock.shop.from).toHaveBeenCalledWith('family_members');
   });
 
   it('findMine devuelve null si no tiene familia', async () => {
-    mock.client.from.mockReturnValue(queryMock({ data: null }));
+    mock.shop.from.mockReturnValue(queryMock({ data: null }));
     expect(await repo.findMine()).toBeNull();
   });
 });

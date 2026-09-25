@@ -117,6 +117,22 @@ describe('Arquitectura: acceso a datos', () => {
     expect(offending).toEqual([]);
   });
 
+  it('(g) los repositories de compras consultan el schema `shop`, no `public` (ADR-001)', () => {
+    // `profiles` y `app_updates` son comunes a todas las apps y siguen en `public`.
+    const publicSchemaRepositories = new Set([
+      'core/repositories/profiles.repository.ts',
+      'core/repositories/app-updates.repository.ts',
+    ]);
+    expect(
+      violations(
+        (f) =>
+          isRepository(f.path) &&
+          !publicSchemaRepositories.has(f.path) &&
+          /\bclient\s*\.\s*(from|rpc)\s*\(|schema\s*:\s*['"]public['"]/.test(f.code)
+      )
+    ).toEqual([]);
+  });
+
   it('(d) @supabase/supabase-js solo en repositories, infraestructura y models', () => {
     expect(
       violations(
