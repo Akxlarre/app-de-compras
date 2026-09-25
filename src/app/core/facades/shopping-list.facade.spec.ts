@@ -23,10 +23,7 @@ describe('ShoppingListFacade', () => {
     };
 
     TestBed.configureTestingModule({
-      providers: [
-        ShoppingListFacade,
-        { provide: SupabaseService, useValue: mockSupabase },
-      ],
+      providers: [ShoppingListFacade, { provide: SupabaseService, useValue: mockSupabase }],
     });
 
     facade = TestBed.inject(ShoppingListFacade);
@@ -43,8 +40,8 @@ describe('ShoppingListFacade', () => {
       name: 'Lista Test',
       status: 'active',
       list_items: [
-        { id: 'item-1', is_checked: false, quantity: 1, product: { name: 'Manzanas' } } as any
-      ]
+        { id: 'item-1', is_checked: false, quantity: 1, product: { name: 'Manzanas' } } as any,
+      ],
     });
 
     // Mock DB resolve success
@@ -56,7 +53,7 @@ describe('ShoppingListFacade', () => {
     // Verificar optimistic update: is_checked debe ser true
     const currentData = facade.data();
     expect(currentData?.list_items[0].is_checked).toBe(true);
-    
+
     // Verificar que se llamó a la base de datos
     expect(mockSupabase.client.update).toHaveBeenCalledWith({ is_checked: true });
   });
@@ -69,8 +66,8 @@ describe('ShoppingListFacade', () => {
       status: 'active',
       list_items: [
         { id: 'item-1', is_checked: false, quantity: 1 } as any,
-        { id: 'item-2', is_checked: true, quantity: 2 } as any
-      ]
+        { id: 'item-2', is_checked: true, quantity: 2 } as any,
+      ],
     });
 
     mockSupabase.client.eq.mockResolvedValueOnce({ error: null });
@@ -82,5 +79,45 @@ describe('ShoppingListFacade', () => {
     const currentData = facade.data();
     expect(currentData?.list_items.length).toBe(1);
     expect(currentData?.list_items[0].id).toBe('item-2');
+  });
+
+  describe('plantillas (status = template)', () => {
+    beforeEach(() => {
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: 'fam-1', error: null });
+      mockSupabase.client.order = vi.fn().mockReturnThis();
+      mockSupabase.client.like = vi.fn().mockReturnThis();
+      mockSupabase.client.single = vi
+        .fn()
+        .mockResolvedValue({ data: { id: 'tpl-1' }, error: null });
+    });
+
+    it('loadTemplates filtra por status template y usa la familia de get_or_create_family', async () => {
+      // 1ª cadena (última completada) termina en maybeSingle; 2ª (plantillas) en order.
+      mockSupabase.client.order
+        .mockReturnValueOnce(mockSupabase.client)
+        .mockResolvedValueOnce({ data: [{ id: 'tpl-1', name: 'Asado', list_items: [] }] });
+
+      await facade.loadTemplates();
+
+      expect(mockSupabase.client.rpc).toHaveBeenCalledWith('get_or_create_family');
+      expect(mockSupabase.client.eq).toHaveBeenCalledWith('family_id', 'fam-1');
+      expect(mockSupabase.client.eq).toHaveBeenCalledWith('status', 'template');
+      expect(mockSupabase.client.like).not.toHaveBeenCalled();
+      expect(facade.templates()[0].name).toBe('Asado');
+    });
+
+    it('saveAsTemplate crea la lista con status template y sin prefijo en el nombre', async () => {
+      const loadSpy = vi.spyOn(facade, 'loadTemplates').mockResolvedValue();
+      mockSupabase.client.eq.mockResolvedValueOnce({ data: [], error: null });
+
+      await facade.saveAsTemplate('list-1', 'Asado');
+
+      expect(mockSupabase.client.insert).toHaveBeenCalledWith({
+        name: 'Asado',
+        family_id: 'fam-1',
+        status: 'template',
+      });
+      expect(loadSpy).toHaveBeenCalled();
+    });
   });
 });

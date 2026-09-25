@@ -41,7 +41,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       .from('shopping_lists')
       .select('*, list_items(*, product:products(id, name, category, last_price))')
       .eq('family_id', familyId)
-      .eq('status', 'archived').like('name', '[TEMPLATE] %')
+      .eq('status', 'template')
       .order('created_at', { ascending: false });
 
     this.templates.set((templatesData as unknown as ActiveShoppingList[]) || []);
@@ -72,44 +72,10 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
    * Obtiene la familia actual del usuario o crea una por defecto.
    */
   private async getOrCreateFamily(): Promise<string> {
-    // 1. Buscar si ya pertenece a una familia
-    const { data: member } = await this.supabase.client
-      .from('family_members')
-      .select('family_id')
-      .limit(1)
-      .maybeSingle();
-
-    if (member?.family_id) {
-      return member.family_id;
-    }
-
-    const { data: userData } = await this.supabase.getUser();
-    if (!userData.user) throw new Error('Usuario no autenticado');
-
-    // Generamos el UUID en el cliente. Así evitamos hacer .select() al insertar la familia.
-    // Hacer .select() causaba un 403 porque el usuario aún no estaba en family_members
-    // en el exacto momento en que se insertaba la familia.
-    const newFamilyId = crypto.randomUUID();
-
-    // 2. Si no tiene familia, crear una nueva sin pedir los datos de vuelta
-    const { error: familyError } = await this.supabase.client
-      .from('families')
-      .insert({ id: newFamilyId, name: 'Mi Familia' });
-
-    if (familyError) throw familyError;
-
-    // 3. Vincular al usuario como 'owner'
-    const { error: linkError } = await this.supabase.client
-      .from('family_members')
-      .insert({ 
-        family_id: newFamilyId, 
-        user_id: userData.user.id, 
-        role: 'owner' 
-      });
-
-    if (linkError) throw linkError;
-
-    return newFamilyId;
+    // RPC SECURITY DEFINER: RLS no permite insertar familias ni membresías directamente.
+    const { data, error } = await this.supabase.client.rpc('get_or_create_family');
+    if (error) throw error;
+    return data as string;
   }
 
   /**
@@ -124,7 +90,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
         .insert({ name, family_id: familyId, status: 'active' });
 
       if (error) throw error;
-      
+
       await this.refreshSilently();
     } catch (e) {
       this._error.set(ShoppingListFacade.sanitizeError(e));
@@ -138,15 +104,15 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     const currentList = this._data();
     if (!currentList) return;
 
-    const existingItem = currentList.list_items?.find(i => i.product?.id === productId);
+    const existingItem = currentList.list_items?.find((i) => i.product?.id === productId);
 
     if (existingItem) {
       // Optimistic Update
       const oldQty = existingItem.quantity;
-      this._data.update(list => {
+      this._data.update((list) => {
         if (!list) return list;
         const items = [...list.list_items];
-        const idx = items.findIndex(i => i.id === existingItem.id);
+        const idx = items.findIndex((i) => i.id === existingItem.id);
         if (idx !== -1) {
           items[idx] = { ...items[idx], quantity: items[idx].quantity + quantity };
         }
@@ -182,16 +148,16 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     const list = this._data();
     if (!list) return;
 
-    const existingItem = list.list_items?.find(i => i.id === itemId);
+    const existingItem = list.list_items?.find((i) => i.id === itemId);
     if (!existingItem) return;
 
     const oldQty = existingItem.quantity;
-    
+
     // Optimistic Update
-    this._data.update(curr => {
+    this._data.update((curr) => {
       if (!curr) return curr;
       const items = [...curr.list_items];
-      const idx = items.findIndex(i => i.id === itemId);
+      const idx = items.findIndex((i) => i.id === itemId);
       if (idx !== -1) {
         items[idx] = { ...items[idx], quantity: newQuantity };
       }
@@ -205,10 +171,10 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
 
     if (error) {
       // Rollback
-      this._data.update(curr => {
+      this._data.update((curr) => {
         if (!curr) return curr;
         const items = [...curr.list_items];
-        const idx = items.findIndex(i => i.id === itemId);
+        const idx = items.findIndex((i) => i.id === itemId);
         if (idx !== -1) {
           items[idx] = { ...items[idx], quantity: oldQty };
         }
@@ -231,7 +197,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       this._error.set(ShoppingListFacade.sanitizeError(error));
       return;
     }
-    
+
     // Resetear y forzar fetch. Como la lista ya no es 'active', lanzará NO_ACTIVE_LIST
     this.reset();
     await this.initialize();
@@ -247,10 +213,10 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       .eq('list_id', sourceListId);
 
     if (itemsToClone && itemsToClone.length > 0) {
-      const newItems = itemsToClone.map(item => ({
+      const newItems = itemsToClone.map((item) => ({
         list_id: targetListId,
         product_id: item.product_id,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
       await this.supabase.client.from('list_items').insert(newItems);
       await this.refreshSilently();
@@ -264,7 +230,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     const familyId = await this.getOrCreateFamily();
     const { data: newTemplate, error: createError } = await this.supabase.client
       .from('shopping_lists')
-      .insert({ name: '[TEMPLATE] ' + templateName, family_id: familyId, status: 'archived' })
+      .insert({ name: templateName, family_id: familyId, status: 'template' })
       .select()
       .single();
 
@@ -286,14 +252,11 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     if (currentData) {
       this._data.set({
         ...currentData,
-        list_items: currentData.list_items.filter(i => i.id !== itemId)
+        list_items: currentData.list_items.filter((i) => i.id !== itemId),
       });
     }
 
-    const { error } = await this.supabase.client
-      .from('list_items')
-      .delete()
-      .eq('id', itemId);
+    const { error } = await this.supabase.client.from('list_items').delete().eq('id', itemId);
 
     if (error) {
       console.error('Error deleting item:', error);
@@ -308,7 +271,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     // Optimistic UI Update
     const currentData = this._data();
     if (currentData) {
-      const updatedItems = currentData.list_items.map(item =>
+      const updatedItems = currentData.list_items.map((item) =>
         item.id === itemId ? { ...item, is_checked: !currentStatus } : item
       );
       this._data.set({ ...currentData, list_items: updatedItems });
@@ -334,14 +297,15 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       this.channel.unsubscribe();
     }
 
-    this.channel = this.supabase.client.channel(`list_items_changes_${listId}`)
+    this.channel = this.supabase.client
+      .channel(`list_items_changes_${listId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'list_items',
-          filter: `list_id=eq.${listId}`
+          filter: `list_id=eq.${listId}`,
         },
         () => {
           // Si otro miembro de la familia hace un cambio, refrescamos silenciosamente
@@ -365,4 +329,3 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     return BaseFacade.sanitizeError(e);
   }
 }
-

@@ -1,4 +1,4 @@
-export type ShoppingListStatus = 'active' | 'completed' | 'archived';
+export type ShoppingListStatus = 'active' | 'completed' | 'archived' | 'template';
 
 export interface ShoppingList {
   id: string;
