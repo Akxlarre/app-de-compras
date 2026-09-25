@@ -200,13 +200,22 @@ process.stdin.on('end', () => {
       )
         violations.push('inject(MessageService) → inject(ToastService) | Doc: notifications.md');
 
-      // ARCH-12: Repository boundary — Facades no acceden a la BD directamente
+            // ARCH-12: solo core/repositories/ (y SupabaseService) tocan supabase.client.
+      const touchesSupabaseClient =
+        /\bsupabase\s*\.\s*client\b/.test(newContent) ||
+        /inject\(\s*SupabaseService\s*\)\s*\.\s*client\b/.test(newContent) ||
+        /\b(?:client|db)\s*\.\s*(?:from|rpc|channel|removeChannel|functions|storage)\b/.test(newContent);
       if (
         STACK.supabase &&
-        normalizedPath.includes('.facade.') &&
-        (/\bclient\.from\s*\(/.test(newContent) || /\bdb\.from\s*\(/.test(newContent))
+        normalizedPath.includes('src/app/') &&
+        normalizedPath.endsWith('.ts') &&
+        !/\.(spec|test)\.ts$/.test(normalizedPath) &&
+        !normalizedPath.includes('/core/repositories/') &&
+        !normalizedPath.endsWith('/supabase.service.ts') &&
+        touchesSupabaseClient
       )
-        violations.push('[ARCH-12] .db.from() en Facade → inject(XRepository) de core/repositories/ | Doc: facades.md');
+        violations.push('[ARCH-12] supabase.client fuera de core/repositories/ → inject(XRepository) | Doc: architecture.md');
+
 
       // LLM-01: Botones submit sin data-llm-action (solo en features/)
       if (normalizedPath.includes('features/')) {
