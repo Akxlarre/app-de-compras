@@ -31,11 +31,12 @@ jobs:
           echo "project_ref=$REF" >> $GITHUB_OUTPUT
           echo "📦 Project ref extraído: $REF"
 
-      - name: Deploy Edge Function (mcp-server)
+      # process-receipt valida el JWT por su cuenta (y responde el preflight CORS).
+      - name: Deploy Edge Function (process-receipt)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          supabase functions deploy mcp-server \
+          supabase functions deploy process-receipt \
             --project-ref ${{ steps.extract_ref.outputs.project_ref }} \
             --no-verify-jwt
 

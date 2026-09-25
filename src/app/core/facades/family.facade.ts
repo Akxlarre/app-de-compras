@@ -25,7 +25,11 @@ export class FamilyFacade {
         .maybeSingle();
 
       if (member?.families) {
-        this.currentFamily.set((Array.isArray(member.families) ? member.families[0] : member.families) as unknown as FamilyInfo);
+        this.currentFamily.set(
+          (Array.isArray(member.families)
+            ? member.families[0]
+            : member.families) as unknown as FamilyInfo
+        );
       } else {
         this.currentFamily.set(null);
       }
@@ -38,20 +42,15 @@ export class FamilyFacade {
 
   async joinFamily(familyId: string): Promise<boolean> {
     this.isLoading.set(true);
+    this.error.set(null);
     try {
-      const { data: userData } = await this.supabase.getUser();
-      if (!userData.user) throw new Error('No auth');
-
-      const { error } = await this.supabase.client
-        .from('family_members')
-        .insert({
-          family_id: familyId,
-          user_id: userData.user.id,
-          role: 'member' // un nuevo miembro unido por id
-        });
+      // RPC: valida el código, quita la membresía anterior y une como 'member'.
+      const { error } = await this.supabase.client.rpc('join_family', {
+        p_family_id: familyId.trim(),
+      });
 
       if (error) throw error;
-      
+
       await this.loadMyFamily();
       return true;
     } catch (e) {

@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "koa-tmp-app-de-entrenamiento-934c46560e95e62c": {
+    "app-de-compras": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -122,10 +122,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:build:production"
+              "buildTarget": "app-de-compras:build:production"
             },
             "development": {
-              "buildTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:build:development"
+              "buildTarget": "app-de-compras:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -156,24 +156,24 @@
         "ionic-cordova-serve": {
           "builder": "@ionic/angular-toolkit:cordova-serve",
           "options": {
-            "cordovaBuildTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:ionic-cordova-build",
-            "devServerTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:serve"
+            "cordovaBuildTarget": "app-de-compras:ionic-cordova-build",
+            "devServerTarget": "app-de-compras:serve"
           },
           "configurations": {
             "production": {
-              "cordovaBuildTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:ionic-cordova-build:production",
-              "devServerTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:serve:production"
+              "cordovaBuildTarget": "app-de-compras:ionic-cordova-build:production",
+              "devServerTarget": "app-de-compras:serve:production"
             }
           }
         },
         "ionic-cordova-build": {
           "builder": "@ionic/angular-toolkit:cordova-build",
           "options": {
-            "browserTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:build"
+            "browserTarget": "app-de-compras:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "koa-tmp-app-de-entrenamiento-934c46560e95e62c:build:production"
+              "browserTarget": "app-de-compras:build:production"
             }
           }
         }
