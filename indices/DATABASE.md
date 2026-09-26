@@ -18,7 +18,7 @@ Los repositories de compras usan `client.schema('shop')` (guardia: `architecture
 
 | Tabla | Columnas clave | RLS (`authenticated`) |
 |---|---|---|
-| `families` | `id`, `name` | SELECT/UPDATE si soy miembro. **Sin INSERT directo** → `get_or_create_family()`. |
+| `families` | `id`, `name`, `invite_code` (8 caracteres sin 0/O/1/I, único) | SELECT/UPDATE si soy miembro. **Sin INSERT directo** → `get_or_create_family()`. |
 | `family_members` | PK (`family_id`, `user_id` → `public.profiles`), `role` owner/member | SELECT si soy miembro. **Sin INSERT directo** → RPCs. |
 | `products` | `family_id`, `name`, `category`, `last_price`, `estimated_duration_days`, `last_purchased_at` | ALL si es de mi familia. |
 | `shopping_lists` | `family_id`, `name`, `status` active/completed/archived/template, `completed_at` | ALL si es de mi familia. |
@@ -33,6 +33,10 @@ Los repositories de compras usan `client.schema('shop')` (guardia: `architecture
 |---|---|
 | `get_or_create_family() → uuid` | Devuelve la familia del usuario o crea "Mi Familia" con él como `owner`. |
 | `join_family(p_family_id uuid) → uuid` | Une al usuario como `member`; quita sus membresías previas. Falla si la familia no tiene miembros (`invalid_family_code`) o ya es miembro (`already_member`). |
+| `preview_family(p_code text) → (name, member_count)` | Familia de un código (acepta minúsculas/guiones) para confirmar antes de unirse. Vacío si no existe. |
+| `join_family_by_code(p_code text) → uuid` | Como `join_family`, por código. Errores `invalid_family_code` (P0002), `already_member` (23505). |
+| `get_family_members() → (user_id, name, role, joined_at, is_me)` | Miembros de mi familia; `name` = `display_name` o parte local del email (nunca el email). |
+| `remove_family_member(p_user_id uuid)` | Solo el dueño, no a sí mismo; rota el código. Errores `not_owner`, `cannot_remove_self`, `not_member`. Migración `20260926010000_shop_family_invites_members`. |
 | `complete_list(p_list_id uuid, p_carry_pending boolean) → uuid` | Finaliza la compra (SECURITY INVOKER, RLS). Fija `unit_price` y `products.last_purchased_at` de lo marcado; los pendientes se mueven a la lista activa (o a una "Compra de la Semana" nueva, sumando cantidades) y devuelve su id, o se borran con `false` (devuelve null). Errores: `list_not_found`, `list_not_active`. Migración `20260925220000_shop_purchase_history`. |
 
 ## `public` (común)

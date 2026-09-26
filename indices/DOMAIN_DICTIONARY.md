@@ -6,7 +6,8 @@ Lenguaje ubicuo. Usar estos términos en código, UI y specs.
 |---|---|---|
 | Familia | `families` | Grupo que comparte listas, catálogo y boletas. Unidad de aislamiento (RLS por `family_id`). |
 | Miembro | `family_members` | Usuario dentro de una familia. Rol `owner` (creador) o `member` (unido por código). Un usuario pertenece a **una** familia. |
-| Código de familia | `families.id` | UUID que se comparte para que otro usuario se una vía RPC `join_family`. |
+| Código de familia | `families.invite_code` | 8 caracteres (`ABCD-EFGH`, sin 0/O/1/I) para que otro usuario se una (`join_family_by_code`). Cambia cuando el dueño quita a un miembro. |
+| Dueño | `family_members.role = 'owner'` | Quien creó la familia. Puede quitar miembros. |
 | Producto | `products` | Ítem del catálogo de la familia. Guarda `last_price` y `estimated_duration_days`. |
 | Tus Esenciales | `ProductSearchFacade.loadEssentials` | Productos sugeridos al abrir el buscador. |
 | Lista | `shopping_lists` | Una compra. Estados: `active`, `completed`, `archived`, `template`. |

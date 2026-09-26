@@ -9,7 +9,7 @@
 
 | Repository | Métodos | Tabla / recurso | Archivo |
 |---|---|---|---|
-| `FamilyRepository` | `getOrCreateFamilyId()`, `join(familyId)`, `findMine()` | RPC `get_or_create_family`, `join_family`; `family_members` | `src/app/core/repositories/family.repository.ts` |
+| `FamilyRepository` | `getOrCreateFamilyId()`, `findMine()` (id, nombre, código, mi rol), `preview(code)`, `joinByCode(code)`, `findMembers()`, `removeMember(userId)`, `rename(familyId, name)` | RPC `get_or_create_family`, `preview_family`, `join_family_by_code`, `get_family_members`, `remove_family_member`; `family_members`, `families` | `src/app/core/repositories/family.repository.ts` |
 | `ShoppingListsRepository` | `findLatestActive()`, `findLastCompleted(familyId)`, `findTemplates(familyId)`, `findCompleted(familyId, limit?)`, `create({name, familyId, status})`, `complete(listId, carryPending)` | `shopping_lists` (+ `list_items`, `products` embebidos); RPC `complete_list` | `src/app/core/repositories/shopping-lists.repository.ts` |
 | `ListItemsRepository` | `add()`, `addMany()`, `findByList()`, `updateQuantity()`, `setChecked()`, `remove()`, `watchList(listId, cb) → baja` | `list_items` + Realtime | `src/app/core/repositories/list-items.repository.ts` |
 | `ProductsRepository` | `findByFamily(familyId, limit?)`, `searchByName(term, limit)`, `create({name, familyId, lastPrice?})`, `findIdByName()`, `updatePrice()` | `products` | `src/app/core/repositories/products.repository.ts` |
