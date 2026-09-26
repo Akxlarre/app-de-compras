@@ -1,0 +1,138 @@
+import { TestBed } from '@angular/core/testing';
+import { computed, signal } from '@angular/core';
+import { AlertController } from '@ionic/angular';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { FamilySectionComponent } from './family-section.component';
+import { FamilyFacade } from '@core/facades/family.facade';
+
+const ME = { userId: 'u1', name: 'ana', role: 'owner', joinedAt: '', isMe: true };
+const BETO = { userId: 'u2', name: 'beto', role: 'member', joinedAt: '', isMe: false };
+
+describe('FamilySectionComponent', () => {
+  let cmp: FamilySectionComponent;
+  let facade: any;
+  let alerts: { create: ReturnType<typeof vi.fn> };
+  const lastAlert = () => alerts.create.mock.calls.at(-1)![0];
+  const button = (text: RegExp) => lastAlert().buttons.find((b: any) => text.test(b.text));
+
+  beforeEach(() => {
+    const members = signal<any[]>([ME, BETO]);
+    facade = {
+      currentFamily: signal({ id: 'f', name: 'Casa', inviteCode: 'ABCDEFGH', myRole: 'owner' }),
+      members,
+      isOwner: signal(true),
+      isLoading: signal(false),
+      error: signal(null),
+      hasOtherMembers: computed(() => members().length > 1),
+      loadMyFamily: vi.fn(),
+      preview: vi.fn().mockResolvedValue({ name: 'Los Pérez', memberCount: 2 }),
+      joinByCode: vi.fn().mockResolvedValue('joined'),
+      removeMember: vi.fn().mockResolvedValue(true),
+      rename: vi.fn().mockResolvedValue(true),
+    };
+    alerts = { create: vi.fn().mockResolvedValue({ present: vi.fn() }) };
+
+    TestBed.configureTestingModule({
+      providers: [
+        FamilySectionComponent,
+        { provide: FamilyFacade, useValue: facade },
+        { provide: AlertController, useValue: alerts },
+      ],
+    });
+    cmp = TestBed.inject(FamilySectionComponent);
+    vi.spyOn(cmp, 'reloadApp').mockImplementation(() => {});
+  });
+
+  it('muestra el código en dos grupos', () => {
+    expect(cmp.displayCode()).toBe('ABCD-EFGH');
+  });
+
+  describe('unirse', () => {
+    it('un código mal escrito avisa junto al campo sin consultar', async () => {
+      await cmp.joinWithCode('abc');
+
+      expect(facade.preview).not.toHaveBeenCalled();
+      expect(cmp.joinError()).toMatch(/8 letras/);
+      expect(alerts.create).not.toHaveBeenCalled();
+    });
+
+    it('el código de mi propia familia avisa sin consultar ni pedir confirmación', async () => {
+      await cmp.joinWithCode('abcd-efgh');
+
+      expect(facade.preview).not.toHaveBeenCalled();
+      expect(cmp.joinError()).toMatch(/Ya estás/);
+      expect(alerts.create).not.toHaveBeenCalled();
+    });
+
+    it('un código que no existe avisa sin pedir confirmación', async () => {
+      facade.preview.mockResolvedValue(null);
+
+      await cmp.joinWithCode('ZZZZ-ZZZZ');
+
+      expect(cmp.joinError()).toMatch(/código/i);
+      expect(alerts.create).not.toHaveBeenCalled();
+    });
+
+    it('pide confirmación mostrando a qué familia se une y qué deja', async () => {
+      await cmp.joinWithCode('wxyz-2345');
+
+      const alert = lastAlert();
+      expect(alert.header).toContain('Los Pérez');
+      expect(alert.message).toContain('2 miembros');
+      expect(alert.message).toContain('Casa');
+      expect(facade.joinByCode).not.toHaveBeenCalled();
+
+      await button(/unirme/i).handler();
+      expect(facade.joinByCode).toHaveBeenCalledWith('WXYZ2345');
+      expect(cmp.reloadApp).toHaveBeenCalled();
+    });
+
+    it('si soy el único miembro, advierte que no podré volver a ver mis listas', async () => {
+      facade.members.set([ME]);
+
+      await cmp.joinWithCode('WXYZ2345');
+
+      expect(lastAlert().message).toMatch(/no podrás volver a ver/i);
+    });
+
+    it.each([
+      ['already_member', /ya estás/i],
+      ['invalid_code', /código/i],
+      ['error', /intenta/i],
+    ])('si joinByCode devuelve %s, lo explica y no recarga', async (result, text) => {
+      facade.joinByCode.mockResolvedValue(result);
+
+      await cmp.joinWithCode('WXYZ2345');
+      await button(/unirme/i).handler();
+
+      expect(cmp.joinError()).toMatch(text);
+      expect(cmp.reloadApp).not.toHaveBeenCalled();
+    });
+
+    it('un intento nuevo borra el error anterior', async () => {
+      await cmp.joinWithCode('abc');
+      await cmp.joinWithCode('WXYZ2345');
+      expect(cmp.joinError()).toBeNull();
+    });
+  });
+
+  describe('administrar', () => {
+    it('quitar un miembro pide confirmación', async () => {
+      await cmp.removeMember(BETO as any);
+
+      expect(lastAlert().message).toContain('beto');
+      expect(facade.removeMember).not.toHaveBeenCalled();
+
+      await button(/quitar/i).handler();
+      expect(facade.removeMember).toHaveBeenCalledWith('u2');
+    });
+
+    it('renombrar guarda el nombre ingresado', async () => {
+      await cmp.renameFamily();
+
+      expect(lastAlert().inputs[0].value).toBe('Casa');
+      await button(/guardar/i).handler({ name: 'Los Pérez' });
+      expect(facade.rename).toHaveBeenCalledWith('Los Pérez');
+    });
+  });
+});

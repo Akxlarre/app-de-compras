@@ -13,7 +13,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
+import { ShoppingListFacade, type PopulatedListItem } from '@core/facades/shopping-list.facade';
+import { FamilyFacade } from '@core/facades/family.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -60,6 +61,7 @@ export class ActiveListPage implements OnInit {
   public facade = inject(ShoppingListFacade);
   private destroyRef = inject(DestroyRef);
   private nav = inject(NavController);
+  private family = inject(FamilyFacade);
   private alertController = inject(AlertController);
   private gsap = inject(GsapAnimationsService);
   private cdr = inject(ChangeDetectorRef);
@@ -105,7 +107,15 @@ export class ActiveListPage implements OnInit {
   ngOnInit() {
     this.facade.initialize();
     this.facade.loadTemplates();
+    // Nombres de los miembros para "quién marcó" (composición en la página: facades aislados).
+    if (!this.family.currentFamily()) this.family.loadMyFamily();
     this.destroyRef.onDestroy(() => this.facade.dispose());
+  }
+
+  /** Quién marcó el ítem ("Tú" o el nombre); solo si la familia tiene más de un miembro. */
+  checkedByName(item: PopulatedListItem): string | null {
+    if (!item.is_checked || !item.checked_by || !this.family.hasOtherMembers()) return null;
+    return this.family.memberNames().get(item.checked_by) ?? null;
   }
 
   async cloneList(sourceListId: string) {

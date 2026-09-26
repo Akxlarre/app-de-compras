@@ -5,11 +5,13 @@ import { ConfirmationService } from 'primeng/api';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { AlertController } from '@ionic/angular';
+import { FamilyFacade } from '@core/facades/family.facade';
 
 describe('ActiveListPage', () => {
   let component: ActiveListPage;
   let mockFacade: any;
   let alertController: { create: ReturnType<typeof vi.fn> };
+  let familyFacade: any;
 
   beforeEach(() => {
     alertController = { create: vi.fn().mockResolvedValue({ present: vi.fn() }) };
@@ -19,15 +21,29 @@ describe('ActiveListPage', () => {
       isLoading: signal(false),
       error: signal(null),
       initialize: vi.fn(),
+      loadTemplates: vi.fn(),
+      dispose: vi.fn(),
       toggleItemCheck: vi.fn(),
       deleteItem: vi.fn(),
       completeList: vi.fn(),
+    };
+    familyFacade = {
+      currentFamily: signal(null),
+      hasOtherMembers: signal(true),
+      memberNames: signal(
+        new Map([
+          ['u1', 'Tú'],
+          ['u2', 'beto'],
+        ])
+      ),
+      loadMyFamily: vi.fn(),
     };
 
     TestBed.configureTestingModule({
       providers: [
         ActiveListPage,
         { provide: ShoppingListFacade, useValue: mockFacade },
+        { provide: FamilyFacade, useValue: familyFacade },
         { provide: ConfirmationService, useValue: { confirm: vi.fn() } },
         { provide: AlertController, useValue: alertController },
         // La página se instancia como provider (sin render), así que no hay CDR de vista.
@@ -65,6 +81,29 @@ describe('ActiveListPage', () => {
 
     // Costo estimado: (2 * 1000) + (1 * 500) + (3 * 0) = 2500
     expect(kpis.estimatedCost).toBe(2500);
+  });
+
+  describe('quién marcó', () => {
+    it('muestra el nombre de quien marcó cuando la familia tiene más de un miembro', () => {
+      expect(component.checkedByName({ is_checked: true, checked_by: 'u2' } as any)).toBe('beto');
+      expect(component.checkedByName({ is_checked: true, checked_by: 'u1' } as any)).toBe('Tú');
+    });
+
+    it('no muestra nada si el ítem no está marcado o no se sabe quién fue', () => {
+      expect(component.checkedByName({ is_checked: false, checked_by: 'u2' } as any)).toBeNull();
+      expect(component.checkedByName({ is_checked: true } as any)).toBeNull();
+      expect(component.checkedByName({ is_checked: true, checked_by: 'u9' } as any)).toBeNull();
+    });
+
+    it('en una familia de una persona no muestra nombres', () => {
+      familyFacade.hasOtherMembers.set(false);
+      expect(component.checkedByName({ is_checked: true, checked_by: 'u1' } as any)).toBeNull();
+    });
+
+    it('al entrar carga la familia si todavía no está', () => {
+      component.ngOnInit();
+      expect(familyFacade.loadMyFamily).toHaveBeenCalled();
+    });
   });
 
   describe('finalizar compra', () => {

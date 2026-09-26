@@ -180,6 +180,9 @@
                     } @if (item.product?.last_price) {
                     <span>•</span>
                     <span>${{ item.product?.last_price }}</span>
+                    } @if (checkedByName(item); as who) {
+                    <span>•</span>
+                    <span class="truncate" data-testid="checked-by">{{ who }}</span>
                     }
                   </div>
                 </div>

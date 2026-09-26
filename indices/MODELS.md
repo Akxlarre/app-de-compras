@@ -6,7 +6,7 @@
 | Interfaces | Categoría | Archivo |
 |-----------|----------|---------|
 | `AppUpdate` | `other` | `src/app/core/models/app-update.model.ts` |
-| `Family`, `FamilyInfo`, `FamilyRole`, `FamilyMember` | `other` | `src/app/core/models/family.model.ts` |
+| `Family`, `FamilyRole`, `FamilyMember`, `FamilyInfo`, `FamilyMemberView`, `FamilyPreview`, `JoinFamilyResult` | `other` | `src/app/core/models/family.model.ts` |
 | `NotificationType`, `Notification` | `other` | `src/app/core/models/notification.model.ts` |
 | `Product` | `other` | `src/app/core/models/product.model.ts` |
 | `PurchasedItem`, `PurchaseSummary`, `MonthlySpending` | `other` | `src/app/core/models/purchase-history.model.ts` |
