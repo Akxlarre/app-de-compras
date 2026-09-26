@@ -1,6 +1,6 @@
 > id: 0006-familia
 > refs: Auditoría de flujos (2026-09-25), punto 3 del plan: familia
-> status: in-progress
+> status: done
 > created: 2026-09-26
 
 ## Problema
@@ -69,7 +69,7 @@
 - [x] AC5: Perfil: código legible con copiar/compartir; unirse pide confirmación con la vista previa;
   miembros visibles; el dueño puede quitar (con confirmación); renombrar.
 - [x] AC6: Mi Lista muestra quién marcó cada ítem cuando hay más de un miembro.
-- [ ] AC7: Staging (Chromium, cuentas A y C): C ve el nombre de la familia de A antes de unirse,
+- [x] AC7: Staging (Chromium, cuentas A y C): C ve el nombre de la familia de A antes de unirse,
   confirma y ve la lista de A; A ve a C en miembros y "C" en lo que C marca; A quita a C y el código
   cambia; el código viejo ya no sirve.
 - [x] AC8: `npm run test:ci`, `npm run lint:arch`, `ng build` en verde; índices actualizados.
@@ -83,4 +83,16 @@
   muestran junto al campo.
 - AC8: `test:ci` 266/266, `lint:arch` 0 errores (2 avisos previos), `ng build` OK; índices
   (FACADES, MODELS, USAGE-MAP, DATABASE, REPOSITORIES, DOMAIN_DICTIONARY).
-- AC7: pendiente — merge de plataforma-db#7 + exponer las 4 funciones en staging.
+- AC7: staging (Chromium 390×844, cuentas A y C, `scratchpad/verify-0006.mjs`), 12/12 y ningún HTTP
+  ≥ 400: A ve `H5P6-KGF2`; C escribe el código en minúsculas y ve «¿Unirte a «Mi Familia»?» con
+  "Tiene 2 miembros. Eres el único miembro…"; confirma y vuelve a Mi Lista; agrega "Arroz" del
+  catálogo de A y lo marca; A ve "Usuario C" en miembros y bajo "Arroz"; A quita a C, el código pasa
+  a `XG66-K4DN` y el viejo da "No hay ninguna familia con ese código". Capturas
+  `.claude/temp/audit/v6-*.png`.
+  La verificación destapó dos bugs, corregidos con test primero:
+  - `findMine()` no filtraba por usuario: RLS deja ver las membresías de toda la familia y un
+    miembro recibía el rol del dueño (veía botones para quitar). Ahora filtra por la sesión.
+  - Quien es quitado queda sin familia y Perfil no mostraba la sección (ni el campo para unirse):
+    `loadMyFamily()` primero llama a `get_or_create_family`, como el resto de la app.
+  - Además, ingresar el código de la propia familia avisa "Ya estás en esa familia" sin abrir la
+    confirmación. `test:ci` 270/270, `lint:arch` 0 errores, `ng build` OK.
