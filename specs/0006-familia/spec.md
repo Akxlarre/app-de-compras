@@ -58,18 +58,29 @@
   todas las apps: se reporta aparte.
 
 ## Acceptance Criteria
-- [ ] AC1: Migración + pgTAP: códigos únicos de 8 caracteres del alfabeto; `preview_family` y
+- [x] AC1: Migración + pgTAP: códigos únicos de 8 caracteres del alfabeto; `preview_family` y
   `join_family_by_code` aceptan el código con guion/minúsculas; `get_family_members` solo devuelve mi
   familia y sin emails; `remove_family_member` solo para el dueño, no a sí mismo, y rota el código
   (el viejo deja de funcionar); un miembro renombra su familia pero no otra. CI de plataforma-db verde.
-- [ ] AC2: `normalizeInviteCode` / `formatInviteCode` con tests.
-- [ ] AC3: `FamilyRepository` llama a las RPCs/tablas correctas (specs con `queryMock`).
-- [ ] AC4: `FamilyFacade`: carga familia + miembros, `isOwner`, `memberNames`, errores de unión
+- [x] AC2: `normalizeInviteCode` / `formatInviteCode` con tests.
+- [x] AC3: `FamilyRepository` llama a las RPCs/tablas correctas (specs con `queryMock`).
+- [x] AC4: `FamilyFacade`: carga familia + miembros, `isOwner`, `memberNames`, errores de unión
   distinguibles, `removeMember` recarga miembros y código, `rename`.
-- [ ] AC5: Perfil: código legible con copiar/compartir; unirse pide confirmación con la vista previa;
+- [x] AC5: Perfil: código legible con copiar/compartir; unirse pide confirmación con la vista previa;
   miembros visibles; el dueño puede quitar (con confirmación); renombrar.
-- [ ] AC6: Mi Lista muestra quién marcó cada ítem cuando hay más de un miembro.
+- [x] AC6: Mi Lista muestra quién marcó cada ítem cuando hay más de un miembro.
 - [ ] AC7: Staging (Chromium, cuentas A y C): C ve el nombre de la familia de A antes de unirse,
   confirma y ve la lista de A; A ve a C en miembros y "C" en lo que C marca; A quita a C y el código
   cambia; el código viejo ya no sirve.
-- [ ] AC8: `npm run test:ci`, `npm run lint:arch`, `ng build` en verde; índices actualizados.
+- [x] AC8: `npm run test:ci`, `npm run lint:arch`, `ng build` en verde; índices actualizados.
+
+## Evidencia (2026-09-26)
+- AC1: Akxlarre/plataforma-db#7 (`fe7bcb1`), CI verde (`supabase db lint` + `supabase test db`);
+  21/21 también en Postgres 16 local; la migración aplicada dos veces sin error.
+- AC2–AC6: `766ac84` en rojo (30 fallos) → `da7d32e` en verde. Los specs de `FamilySectionComponent`
+  y `FamilyFacade` cambiaron de contrato en el verde: ARCH-02 no deja inyectar `ToastService` en un
+  componente, así que los avisos de quitar/renombrar pasaron al facade y los errores de unirse se
+  muestran junto al campo.
+- AC8: `test:ci` 266/266, `lint:arch` 0 errores (2 avisos previos), `ng build` OK; índices
+  (FACADES, MODELS, USAGE-MAP, DATABASE, REPOSITORIES, DOMAIN_DICTIONARY).
+- AC7: pendiente — merge de plataforma-db#7 + exponer las 4 funciones en staging.
