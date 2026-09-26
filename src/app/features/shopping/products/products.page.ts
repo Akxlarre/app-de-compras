@@ -9,6 +9,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { Router } from '@angular/router';
 import { parsePrice } from '@core/utils/price.utils';
+import { formatDaysAgo } from '@core/utils/date.utils';
 import { ToastService } from '@core/services/ui/toast.service';
 
 @Component({
@@ -47,8 +48,10 @@ import { ToastService } from '@core/services/ui/toast.service';
               <div>
                 <h3 class="font-bold text-primary">Es momento de reponer</h3>
                 <p class="text-sm text-muted">
-                  Detectamos {{ facade.recommendedProducts().length }} productos que no compras hace
-                  más de una semana.
+                  @if (facade.recommendedProducts().length === 1) { 1 producto que sueles comprar ya
+                  debería estar por acabarse. } @else {
+                  {{ facade.recommendedProducts().length }} productos que sueles comprar ya deberían
+                  estar por acabarse. }
                 </p>
               </div>
             </div>
@@ -88,8 +91,13 @@ import { ToastService } from '@core/services/ui/toast.service';
                 <div class="flex-1 min-w-0 pr-4">
                   <span class="font-medium text-primary block truncate">{{ product.name }}</span>
                   <span class="text-xs text-muted block mt-0.5">
-                    <app-icon name="clock" [size]="12" class="inline-block mr-1 opacity-70" />
-                    Hace {{ product.daysSinceUpdate }} días
+                    <app-icon
+                      name="clock"
+                      [size]="12"
+                      class="inline-block mr-1 opacity-70"
+                      [attr.aria-label]="'Última compra'"
+                    />
+                    {{ lastPurchaseLabel(product.daysSincePurchase) }}
                   </span>
                 </div>
 
@@ -163,6 +171,10 @@ export class ProductsPage implements OnInit {
         this.savedId.set(null);
       }
     }, 1500);
+  }
+
+  lastPurchaseLabel(days: number | null): string {
+    return days === null ? 'Sin compras aún' : `Comprado ${formatDaysAgo(days)}`;
   }
 
   async generateSmartList() {

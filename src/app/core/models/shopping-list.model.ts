@@ -20,6 +20,8 @@ export interface ListItem {
   is_checked: boolean;
   checked_at?: string;
   checked_by?: string;
+  /** Precio pagado; lo fija la RPC `complete_list` al finalizar la compra. */
+  unit_price?: number | null;
   created_at: string;
 }
 

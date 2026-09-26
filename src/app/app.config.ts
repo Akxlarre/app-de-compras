@@ -1,4 +1,9 @@
-import { ApplicationConfig, importProvidersFrom, LOCALE_ID, provideZoneChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  importProvidersFrom,
+  LOCALE_ID,
+  provideZoneChangeDetection,
+} from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEsCl from '@angular/common/locales/es-CL';
 
@@ -54,6 +59,7 @@ import {
   // ── Contenido ──
   Calendar,
   Clock,
+  History,
   FileText,
   FolderOpen,
   Image,
@@ -183,6 +189,7 @@ export const appConfig: ApplicationConfig = {
         // Contenido
         Calendar,
         Clock,
+        History,
         FileText,
         FolderOpen,
         Image,
@@ -225,7 +232,7 @@ export const appConfig: ApplicationConfig = {
         Brain,
         Loader2,
         CircleAlert,
-      }),
+      })
     ),
     provideIonicAngular({}),
   ],

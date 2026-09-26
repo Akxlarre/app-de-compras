@@ -20,9 +20,9 @@ Los repositories de compras usan `client.schema('shop')` (guardia: `architecture
 |---|---|---|
 | `families` | `id`, `name` | SELECT/UPDATE si soy miembro. **Sin INSERT directo** → `get_or_create_family()`. |
 | `family_members` | PK (`family_id`, `user_id` → `public.profiles`), `role` owner/member | SELECT si soy miembro. **Sin INSERT directo** → RPCs. |
-| `products` | `family_id`, `name`, `category`, `last_price`, `estimated_duration_days` | ALL si es de mi familia. |
+| `products` | `family_id`, `name`, `category`, `last_price`, `estimated_duration_days`, `last_purchased_at` | ALL si es de mi familia. |
 | `shopping_lists` | `family_id`, `name`, `status` active/completed/archived/template, `completed_at` | ALL si es de mi familia. |
-| `list_items` | `list_id`, `product_id`, `quantity`, `is_checked`, `checked_at`, `checked_by` | ALL si la lista es de mi familia. Realtime (`supabase_realtime`) por `list_id`. |
+| `list_items` | `list_id`, `product_id`, `quantity`, `is_checked`, `checked_at`, `checked_by`, `unit_price` | ALL si la lista es de mi familia. Realtime (`supabase_realtime`) por `list_id`. Trigger `list_items_track_check`: marcar fija `checked_at`/`checked_by = auth.uid()`, desmarcar los limpia (no se escriben desde el cliente). |
 | `receipts` | `family_id`, `image_url`, `total_amount`, `status` pending_ocr/processed/error | ALL si es de mi familia. (Sin uso en la app todavía.) |
 
 `anon` no tiene acceso al schema. Tests de RLS: `plataforma-db/supabase/tests/shop_rls.test.sql`.
@@ -33,6 +33,7 @@ Los repositories de compras usan `client.schema('shop')` (guardia: `architecture
 |---|---|
 | `get_or_create_family() → uuid` | Devuelve la familia del usuario o crea "Mi Familia" con él como `owner`. |
 | `join_family(p_family_id uuid) → uuid` | Une al usuario como `member`; quita sus membresías previas. Falla si la familia no tiene miembros (`invalid_family_code`) o ya es miembro (`already_member`). |
+| `complete_list(p_list_id uuid, p_carry_pending boolean) → uuid` | Finaliza la compra (SECURITY INVOKER, RLS). Fija `unit_price` y `products.last_purchased_at` de lo marcado; los pendientes se mueven a la lista activa (o a una "Compra de la Semana" nueva, sumando cantidades) y devuelve su id, o se borran con `false` (devuelve null). Errores: `list_not_found`, `list_not_active`. Migración `20260925220000_shop_purchase_history`. |
 
 ## `public` (común)
 

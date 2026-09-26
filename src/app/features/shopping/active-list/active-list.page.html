@@ -1,5 +1,15 @@
 <div class="h-full flex flex-col bg-base">
-  <app-header title="Lista de Compras" [showBrand]="true" />
+  <app-header title="Lista de Compras" [showBrand]="true">
+    <button
+      slot="actions"
+      class="w-11 h-11 rounded-full flex items-center justify-center text-text-muted hover:text-text-primary active:scale-95 transition-all"
+      aria-label="Historial de compras"
+      data-llm-nav="historial"
+      (click)="openHistory()"
+    >
+      <app-icon name="history" [size]="22" [attr.aria-label]="'Historial'" />
+    </button>
+  </app-header>
 
   <main class="flex-1 overflow-y-auto px-4 pb-32">
     <div class="flex flex-col gap-6">
@@ -47,6 +57,7 @@
           <div class="flex flex-col items-end gap-2">
             <button
               class="px-5 py-2 bg-brand text-brand-contrast rounded-full text-sm font-bold shadow-md shadow-brand/20 transition-transform active:scale-95"
+              data-llm-action="finalizar-compra"
               (click)="completeList(list.id)"
             >
               Finalizar

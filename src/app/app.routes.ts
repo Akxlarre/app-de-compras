@@ -9,7 +9,7 @@ export const routes: Routes = [
   {
     path: '',
     redirectTo: 'app',
-    pathMatch: 'full'
+    pathMatch: 'full',
   },
 
   // Rutas públicas — autenticación
@@ -24,9 +24,7 @@ export const routes: Routes = [
   {
     path: 'reset-password',
     loadComponent: () =>
-      import('./features/auth/reset-password/reset-password.page').then(
-        (m) => m.ResetPasswordPage,
-      ),
+      import('./features/auth/reset-password/reset-password.page').then((m) => m.ResetPasswordPage),
   },
 
   // Rutas protegidas — envueltas en TabsLayout
@@ -45,19 +43,25 @@ export const routes: Routes = [
       },
       {
         path: 'profile',
-        loadComponent: () =>
-          import('./features/profile/profile.page').then((m) => m.ProfilePage),
+        loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
       },
       {
         path: 'receipt',
         loadComponent: () =>
-          import('./features/shopping/receipt-scanner/receipt-scanner.page').then((m) => m.ReceiptScannerPage),
+          import('./features/shopping/receipt-scanner/receipt-scanner.page').then(
+            (m) => m.ReceiptScannerPage
+          ),
+      },
+      {
+        path: 'history',
+        loadComponent: () =>
+          import('./features/shopping/history/history.page').then((m) => m.HistoryPage),
       },
       {
         path: 'products',
         loadComponent: () =>
           import('./features/shopping/products/products.page').then((m) => m.ProductsPage),
-      }
+      },
     ],
   },
 

@@ -75,22 +75,54 @@ describe('ShoppingListsRepository', () => {
     expect(created).toEqual({ id: 'l2', name: 'Asado' });
   });
 
-  it('complete marca completed con fecha', async () => {
-    const q = queryMock();
+  it('complete finaliza con la RPC complete_list y devuelve la lista de los pendientes', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: 'l9', error: null });
+
+    expect(await repo.complete('l1', true)).toBe('l9');
+    expect(mock.shop.rpc).toHaveBeenCalledWith('complete_list', {
+      p_list_id: 'l1',
+      p_carry_pending: true,
+    });
+  });
+
+  it('complete descartando pendientes devuelve null', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: null, error: null });
+
+    expect(await repo.complete('l1', false)).toBeNull();
+    expect(mock.shop.rpc).toHaveBeenCalledWith('complete_list', {
+      p_list_id: 'l1',
+      p_carry_pending: false,
+    });
+  });
+
+  it('complete lanza el error de Supabase', async () => {
+    const error = { message: 'list_not_active' };
+    mock.shop.rpc.mockResolvedValue({ data: null, error });
+    await expect(repo.complete('l1', true)).rejects.toBe(error);
+  });
+
+  it('findCompleted trae las compras finalizadas de la familia, más recientes primero', async () => {
+    const q = queryMock({ data: [{ id: 'l0' }] });
     mock.shop.from.mockReturnValue(q);
 
-    await repo.complete('l1');
+    expect(await repo.findCompleted('fam-1', 20)).toEqual([{ id: 'l0' }]);
+    expect(q.select).toHaveBeenCalledWith(
+      '*, list_items(*, product:products(id, name, category, last_price))'
+    );
+    expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
+    expect(q.eq).toHaveBeenCalledWith('status', 'completed');
+    expect(q.order).toHaveBeenCalledWith('completed_at', { ascending: false, nullsFirst: false });
+    expect(q.limit).toHaveBeenCalledWith(20);
+  });
 
-    expect(q.update).toHaveBeenCalledWith({
-      status: 'completed',
-      completed_at: expect.any(String),
-    });
-    expect(q.eq).toHaveBeenCalledWith('id', 'l1');
+  it('findCompleted devuelve [] si no hay datos', async () => {
+    mock.shop.from.mockReturnValue(queryMock({ data: null }));
+    expect(await repo.findCompleted('fam-1')).toEqual([]);
   });
 
   it('lanza el error de Supabase', async () => {
     const error = { message: 'boom' };
     mock.shop.from.mockReturnValue(queryMock({ error }));
-    await expect(repo.complete('l1')).rejects.toBe(error);
+    await expect(repo.findCompleted('fam-1')).rejects.toBe(error);
   });
 });
