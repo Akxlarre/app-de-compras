@@ -53,7 +53,7 @@
 - Boletas/OCR (punto 4). Realtime de borrados.
 
 ## Acceptance Criteria
-- [ ] AC1: Migración + pgTAP: el trigger fija/limpia `checked_at`/`checked_by` y no se puede falsificar;
+- [x] AC1: Migración + pgTAP: el trigger fija/limpia `checked_at`/`checked_by` y no se puede falsificar;
   `complete_list` mueve pendientes (lista nueva o activa existente, sumando cantidades), descarta con
   `false`, fija `unit_price` y `last_purchased_at`, y rechaza listas de otra familia o no activas.
   CI de plataforma-db en verde.
@@ -74,8 +74,8 @@
 - [x] AC9: `npm run test:ci`, `npm run lint:arch` y `ng build` en verde; índices actualizados.
 
 ## Evidencia (2026-09-25)
-- AC1 (parcial): migración + 22 tests pgTAP en plataforma-db (commit local `5dde022`), en verde en
-  Postgres 16 local con stubs de `auth`/pgTAP. Falta: push, CI de plataforma-db, merge → staging.
+- AC1: migración + 22 tests pgTAP en plataforma-db (`5dde022`, Akxlarre/plataforma-db#6). CI verde:
+  `supabase db lint` sin errores y `supabase test db` 40/40 (3 archivos).
 - AC2–AC7: `04f1750` en rojo (22 fallos) → `30f0010` en verde.
 - AC9: `test:ci` 221/221, `lint:arch` 0 errores (2 avisos previos), `ng build` OK; índices
   (FACADES, MODELS, DATABASE, REPOSITORIES, DOMAIN_DICTIONARY) actualizados.
