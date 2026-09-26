@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { FamilyFacade } from './family.facade';
 import { FamilyRepository } from '../repositories/family.repository';
 import { SessionScopeService } from '../services/auth/session-scope.service';
+import { ToastService } from '../services/ui/toast.service';
 
 const FAMILY = { id: 'fam-1', name: 'Casa', inviteCode: 'ABCDEFGH', myRole: 'owner' as const };
 const ME = {
@@ -23,6 +24,7 @@ const BETO = {
 describe('FamilyFacade', () => {
   let facade: FamilyFacade;
   let repo: Record<string, ReturnType<typeof vi.fn>>;
+  let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -34,8 +36,13 @@ describe('FamilyFacade', () => {
       removeMember: vi.fn().mockResolvedValue(undefined),
       rename: vi.fn().mockResolvedValue(undefined),
     };
+    toast = { success: vi.fn(), error: vi.fn() };
     TestBed.configureTestingModule({
-      providers: [FamilyFacade, { provide: FamilyRepository, useValue: repo }],
+      providers: [
+        FamilyFacade,
+        { provide: FamilyRepository, useValue: repo },
+        { provide: ToastService, useValue: toast },
+      ],
     });
     facade = TestBed.inject(FamilyFacade);
   });
@@ -126,13 +133,15 @@ describe('FamilyFacade', () => {
       expect(repo['removeMember']).toHaveBeenCalledWith('u2');
       expect(facade.members()).toEqual([ME]);
       expect(facade.currentFamily()?.inviteCode).toBe('ZZZZZZZZ');
+      expect(toast.success).toHaveBeenCalled();
     });
 
-    it('removeMember devuelve false si falla y no toca los miembros', async () => {
+    it('removeMember devuelve false si falla, avisa y no toca los miembros', async () => {
       repo['removeMember'].mockRejectedValue({ code: '42501', message: 'not_owner' });
 
       expect(await facade.removeMember('u2')).toBe(false);
       expect(facade.members()).toEqual([ME, BETO]);
+      expect(toast.error).toHaveBeenCalled();
     });
 
     it('rename guarda el nombre recortado y lo refleja', async () => {
@@ -142,16 +151,18 @@ describe('FamilyFacade', () => {
       expect(facade.currentFamily()?.name).toBe('Los Pérez');
     });
 
-    it('rename con un nombre vacío no guarda', async () => {
+    it('rename con un nombre vacío no guarda y avisa', async () => {
       expect(await facade.rename('   ')).toBe(false);
       expect(repo['rename']).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
     });
 
-    it('rename devuelve false si falla y conserva el nombre', async () => {
+    it('rename devuelve false si falla, avisa y conserva el nombre', async () => {
       repo['rename'].mockRejectedValue(new Error('rls'));
 
       expect(await facade.rename('Otro')).toBe(false);
       expect(facade.currentFamily()?.name).toBe('Casa');
+      expect(toast.error).toHaveBeenCalled();
     });
   });
 

@@ -4,7 +4,6 @@ import { AlertController } from '@ionic/angular';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { FamilySectionComponent } from './family-section.component';
 import { FamilyFacade } from '@core/facades/family.facade';
-import { ToastService } from '@core/services/ui/toast.service';
 
 const ME = { userId: 'u1', name: 'ana', role: 'owner', joinedAt: '', isMe: true };
 const BETO = { userId: 'u2', name: 'beto', role: 'member', joinedAt: '', isMe: false };
@@ -12,7 +11,6 @@ const BETO = { userId: 'u2', name: 'beto', role: 'member', joinedAt: '', isMe: f
 describe('FamilySectionComponent', () => {
   let cmp: FamilySectionComponent;
   let facade: any;
-  let toast: Record<string, ReturnType<typeof vi.fn>>;
   let alerts: { create: ReturnType<typeof vi.fn> };
   const lastAlert = () => alerts.create.mock.calls.at(-1)![0];
   const button = (text: RegExp) => lastAlert().buttons.find((b: any) => text.test(b.text));
@@ -32,14 +30,12 @@ describe('FamilySectionComponent', () => {
       removeMember: vi.fn().mockResolvedValue(true),
       rename: vi.fn().mockResolvedValue(true),
     };
-    toast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
     alerts = { create: vi.fn().mockResolvedValue({ present: vi.fn() }) };
 
     TestBed.configureTestingModule({
       providers: [
         FamilySectionComponent,
         { provide: FamilyFacade, useValue: facade },
-        { provide: ToastService, useValue: toast },
         { provide: AlertController, useValue: alerts },
       ],
     });
@@ -52,11 +48,11 @@ describe('FamilySectionComponent', () => {
   });
 
   describe('unirse', () => {
-    it('un código mal escrito avisa sin consultar', async () => {
+    it('un código mal escrito avisa junto al campo sin consultar', async () => {
       await cmp.joinWithCode('abc');
 
       expect(facade.preview).not.toHaveBeenCalled();
-      expect(toast['error']).toHaveBeenCalled();
+      expect(cmp.joinError()).toMatch(/8 letras/);
       expect(alerts.create).not.toHaveBeenCalled();
     });
 
@@ -65,10 +61,7 @@ describe('FamilySectionComponent', () => {
 
       await cmp.joinWithCode('ZZZZ-ZZZZ');
 
-      expect(toast['error']).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.stringMatching(/código/i)
-      );
+      expect(cmp.joinError()).toMatch(/código/i);
       expect(alerts.create).not.toHaveBeenCalled();
     });
 
@@ -95,17 +88,23 @@ describe('FamilySectionComponent', () => {
     });
 
     it.each([
-      ['already_member', /ya/i],
+      ['already_member', /ya estás/i],
       ['invalid_code', /código/i],
       ['error', /intenta/i],
-    ])('si joinByCode devuelve %s, avisa y no recarga', async (result, text) => {
+    ])('si joinByCode devuelve %s, lo explica y no recarga', async (result, text) => {
       facade.joinByCode.mockResolvedValue(result);
 
       await cmp.joinWithCode('WXYZ2345');
       await button(/unirme/i).handler();
 
-      expect(toast['error']).toHaveBeenCalledWith(expect.any(String), expect.stringMatching(text));
+      expect(cmp.joinError()).toMatch(text);
       expect(cmp.reloadApp).not.toHaveBeenCalled();
+    });
+
+    it('un intento nuevo borra el error anterior', async () => {
+      await cmp.joinWithCode('abc');
+      await cmp.joinWithCode('WXYZ2345');
+      expect(cmp.joinError()).toBeNull();
     });
   });
 
@@ -118,16 +117,6 @@ describe('FamilySectionComponent', () => {
 
       await button(/quitar/i).handler();
       expect(facade.removeMember).toHaveBeenCalledWith('u2');
-      expect(toast['success']).toHaveBeenCalled();
-    });
-
-    it('si quitar falla, avisa', async () => {
-      facade.removeMember.mockResolvedValue(false);
-
-      await cmp.removeMember(BETO as any);
-      await button(/quitar/i).handler();
-
-      expect(toast['error']).toHaveBeenCalled();
     });
 
     it('renombrar guarda el nombre ingresado', async () => {
