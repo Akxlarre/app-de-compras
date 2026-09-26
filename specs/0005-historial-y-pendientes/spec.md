@@ -1,6 +1,6 @@
 > id: 0005-historial-y-pendientes
 > refs: Auditoría de flujos (2026-09-25), punto 2 del plan: lógica central
-> status: in-progress
+> status: done
 > created: 2026-09-25
 
 ## Problema
@@ -69,7 +69,7 @@
   y error.
 - [x] AC7: Reponer por fecha de compra (`needsRestock`) y textos "Comprado hace N días" con singular
   correcto.
-- [ ] AC8: Verificación en staging (Chromium): finalizar con pendientes → aparecen en la lista nueva;
+- [x] AC8: Verificación en staging (Chromium): finalizar con pendientes → aparecen en la lista nueva;
   la compra aparece en Historial con su total; `checked_by` queda con el usuario.
 - [x] AC9: `npm run test:ci`, `npm run lint:arch` y `ng build` en verde; índices actualizados.
 
@@ -79,7 +79,16 @@
 - AC2–AC7: `04f1750` en rojo (22 fallos) → `30f0010` en verde.
 - AC9: `test:ci` 221/221, `lint:arch` 0 errores (2 avisos previos), `ng build` OK; índices
   (FACADES, MODELS, DATABASE, REPOSITORIES, DOMAIN_DICTIONARY) actualizados.
-- AC8: pendiente — requiere la migración aplicada en staging y `complete_list` expuesta.
+- AC8: staging (Chromium, cuenta A, 2026-09-26), tras el deploy de plataforma-db#6 y exponer
+  `complete_list`:
+  - Ronda 1 (con pendientes): la alerta ofrece pasar/descartar; "Pasar" deja el pendiente (Huevos)
+    en la lista activa y saca lo comprado; la compra aparece en Historial con su detalle.
+  - Ronda 2 (sin pendientes): confirmación simple, toast "Compra finalizada", no se crea otra lista;
+    Historial muestra la compra con $3.490 y "Gastado en septiembre".
+  - BD (REST con la sesión): `checked_by` = usuario, `checked_at` fijado, `unit_price` = 3490.
+  - Ningún HTTP ≥ 400.
+  - Observado (fuera de alcance, punto 5): la pantalla "sin lista activa" no ofrece "Repetir última
+    compra" ni plantillas; solo aparecen dentro de una lista vacía.
 
 ## Tests
 `restock.utils.spec.ts`, `purchase-history.utils.spec.ts`, `date.utils.spec.ts`,
