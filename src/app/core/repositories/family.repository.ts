@@ -45,9 +45,15 @@ export class FamilyRepository {
   }
 
   async findMine(): Promise<FamilyInfo | null> {
+    // RLS deja ver a todos los miembros de la familia: sin el filtro, `role` podría ser el de otro.
+    const { data: auth } = await this.supabase.client.auth.getSession();
+    const userId = auth.session?.user.id;
+    if (!userId) return null;
+
     const { data, error } = await this.db
       .from('family_members')
       .select('role, families(id, name, invite_code)')
+      .eq('user_id', userId)
       .limit(1)
       .maybeSingle();
     if (error) throw error;

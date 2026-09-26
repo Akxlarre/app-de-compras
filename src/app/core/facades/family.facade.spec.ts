@@ -29,6 +29,7 @@ describe('FamilyFacade', () => {
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     repo = {
+      getOrCreateFamilyId: vi.fn().mockResolvedValue('f'),
       findMine: vi.fn().mockResolvedValue(FAMILY),
       findMembers: vi.fn().mockResolvedValue([ME, BETO]),
       preview: vi.fn().mockResolvedValue({ name: 'Los Pérez', memberCount: 2 }),
@@ -48,6 +49,14 @@ describe('FamilyFacade', () => {
   });
 
   describe('loadMyFamily', () => {
+    it('asegura que haya familia antes de leerla (quien fue quitado queda sin familia)', async () => {
+      await facade.loadMyFamily();
+
+      const ensured = repo.getOrCreateFamilyId.mock.invocationCallOrder[0];
+      expect(ensured).toBeLessThan(repo.findMine.mock.invocationCallOrder[0]);
+      expect(ensured).toBeLessThan(repo.findMembers.mock.invocationCallOrder[0]);
+    });
+
     it('carga la familia y sus miembros', async () => {
       await facade.loadMyFamily();
 

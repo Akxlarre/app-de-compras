@@ -56,6 +56,14 @@ describe('FamilySectionComponent', () => {
       expect(alerts.create).not.toHaveBeenCalled();
     });
 
+    it('el código de mi propia familia avisa sin consultar ni pedir confirmación', async () => {
+      await cmp.joinWithCode('abcd-efgh');
+
+      expect(facade.preview).not.toHaveBeenCalled();
+      expect(cmp.joinError()).toMatch(/Ya estás/);
+      expect(alerts.create).not.toHaveBeenCalled();
+    });
+
     it('un código que no existe avisa sin pedir confirmación', async () => {
       facade.preview.mockResolvedValue(null);
 

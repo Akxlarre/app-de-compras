@@ -52,6 +52,9 @@ export function supabaseServiceMock() {
     storage: { from: vi.fn() },
     channel: vi.fn(() => channel),
     removeChannel: vi.fn(),
+    auth: {
+      getSession: vi.fn(async () => ({ data: { session: { user: { id: 'me' } } }, error: null })),
+    },
   };
   return { service: { client }, client, shop, channel };
 }

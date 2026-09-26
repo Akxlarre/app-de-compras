@@ -50,6 +50,8 @@ export class FamilyFacade {
     this.isLoading.set(true);
     this.error.set(null);
     try {
+      // Quien fue quitado de su familia queda sin ninguna: se le crea una (como en el resto de la app).
+      await this.family.getOrCreateFamilyId();
       const [family, members] = await Promise.all([
         this.family.findMine(),
         this.family.findMembers(),

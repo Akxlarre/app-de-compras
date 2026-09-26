@@ -49,6 +49,20 @@ describe('FamilyRepository', () => {
       expect(q.select).toHaveBeenCalledWith('role, families(id, name, invite_code)');
     });
 
+    it('lee solo MI membresía (RLS deja ver las de toda la familia)', async () => {
+      const q = queryMock({ data: { role: 'member', families: row } });
+      mock.shop.from.mockReturnValue(q);
+
+      expect((await repo.findMine())?.myRole).toBe('member');
+      expect(q.eq).toHaveBeenCalledWith('user_id', 'me');
+    });
+
+    it('devuelve null sin sesión', async () => {
+      mock.client.auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: null });
+      expect(await repo.findMine()).toBeNull();
+      expect(mock.shop.from).not.toHaveBeenCalled();
+    });
+
     it('devuelve null si no tiene familia', async () => {
       mock.shop.from.mockReturnValue(queryMock({ data: null }));
       expect(await repo.findMine()).toBeNull();

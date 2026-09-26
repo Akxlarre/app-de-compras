@@ -112,6 +112,10 @@ export class FamilySectionComponent implements OnInit {
       this.joinError.set('El código son 8 letras y números, por ejemplo ABCD-EFGH.');
       return;
     }
+    if (code === this.facade.currentFamily()?.inviteCode) {
+      this.joinError.set('Ya estás en esa familia.');
+      return;
+    }
 
     const preview = await this.facade.preview(code);
     if (!preview) {
