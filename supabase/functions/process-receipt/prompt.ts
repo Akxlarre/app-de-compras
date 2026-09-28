@@ -63,7 +63,7 @@ CANTIDADES (la posición cambia según la cadena; léela siempre junto al produc
 - Tottus, Unimarc: la cantidad va DEBAJO del producto: "0.585 X $1.299 /Kg", "3 X $1.689 c/u", "2 x 1 UN $1390 c/u", "0,306 x 1 KG $2092 c/". En Unimarc la descripción puede seguir en la línea de abajo ("MALAYITA RAIHUEN 4" + "50 GR CAT. V" = un solo producto).
 - Sin cantidad impresa: quantity 1, unit "un", unit_price = line_total.
 - Una línea que solo trae cantidad o peso ("2X1.950", "x 0.245 KG", "0,290 KG X $889", "3 X $1.689 c/u") NUNCA es un producto propio: es parte del producto de arriba o de abajo según la cadena. Cada producto aparece UNA vez y con SU monto; revisa que no se corran los montos de una línea a otra.
-- Antes de responder, suma los line_total (productos, bolsas y envases) menos los descuentos: debe dar el total. Si no da, vuelve a leer las cantidades, los pesos y los descuentos; si igual no da, deja los montos como los ves (no los ajustes para que cuadre).
+- Copia cada monto tal como está impreso. No calcules ni corrijas montos para que la boleta sume el total: la app hace esa revisión y necesita ver los números reales, aunque no cuadren.
 
 TOTAL
 - total = lo que se pagó por la compra: la línea TOTAL; si no hay, el SUBTOTAL; si tampoco se ve, el monto pagado con tarjeta o efectivo menos el vuelto. Si no se puede saber, null.
