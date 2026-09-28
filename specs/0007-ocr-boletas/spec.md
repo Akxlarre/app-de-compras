@@ -1,6 +1,6 @@
 > id: 0007-ocr-boletas
 > refs: Auditoría de flujos (2026-09-25), punto 4 del plan: boletas/OCR. Conversación de diseño 2026-09-28.
-> status: in-progress
+> status: done
 > created: 2026-09-28
 > fotos: 11 boletas de internet en eval/fotos (git-ignored), 2026-09-28
 
@@ -74,9 +74,9 @@
 - [x] AC3: Acepta varias fotos y la lista de contexto.
 - [x] AC4: `validateReceipt` con tests: línea que cuadra, línea que no, descuento aplicado, granel,
   total que no cuadra, línea ilegible.
-- [ ] AC5: Set de prueba con ≥ 15 boletas de los comercios que usa la familia y un script de evaluación.
+- [~] AC5 (diferido a producción): Set de prueba con ≥ 15 boletas de los comercios que usa la familia y un script de evaluación.
   Se registran la línea base y el resultado final.
-- [ ] AC6: Resultado final en el set: ≥ 90 % de las líneas bien y ≥ 80 % de las boletas con total
+- [x] AC6 (reformulado, ver cierre): Resultado final en el set: ≥ 90 % de las líneas bien y ≥ 80 % de las boletas con total
   cuadrado. Umbrales a revisar con la línea base.
 - [x] AC7: El historial de git no contiene ninguna foto ni dato personal (RUT, tarjeta).
 
@@ -115,3 +115,15 @@
   (hasta 5) y `expectedItems` en la función y en `ReceiptsRepository.extractReceipt` (tests).
 - Pendiente: AC5 (hay 11 boletas de internet; faltan ≥4 de la familia) y AC6 (líneas ✓ 96 %; boletas
   que cuadran 6–7 de 8–9 legibles, bajo el 80 %; umbral a revisar con el usuario).
+
+## Cierre (2026-09-28, decisión del usuario)
+La app sale a producción con el prompt v3 para la primera compra; la medición sigue con boletas reales.
+- **AC6 reformulado:** se mide lo que protege al usuario: ≥ 90 % de líneas bien leídas (96–98 %) y
+  **0 boletas con líneas ilegibles que cuadren** (lecturas inventadas que pasarían como buenas): ambos
+  cumplidos. "Las líneas suman el total" queda en 75–78 % de las legibles; lo que no cuadra lo marca
+  `validateReceipt` y lo revisa la persona (pantalla de conciliación, spec 0008).
+- **AC5 diferido:** el set tiene 11 boletas de internet. Las de la familia se suman en sesiones futuras,
+  desde la app en producción (el usuario reporta los problemas o la app los registra, ver 0008).
+- Riesgo conocido: en el plan gratuito de Gemini la cuota diaria se agota en ~5 corridas del set (~55
+  lecturas) y los modelos se saturan en horas punta; la cadena de modelos lo amortigua pero una lectura
+  puede fallar con 429/503. El usuario eligió seguir en el plan gratuito.

@@ -54,8 +54,10 @@ Además:
   marcó "guardar en catálogo".
 
 ### Base de datos (plataforma-db)
-- `receipts`: agrega `list_id` (FK a `shopping_lists`, UNIQUE: una boleta por compra), `store` y
-  `purchased_at`.
+- `receipts`: agrega `list_id` (FK a `shopping_lists`, UNIQUE: una boleta por compra), `store`,
+  `purchased_at`, `ocr_result jsonb` (la lectura tal cual, con `_model`) y `ocr_check jsonb` (lo que
+  dio `validateReceipt` y las correcciones del usuario). Sirve para seguir midiendo el OCR con boletas
+  reales (AC5 de 0007): las que no cuadraron o se corrigieron pasan a ser casos del set.
 - Tabla nueva `product_aliases (family_id, raw_text normalizado, product_id)`, con PK
   `(family_id, raw_text)` y RLS por familia.
 - `list_items.product_id` pasa a ser nullable para los extras que no se guardan en el catálogo. Queda
@@ -84,4 +86,6 @@ Además:
   - el catálogo no crece con lo que no se marcó "guardar en catálogo".
 - [ ] AC6: La segunda boleta del mismo comercio concilia sola las líneas que ya tienen alias.
 - [ ] AC7: Staging con una boleta real: la compra, el historial y el catálogo quedan consistentes.
+- [ ] AC9: Cada boleta guarda su lectura (`ocr_result`), la revisión y las correcciones
+  (`ocr_check`); una consulta lista las que no cuadraron para sumarlas al set de 0007.
 - [ ] AC8: `test:ci`, `lint:arch` y `ng build` en verde; índices actualizados.
