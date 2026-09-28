@@ -33,6 +33,13 @@ jobs:
             echo "   SUPABASE_SERVICE_ROLE_KEY: misma página (secret key, nunca en la app)."
             exit 1
           fi
+          # Freno: la v1.0.2 salió con los secretos de STAGING (el APK quedó conectado a la base de
+          # staging). El ref de staging es público (.env.staging / deploy-functions-staging.yml).
+          if echo "$SUPABASE_URL" | grep -q 'okcekripvbimlloqlihv'; then
+            echo "❌ SUPABASE_URL apunta al proyecto de STAGING (okcekripvbimlloqlihv)."
+            echo "   Usa la URL y las keys del proyecto de PRODUCCIÓN (el de app-de-entrenamiento)."
+            exit 1
+          fi
           case "$SUPABASE_URL" in https://*.supabase.co*) ;; *) echo "❌ SUPABASE_URL no tiene el formato https://<ref>.supabase.co"; exit 1;; esac
           case "$SUPABASE_URL" in https://*.supabase.co) ;; *) echo "⚠️ SUPABASE_URL trae algo después del dominio; se usa https://<ref>.supabase.co (conviene dejar el secreto así).";; esac
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then

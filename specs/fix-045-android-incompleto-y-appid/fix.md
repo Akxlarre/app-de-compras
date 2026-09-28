@@ -1,6 +1,6 @@
 > id: fix-045-android-incompleto-y-appid
 > refs: Release v1.0.1 (2026-09-28): "Unable to access jarfile …/gradle-wrapper.jar"
-> status: in-progress
+> status: done
 > created: 2026-09-28
 
 ## Síntoma
@@ -27,3 +27,10 @@ Ninguno de specs (build nativo). Deja de haber dos apps con el mismo id Android.
 
 ## Test de regresión
 La release (`release.yml`, job build_and_deploy_apk) compila y firma el APK con `com.app.compras`.
+
+## Verificación (2026-09-28)
+Release v1.0.2 (run 36495978820, `36cb0d7`): `assembleRelease` compiló (1:56 min), el APK se firmó
+("✅ Firmado exitoso") y se publicó como `update-v1.0.2-b6.apk` con `com.app.compras`.
+Hallazgo aparte: esa release usó los secretos de STAGING (`SUPABASE_URL` → `okcekripvbimlloqlihv`), así
+que el APK v1.0.2 quedó conectado a la base de staging; se agregó un freno en `release.yml` y
+`deploy-functions.yml` y hay que corregir los 3 secretos y publicar v1.0.3.

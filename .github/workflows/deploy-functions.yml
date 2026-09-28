@@ -43,6 +43,13 @@ jobs:
             echo "❌ Falta el secreto SUPABASE_URL en el repositorio."
             exit 1
           fi
+          # Freno: la v1.0.2 salió con los secretos de STAGING (el APK quedó conectado a la base de
+          # staging). El ref de staging es público (.env.staging / deploy-functions-staging.yml).
+          if echo "$SUPABASE_URL" | grep -q 'okcekripvbimlloqlihv'; then
+            echo "❌ SUPABASE_URL apunta al proyecto de STAGING (okcekripvbimlloqlihv)."
+            echo "   Usa la URL y las keys del proyecto de PRODUCCIÓN (el de app-de-entrenamiento)."
+            exit 1
+          fi
           REF=$(echo "$SUPABASE_URL" | sed -E 's|https://([^.]+)\.supabase\.co.*|\1|')
           echo "project_ref=$REF" >> $GITHUB_OUTPUT
           echo "📦 Project ref extraído: $REF"
