@@ -58,6 +58,41 @@ jobs:
             --project-ref ${{ steps.extract_ref.outputs.project_ref }} \
             --no-verify-jwt
 
+      # La app llama estas RPCs de `shop` (plataforma-db). Si alguna no está en la API de producción
+      # (migración sin aplicar o función no expuesta), el APK saldría roto: se corta la release acá.
+      # Se llaman sin sesión: una RPC existente responde 401/403 (solo `authenticated`), una que
+      # falta responde 404 PGRST202 (o PGRST106 si el schema `shop` no está expuesto).
+      - name: Verificar RPCs de producción
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          faltan=0
+          # PostgREST busca la función por nombre Y parámetros: hay que mandar los de su firma.
+          nil='00000000-0000-0000-0000-000000000000'
+          while read -r fn args; do
+            body=$(curl -s -o /tmp/rpc.json -w '%{http_code}' -X POST "$SUPABASE_URL/rest/v1/rpc/$fn" \
+              -H "apikey: $SUPABASE_ANON_KEY" -H "Content-Profile: shop" -H "Content-Type: application/json" -d "$args")
+            if [ "$body" = "404" ] || grep -qE 'PGRST202|PGRST106' /tmp/rpc.json; then
+              echo "❌ $fn no está disponible en producción (HTTP $body): $(head -c 200 /tmp/rpc.json)"
+              faltan=1
+            else
+              echo "✅ $fn (HTTP $body)"
+            fi
+          done <<EOF
+          get_or_create_family {}
+          get_family_members {}
+          complete_list {"p_list_id":"$nil","p_carry_pending":false}
+          preview_family {"p_code":"AAAA2222"}
+          join_family_by_code {"p_code":"AAAA2222"}
+          remove_family_member {"p_user_id":"$nil"}
+          EOF
+          if [ "$faltan" = 1 ]; then
+            echo "Aplica las migraciones (plataforma-db → Deploy de migraciones, confirmar=produccion)"
+            echo "y expón las funciones de 'shop' en la Data API de producción."
+            exit 1
+          fi
+
   # ── Job 2: Build y Deploy de APK ─────────────────────────────
   build_and_deploy_apk:
     runs-on: ubuntu-latest
