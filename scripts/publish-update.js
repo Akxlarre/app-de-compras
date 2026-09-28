@@ -2,7 +2,14 @@ const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 
-let supabaseUrl = process.env.SUPABASE_URL || 'https://ibkyzgxqbxletnwildrm.supabase.co';
+// Proyecto compartido con app-de-entrenamiento (ADR-001): TODO lo que este script lee, publica o borra
+// en app_updates / releases va filtrado por APP_TARGET. Antes insertaba sin app_target (la columna
+// tiene DEFAULT 'gym': compras se publicaba como entrenamiento) y la limpieza conservaba los 3 builds
+// más altos de TODA la tabla (borró la v1.0.4 de compras apenas subió, y borraría los APK ajenos).
+const APP_TARGET = 'shop';
+
+// Sin fallback a un proyecto fijo: si falta el secreto, fallar antes que publicar en otro proyecto.
+let supabaseUrl = process.env.SUPABASE_URL;
 let supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const apkPath = process.env.APK_PATH;
 const versionTag = process.env.VERSION_TAG || 'v1.0.0';
@@ -12,9 +19,9 @@ async function getServiceKey() {
   if (supabaseKey) return supabaseKey;
   
   const token = process.env.SUPABASE_ACCESS_TOKEN;
-  const projectId = process.env.SUPABASE_PROJECT_ID || 'ibkyzgxqbxletnwildrm';
-  
-  if (token) {
+  const projectId = process.env.SUPABASE_PROJECT_ID;
+
+  if (token && projectId) {
     console.log('Consultando Management API de Supabase para obtener service_role key...');
     try {
       const res = await fetch(`https://api.supabase.com/v1/projects/${projectId}/api-keys`, {
@@ -61,7 +68,8 @@ async function publishUpdate() {
     console.log(`Build number asignado (VERSION_CODE de CI): ${nextBuildNumber}`);
 
     // 2. Subir el APK al Storage
-    const fileName = `update-${versionTag}-b${nextBuildNumber}.apk`;
+    // Prefijo por app: los APK de las dos apps conviven en el mismo bucket.
+    const fileName = `${APP_TARGET}/update-${versionTag}-b${nextBuildNumber}.apk`;
     const fileBuffer = fs.readFileSync(apkPath);
     
     console.log(`Subiendo ${fileName} al bucket 'releases'...`);
@@ -87,7 +95,8 @@ async function publishUpdate() {
         build_number: nextBuildNumber,
         release_notes: releaseNotes,
         force_update: false, // Por defecto falso, se puede cambiar manual si es crítico
-        apk_path: uploadData.path
+        apk_path: uploadData.path,
+        app_target: APP_TARGET,
       });
 
     if (insertError) {
@@ -96,12 +105,13 @@ async function publishUpdate() {
 
     console.log(`¡Publicación completada exitosamente! La actualización ${versionTag} (build ${nextBuildNumber}) ya está disponible para los usuarios.`);
 
-    // 4. Limpieza automática de versiones antiguas (retener solo las últimas 3)
+    // 4. Limpieza automática de versiones antiguas DE ESTA APP (retener solo las últimas 3)
     console.log('Verificando versiones antiguas para limpieza de storage...');
     const MAX_RETAINED_VERSIONS = 3;
     const { data: allUpdates, error: listError } = await supabase
       .from('app_updates')
       .select('id, apk_path, build_number')
+      .eq('app_target', APP_TARGET)
       .order('build_number', { ascending: false });
 
     if (!listError && allUpdates && allUpdates.length > MAX_RETAINED_VERSIONS) {
