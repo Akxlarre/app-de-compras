@@ -5,9 +5,9 @@ const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const geminiApiKey = Deno.env.get('GEMINI_API_KEY') || '';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-// Configurables sin redeploy de código: la familia 1.5 fue retirada y el endpoint respondía 502.
-const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash';
-const GEMINI_FALLBACK_MODEL = Deno.env.get('GEMINI_FALLBACK_MODEL') || 'gemini-2.5-flash-lite';
+// Configurables sin redeploy de código. 1.5 fue retirada y 2.5 no está disponible para keys nuevas (404).
+const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.5-flash';
+const GEMINI_FALLBACK_MODEL = Deno.env.get('GEMINI_FALLBACK_MODEL') || 'gemini-3.5-flash-lite';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
