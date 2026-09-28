@@ -89,3 +89,8 @@
   (cuadran las 9 legibles; 04 y 09 marcan sus líneas ilegibles).
 - Primeras lecturas con el prompt viejo: 04 (Jumbo ilegible) inventó 3 productos y un total de $8.110
   (real $19.711); 09 leyó 18/19 líneas pero no marcó las tapadas por el dedo.
+- **Línea base** (prompt viejo `{name, price}`, cadena de modelos del plan gratuito, 11 boletas,
+  2026-09-28): líneas bien 70/84 (83 %, generoso: un solo "price" a veces coincide con el total de
+  línea), **totales ok 3/11 (27 %)**, 0 errores. Pierde cantidades (02: "2X 640" → $640), no resta
+  descuentos (06: $6.380 vs $2.552; 05: $32.869 vs $29.770), 04 inventa 3 productos, 09 no marca las
+  líneas tapadas. Modelos que respondieron: 3.6-flash, 3.1-flash-lite, 3.5-flash-lite.
