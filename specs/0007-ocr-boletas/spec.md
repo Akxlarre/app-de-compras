@@ -94,3 +94,8 @@
   línea), **totales ok 3/11 (27 %)**, 0 errores. Pierde cantidades (02: "2X 640" → $640), no resta
   descuentos (06: $6.380 vs $2.552; 05: $32.869 vs $29.770), 04 inventa 3 productos, 09 no marca las
   líneas tapadas. Modelos que respondieron: 3.6-flash, 3.1-flash-lite, 3.5-flash-lite.
+- **Contrato nuevo, prompt v1** (`dda3ec6`): líneas bien 82/84 (98 %), total impreso bien leído 11/11,
+  **las líneas suman el total en 7/11**. Las 4 que no cuadran quedan marcadas por la aritmética, no
+  pasan como buenas: 03 (±$10, el "LAV LIMON" ambiguo de la foto), 04 (leyó 2 fragmentos, no inventó
+  productos completos), 09 (faltan $1.000 bajo el dedo) y 01 (tomó "x 0.245 KG" como producto y corrió
+  los montos). Prompt v2 (`4adba0e`) corrige lo de 01 y pide marcar ilegibles en vez de reconstruir.
