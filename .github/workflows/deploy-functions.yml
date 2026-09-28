@@ -1,0 +1,75 @@
+name: Deploy Edge Functions
+
+# Igual que en app-de-entrenamiento: desplegar una Edge Function no debería exigir cortar un
+# release de la APK. release.yml acopla las dos cosas y toma VERSION_TAG de github.ref_name, así
+# que dispararlo a mano publicaría en app_updates una versión llamada como la rama. Este workflow
+# hace solo la parte de servidor, en PRODUCCIÓN (staging: deploy-functions-staging.yml).
+
+on:
+  workflow_dispatch:
+  # Al tocar el código de las functions en main, para que el servidor no quede atrás del cliente.
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '!supabase/functions/process-receipt/eval/**'
+      - '.github/workflows/deploy-functions.yml'
+
+concurrency:
+  group: deploy-functions-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # CLI desde npm: setup-cli con `latest` consulta la API de GitHub sin token y puede chocar
+      # con el límite de solicitudes.
+      - name: Setup Supabase CLI
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/cli" supabase@2
+          echo "$RUNNER_TEMP/cli/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Extraer Project Ref desde SUPABASE_URL
+        id: extract_ref
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "❌ Falta el secreto SUPABASE_URL en el repositorio."
+            exit 1
+          fi
+          REF=$(echo "$SUPABASE_URL" | sed -E 's|https://([^.]+)\.supabase\.co.*|\1|')
+          echo "project_ref=$REF" >> $GITHUB_OUTPUT
+          echo "📦 Project ref extraído: $REF"
+
+      # El proyecto es compartido con app-de-entrenamiento (misma key): publicarla es idempotente.
+      - name: Publicar GEMINI_API_KEY como secreto de Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "❌ Falta el secreto GEMINI_API_KEY en el repositorio."
+            exit 1
+          fi
+          supabase secrets set GEMINI_API_KEY="$GEMINI_API_KEY" \
+            --project-ref ${{ steps.extract_ref.outputs.project_ref }}
+
+      # Mismo flag que release.yml: process-receipt valida el JWT por su cuenta (y el preflight CORS).
+      - name: Deploy Edge Function (process-receipt)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy process-receipt \
+            --project-ref ${{ steps.extract_ref.outputs.project_ref }} \
+            --no-verify-jwt
+
+      - name: Resumen
+        run: |
+          echo "✅ Edge Function desplegada en producción: process-receipt"
+          echo "   No se construyó ni publicó ninguna APK."
