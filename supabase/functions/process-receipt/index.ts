@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { RECEIPT_SCHEMA, SYSTEM_PROMPT, userPrompt } from './prompt.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -71,10 +72,25 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { imageBase64, mimeType } = await req.json();
+    const body = await req.json();
+    // Varias fotos para una boleta larga; `imageBase64` suelto se acepta por compatibilidad.
+    const images: { base64: string; mimeType?: string }[] = Array.isArray(body.images)
+      ? body.images
+      : body.imageBase64
+      ? [{ base64: body.imageBase64, mimeType: body.mimeType }]
+      : [];
+    const expectedItems: string[] = Array.isArray(body.expectedItems)
+      ? body.expectedItems.filter((i: unknown) => typeof i === 'string').slice(0, 200)
+      : [];
 
-    if (!imageBase64) {
+    if (images.length === 0 || images.some((i) => !i?.base64)) {
       return new Response(JSON.stringify({ error: { message: 'Falta la imagen de la boleta.' } }), {
+        status: 400,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      });
+    }
+    if (images.length > 5) {
+      return new Response(JSON.stringify({ error: { message: 'Máximo 5 fotos por boleta.' } }), {
         status: 400,
         headers: { ...cors, 'Content-Type': 'application/json' },
       });
@@ -83,24 +99,23 @@ Deno.serve(async (req: Request) => {
     const buildPayload = (model: string) => ({
       model,
       messages: [
-        {
-          role: 'system',
-          content:
-            'Eres un sistema de OCR para boletas de supermercado. Tu única tarea es extraer los nombres de los productos y sus precios unitarios. IGNORA fechas y totales globales. Devuelve un JSON estricto con la estructura: { "items": [ { "name": "Leche", "price": 1200 } ] }',
-        },
+        { role: 'system', content: SYSTEM_PROMPT },
         {
           role: 'user',
           content: [
-            { type: 'text', text: 'Extrae los productos y precios de esta boleta.' },
-            {
+            { type: 'text', text: userPrompt(expectedItems) },
+            ...images.map((i) => ({
               type: 'image_url',
-              image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}` },
-            },
+              image_url: { url: `data:${i.mimeType || 'image/jpeg'};base64,${i.base64}` },
+            })),
           ],
         },
       ],
-      response_format: { type: 'json_object' },
-      temperature: 0.1,
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: 'boleta', strict: true, schema: RECEIPT_SCHEMA },
+      },
+      temperature: 0,
     });
 
     const call = (model: string) =>
@@ -160,13 +175,13 @@ Deno.serve(async (req: Request) => {
     const contentStr = result.choices?.[0]?.message?.content;
 
     // Se agrega qué modelo leyó la boleta (la calidad cambia entre modelos; lo usa el eval).
-    let body = contentStr;
+    let responseBody = contentStr;
     try {
-      body = JSON.stringify({ ...JSON.parse(contentStr), _model: currentModel });
+      responseBody = JSON.stringify({ ...JSON.parse(contentStr), _model: currentModel });
     } catch {
       // JSON inválido del modelo: se devuelve tal cual y la app lo trata como error.
     }
-    return new Response(body, {
+    return new Response(responseBody, {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
     });

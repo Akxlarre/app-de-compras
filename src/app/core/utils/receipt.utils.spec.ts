@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateReceipt } from './receipt.utils';
+import { parseOcrReceipt, validateReceipt } from './receipt.utils';
 import type { OcrReceipt, OcrReceiptLine } from '@core/models/receipt.model';
 
 const line = (over: Partial<OcrReceiptLine>): OcrReceiptLine => ({
@@ -149,5 +149,46 @@ describe('validateReceipt', () => {
 
     expect(r.doubtfulLines).toEqual([]);
     expect(r.totalMatches).toBe(true);
+  });
+});
+
+describe('parseOcrReceipt', () => {
+  const valida = {
+    store: 'Líder',
+    date: '2012-04-24',
+    total: 1280,
+    lines: [line({ raw_text: 'BETUN LIQ NE', quantity: 2, unit_price: 640, line_total: 1280 })],
+    _model: 'gemini-3.8-flash',
+  };
+
+  it('acepta una respuesta que cumple el contrato (y descarta campos extra como _model)', () => {
+    const { _model, ...esperado } = valida;
+    expect(parseOcrReceipt(valida)).toEqual(esperado);
+  });
+
+  it.each([
+    ['null', null],
+    ['el formato viejo { items }', { items: [{ name: 'Leche', price: 1200 }] }],
+    ['lines no es arreglo', { ...valida, lines: 'x' }],
+    ['total como texto', { ...valida, total: '1.280' }],
+    ['una línea con kind desconocido', { ...valida, lines: [line({ kind: 'promo' as never })] }],
+    ['una línea sin legible', { ...valida, lines: [{ ...line({}), legible: undefined }] }],
+    ['un monto como texto', { ...valida, lines: [line({ line_total: '$1.280' as never })] }],
+    ['unidad desconocida', { ...valida, lines: [line({ unit: 'lt' as never })] }],
+  ])('rechaza %s', (_, data) => {
+    expect(() => parseOcrReceipt(data)).toThrow(/contrato/);
+  });
+
+  it('completa con null los campos opcionales que falten en una línea', () => {
+    const r = parseOcrReceipt({
+      store: null,
+      date: null,
+      total: 990,
+      lines: [{ kind: 'product', line_total: 990, legible: true }],
+    });
+
+    expect(r.lines[0]).toEqual(
+      line({ raw_text: null, quantity: null, unit: null, unit_price: null, line_total: 990 })
+    );
   });
 });
