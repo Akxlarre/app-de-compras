@@ -68,10 +68,10 @@
 - La UI de revisión, que se hace en 0008. Esta spec solo deja el contrato y la validación.
 
 ## Acceptance Criteria
-- [ ] AC1: Staging confirma qué modelos responden hoy; la función usa uno vigente, configurable.
-- [ ] AC2: La respuesta cumple el contrato con un esquema estricto; un test de la función rechaza una
+- [x] AC1: Staging confirma qué modelos responden hoy; la función usa uno vigente, configurable.
+- [x] AC2: La respuesta cumple el contrato con un esquema estricto; un test de la función rechaza una
   respuesta fuera del esquema.
-- [ ] AC3: Acepta varias fotos y la lista de contexto.
+- [x] AC3: Acepta varias fotos y la lista de contexto.
 - [x] AC4: `validateReceipt` con tests: línea que cuadra, línea que no, descuento aplicado, granel,
   total que no cuadra, línea ilegible.
 - [ ] AC5: Set de prueba con ≥ 15 boletas de los comercios que usa la familia y un script de evaluación.
@@ -101,3 +101,17 @@
   los montos). Prompt v2 (`4adba0e`) corrige lo de 01 y pide marcar ilegibles en vez de reconstruir.
 - AC7: `git log --all` no tiene imágenes bajo `eval/` (fotos y resultados git-ignored); los casos no
   tienen RUT ni tarjetas; se quitó el usuario de TikTok del origen del caso 01.
+- Prompt v2 (`4adba0e`, "suma antes de responder"): la 04 ilegible devolvió "14 X $660 = $9.241" (14×660
+  = 9.240): **ajustó un monto en $1 para llegar al total**, dentro de la tolerancia de validateReceipt.
+  Se descartó: pedirle al modelo que verifique la suma lo empuja a forzarla.
+- **Prompt v3** (`6a3c5da`, "copia los montos tal cual"): líneas bien 72/75 (96 %), total impreso 10/10,
+  las líneas suman el total en 6/8 legibles (+ la 08 cuadró en v1/v2; en v3 dio 429), **0 boletas con
+  líneas ilegibles que cuadren** (sin lecturas inventadas que pasen como buenas). No cuadran y quedan
+  marcadas: 01 (el modelo lite sigue corriendo los montos del granel), 03 (±$10, ambigua en la foto).
+  Casi todo lo leyó `gemini-3.1-flash-lite`: los modelos mejores ya no tenían cuota. La 08 falló con 429
+  en toda la cadena: la cuota diaria gratuita se agota en ~5 corridas del set.
+- AC1: cadena de 7 modelos vigentes (`GEMINI_MODELS`), confirmada en staging. AC2: esquema estricto
+  (`json_schema`) + `parseOcrReceipt` rechaza respuestas fuera de contrato (tests). AC3: `images[]`
+  (hasta 5) y `expectedItems` en la función y en `ReceiptsRepository.extractReceipt` (tests).
+- Pendiente: AC5 (hay 11 boletas de internet; faltan ≥4 de la familia) y AC6 (líneas ✓ 96 %; boletas
+  que cuadran 6–7 de 8–9 legibles, bajo el 80 %; umbral a revisar con el usuario).
