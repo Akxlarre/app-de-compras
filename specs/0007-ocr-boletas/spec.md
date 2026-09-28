@@ -78,7 +78,7 @@
   Se registran la línea base y el resultado final.
 - [ ] AC6: Resultado final en el set: ≥ 90 % de las líneas bien y ≥ 80 % de las boletas con total
   cuadrado. Umbrales a revisar con la línea base.
-- [ ] AC7: El historial de git no contiene ninguna foto ni dato personal (RUT, tarjeta).
+- [x] AC7: El historial de git no contiene ninguna foto ni dato personal (RUT, tarjeta).
 
 ## Evidencia (2026-09-28, en curso)
 - AC1 (parcial): staging (workflow `deploy-functions-staging.yml`) confirmó que 1.5 no existe y que 2.5
@@ -99,3 +99,5 @@
   pasan como buenas: 03 (±$10, el "LAV LIMON" ambiguo de la foto), 04 (leyó 2 fragmentos, no inventó
   productos completos), 09 (faltan $1.000 bajo el dedo) y 01 (tomó "x 0.245 KG" como producto y corrió
   los montos). Prompt v2 (`4adba0e`) corrige lo de 01 y pide marcar ilegibles en vez de reconstruir.
+- AC7: `git log --all` no tiene imágenes bajo `eval/` (fotos y resultados git-ignored); los casos no
+  tienen RUT ni tarjetas; se quitó el usuario de TikTok del origen del caso 01.
