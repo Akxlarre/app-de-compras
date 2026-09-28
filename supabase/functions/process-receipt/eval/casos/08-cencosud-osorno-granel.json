@@ -1,0 +1,127 @@
+{
+  "caso": "08-cencosud-osorno-granel",
+  "foto": "08-cencosud-osorno-granel.jpg",
+  "origen": "internet",
+  "store": "Santa Isabel / Jumbo (Cencosud)",
+  "date": null,
+  "total": 6056,
+  "items_count": null,
+  "lines": [
+    {
+      "raw_text": "PAN FRIO P P",
+      "kind": "product",
+      "quantity": 0.29,
+      "unit": "kg",
+      "unit_price": 889,
+      "line_total": 258,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PAN FRIO P P",
+      "kind": "product",
+      "quantity": 0.664,
+      "unit": "kg",
+      "unit_price": 889,
+      "line_total": 590,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PAN FRIO P P",
+      "kind": "product",
+      "quantity": 1.038,
+      "unit": "kg",
+      "unit_price": 889,
+      "line_total": 923,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PAN FRIO P P",
+      "kind": "product",
+      "quantity": 0.856,
+      "unit": "kg",
+      "unit_price": 889,
+      "line_total": 761,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PAN FRIO P P",
+      "kind": "product",
+      "quantity": 0.674,
+      "unit": "kg",
+      "unit_price": 889,
+      "line_total": 599,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PAN FRIO P P",
+      "kind": "product",
+      "quantity": 0.404,
+      "unit": "kg",
+      "unit_price": 889,
+      "line_total": 359,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "QUESO CHAN 250GR",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1199,
+      "line_total": 1199,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "LECHE SURLAT L V",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 649,
+      "line_total": 649,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PEBRE DON JUAN BOL",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 449,
+      "line_total": 898,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AJI DON JUAN",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -180,
+      "applies_to": 8,
+      "legible": true
+    },
+    {
+      "raw_text": "Aporte Fund. mi Parque",
+      "kind": "other",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": 4,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Formato Cencosud: la cantidad va ARRIBA del producto (\"0,290 KG X $889\" y luego \"PAN FRIO P P 258\").",
+    "El mismo producto se repite 6 veces (6 bolsas de pan): son 6 líneas, no 1.",
+    "SUB TOTAL 6.236 - DESCUENTOS 180 = TOTAL 6.056. La donación de $4 NO entra al total (se paga aparte: 10.000 - 3.940 = 6.060).",
+    "Sin fecha de compra impresa (solo la de los puntos)."
+  ]
+}

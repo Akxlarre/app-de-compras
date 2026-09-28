@@ -1,0 +1,25 @@
+{
+  "caso": "11-almacen-colina-test",
+  "foto": "11-almacen-colina-test.jpg",
+  "origen": "internet",
+  "store": null,
+  "date": "2021-01-12",
+  "total": 900,
+  "items_count": null,
+  "lines": [
+    {
+      "raw_text": "TEST ZPOS",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 900,
+      "line_total": 900,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Almacén/mayorista pequeño con formato de tabla (Ctd. Descripcion Precio Subt.).",
+    "Boleta de prueba del sistema, 1 línea."
+  ]
+}

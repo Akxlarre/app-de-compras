@@ -7,6 +7,18 @@ import { supabaseServiceMock } from '../../../testing/supabase-query.mock';
 describe('ReceiptsRepository', () => {
   let repo: ReceiptsRepository;
   let mock: ReturnType<typeof supabaseServiceMock>;
+  const linea = {
+    raw_text: 'BETUN LIQ NE',
+    kind: 'product',
+    name: 'Betún líquido negro',
+    matched_list_item: null,
+    quantity: 2,
+    unit: 'un',
+    unit_price: 640,
+    line_total: 1280,
+    applies_to: null,
+    legible: true,
+  };
 
   beforeEach(() => {
     mock = supabaseServiceMock();
@@ -16,24 +28,39 @@ describe('ReceiptsRepository', () => {
     repo = TestBed.inject(ReceiptsRepository);
   });
 
-  it('extractItems invoca process-receipt y devuelve los ítems crudos', async () => {
-    const items = [{ name: 'Leche', price: 1200 }];
-    mock.client.functions.invoke.mockResolvedValue({ data: { items }, error: null });
+  it('extractReceipt manda las fotos y la lista de contexto, y devuelve la boleta validada', async () => {
+    mock.client.functions.invoke.mockResolvedValue({
+      data: { store: 'Líder', date: null, total: 1280, lines: [linea], _model: 'gemini-3.8-flash' },
+      error: null,
+    });
+    const images = [
+      { base64: 'QUJD', mimeType: 'image/png' },
+      { base64: 'REVG', mimeType: 'image/jpeg' },
+    ];
 
-    expect(await repo.extractItems('QUJD', 'image/png')).toEqual(items);
+    const r = await repo.extractReceipt(images, ['Betún']);
+
+    expect(r).toEqual({ store: 'Líder', date: null, total: 1280, lines: [linea] });
     expect(mock.client.functions.invoke).toHaveBeenCalledWith('process-receipt', {
-      body: { imageBase64: 'QUJD', mimeType: 'image/png' },
+      body: { images, expectedItems: ['Betún'] },
     });
   });
 
-  it('extractItems devuelve [] si la respuesta no trae ítems', async () => {
-    mock.client.functions.invoke.mockResolvedValue({ data: {}, error: null });
-    expect(await repo.extractItems('x', 'image/jpeg')).toEqual([]);
+  it('extractReceipt lanza si la respuesta no cumple el contrato', async () => {
+    mock.client.functions.invoke.mockResolvedValue({
+      data: { items: [{ name: 'Leche', price: 1200 }] },
+      error: null,
+    });
+    await expect(repo.extractReceipt([{ base64: 'x', mimeType: 'image/jpeg' }])).rejects.toThrow(
+      /contrato/
+    );
   });
 
-  it('extractItems lanza si la Edge Function falla', async () => {
+  it('extractReceipt lanza si la Edge Function falla', async () => {
     const error = new Error('500');
     mock.client.functions.invoke.mockResolvedValue({ data: null, error });
-    await expect(repo.extractItems('x', 'image/jpeg')).rejects.toBe(error);
+    await expect(repo.extractReceipt([{ base64: 'x', mimeType: 'image/jpeg' }])).rejects.toBe(
+      error
+    );
   });
 });

@@ -3,6 +3,8 @@ import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
 import { SessionScopeService } from '../services/auth/session-scope.service';
+import type { ReceiptValidation } from '@core/models/receipt.model';
+import { validateReceipt } from '@core/utils/receipt.utils';
 
 export interface ScannedItem {
   id: string;
@@ -20,6 +22,8 @@ export class ReceiptScannerFacade {
   readonly isSaving = signal(false);
   readonly scannedItems = signal<ScannedItem[]>([]);
   readonly error = signal<string | null>(null);
+  /** Revisión aritmética de la última boleta leída (null antes de leer). */
+  readonly validation = signal<ReceiptValidation | null>(null);
 
   constructor() {
     inject(SessionScopeService).register(() => this.reset());
@@ -36,14 +40,21 @@ export class ReceiptScannerFacade {
     try {
       // Quitar el prefijo "data:image/jpeg;base64," para mandar solo el payload
       const base64Data = (await this.fileToBase64(file)).split(',')[1];
-      const items = await this.receipts.extractItems(base64Data, file.type);
+      const receipt = await this.receipts.extractReceipt([
+        { base64: base64Data, mimeType: file.type },
+      ]);
 
+      this.validation.set(validateReceipt(receipt));
+      // Hasta la conciliación (spec 0008) la pantalla solo guarda precios: productos legibles con su
+      // precio unitario (o el total de línea si no trae cantidad).
       this.scannedItems.set(
-        items.map((item) => ({
-          id: crypto.randomUUID(),
-          name: item.name || 'Producto Desconocido',
-          price: item.price || 0,
-        }))
+        receipt.lines
+          .filter((l) => l.kind === 'product' && l.legible)
+          .map((l) => ({
+            id: crypto.randomUUID(),
+            name: l.name || l.raw_text || 'Producto Desconocido',
+            price: l.unit_price ?? l.line_total ?? 0,
+          }))
       );
     } catch (e) {
       this.error.set(
@@ -90,6 +101,7 @@ export class ReceiptScannerFacade {
 
   reset() {
     this.scannedItems.set([]);
+    this.validation.set(null);
     this.error.set(null);
     this.isScanning.set(false);
     this.isSaving.set(false);

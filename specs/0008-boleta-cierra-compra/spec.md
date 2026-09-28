@@ -1,0 +1,91 @@
+> id: 0008-boleta-cierra-compra
+> refs: Punto 4 del plan (boletas/OCR). Conversación de diseño 2026-09-28. Depende de 0007.
+> status: draft
+> created: 2026-09-28
+
+## Problema
+Hoy la boleta es un proceso aparte de la compra:
+1. Cada línea se busca por nombre **exacto**. Si no existe, se **crea un producto**: "LECHE ENT
+   SOPROLE 1L" termina duplicando a "Leche" y el catálogo se llena con los nombres del súper.
+2. No toca la compra. El historial (0005) congela `unit_price` con el `last_price` del momento en que
+   se finaliza, y como la boleta se escanea después, no lo corrige.
+3. No se guarda la boleta (la tabla `receipts` no se usa). El gasto del mes es solo una estimación.
+
+## Decisiones (conversación 2026-09-28)
+- **Toda boleta pertenece a una compra.** La boleta es el cierre de la compra y la corrige con la
+  realidad.
+- **Se guarda la foto** en un bucket privado por familia.
+- **La boleta manda en precio y cantidad**, pero no desmarca nada sin preguntar.
+- Al catálogo solo entra lo que el usuario marca ("guardar en catálogo").
+
+## Solución
+### Flujo
+```
+Lista → marcar en el súper → Finalizar → "¿Escaneas la boleta?" → conciliación → compra cerrada
+```
+La opción "Ahora no" finaliza como hoy. La boleta se puede agregar después (0009).
+
+### Conciliación (función pura `reconcileReceipt(lines, listItems, catalog, aliases)`)
+Cada línea `product` de la boleta se cruza, en este orden, contra:
+1. **Alias** de la familia (el `raw_text` ya confirmado antes). Coincidencia segura.
+2. **Ítems marcados de la compra.** Primero el `matched_list_item` del OCR, después por similitud.
+3. **Catálogo de la familia**, por similitud.
+4. Si no coincide con nada: **no estaba en la lista**.
+
+La pantalla muestra tres grupos:
+- **Coinciden:** confirmados, se pueden corregir.
+- **¿Es este?:** el usuario elige entre candidatos o marca "otro".
+- **No estaban en la lista:** suman al gasto de la compra y tienen un check opcional "guardar en
+  catálogo".
+
+Además:
+- Lo marcado en la lista que no aparece en la boleta muestra "¿no lo compraste?", con la opción de
+  desmarcarlo (pasa a pendiente).
+- Las líneas dudosas de `validateReceipt` (0007) se destacan para revisar.
+
+### Al confirmar (RPC transaccional `shop.apply_receipt`)
+- Crea la fila en `receipts` con `list_id`, `total_amount`, `purchased_at`, `store`, `image_url` y
+  `status = 'processed'`.
+- Para cada ítem conciliado, fija en `list_items` el `unit_price` y la `quantity` reales.
+- Actualiza `products.last_price` (y `last_purchased_at`).
+- Guarda en `product_aliases` cada coincidencia **confirmada por el usuario**, con el `raw_text`
+  apuntando al producto.
+- Agrega a la compra los extras "no estaban en la lista", creando el producto solo si el usuario
+  marcó "guardar en catálogo".
+
+### Base de datos (plataforma-db)
+- `receipts`: agrega `list_id` (FK a `shopping_lists`, UNIQUE: una boleta por compra), `store`,
+  `purchased_at`, `ocr_result jsonb` (la lectura tal cual, con `_model`) y `ocr_check jsonb` (lo que
+  dio `validateReceipt` y las correcciones del usuario). Sirve para seguir midiendo el OCR con boletas
+  reales (AC5 de 0007): las que no cuadraron o se corrigieron pasan a ser casos del set.
+- Tabla nueva `product_aliases (family_id, raw_text normalizado, product_id)`, con PK
+  `(family_id, raw_text)` y RLS por familia.
+- `list_items.product_id` pasa a ser nullable para los extras que no se guardan en el catálogo. Queda
+  a evaluar si en vez de eso se usa un `name` libre.
+- Bucket privado `receipts`, con la ruta `<family_id>/<receipt_id>.jpg` y policies por familia.
+- pgTAP: RLS de las tablas nuevas, `apply_receipt` atómico y aislamiento entre familias.
+
+## Fuera de alcance
+- Agregar la boleta desde el Historial, la compra no planificada y el gasto real en el Historial:
+  spec 0009.
+
+## Acceptance Criteria
+- [ ] AC1: Migración + pgTAP: `receipts.list_id` único, `product_aliases` con RLS, bucket privado
+  por familia y `apply_receipt` transaccional. CI de plataforma-db en verde.
+- [ ] AC2: `reconcileReceipt` con tests:
+  - un alias gana siempre;
+  - la lista tiene prioridad sobre el catálogo;
+  - una línea sin coincidencia queda como "no estaba en la lista";
+  - los ítems marcados sin línea en la boleta quedan como "¿no lo compraste?".
+- [ ] AC3: Al finalizar se ofrece escanear; "Ahora no" mantiene el comportamiento actual.
+- [ ] AC4: La pantalla de conciliación muestra los tres grupos y las líneas dudosas, y permite
+  corregir.
+- [ ] AC5: Al confirmar:
+  - la compra queda con los precios y cantidades reales y con su total;
+  - los alias quedan guardados;
+  - el catálogo no crece con lo que no se marcó "guardar en catálogo".
+- [ ] AC6: La segunda boleta del mismo comercio concilia sola las líneas que ya tienen alias.
+- [ ] AC7: Staging con una boleta real: la compra, el historial y el catálogo quedan consistentes.
+- [ ] AC9: Cada boleta guarda su lectura (`ocr_result`), la revisión y las correcciones
+  (`ocr_check`); una consulta lista las que no cuadraron para sumarlas al set de 0007.
+- [ ] AC8: `test:ci`, `lint:arch` y `ng build` en verde; índices actualizados.

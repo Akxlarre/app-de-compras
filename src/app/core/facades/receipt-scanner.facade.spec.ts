@@ -10,7 +10,20 @@ describe('ReceiptScannerFacade', () => {
   let facade: ReceiptScannerFacade;
   let family: { getOrCreateFamilyId: ReturnType<typeof vi.fn> };
   let products: Record<string, ReturnType<typeof vi.fn>>;
-  let receipts: { extractItems: ReturnType<typeof vi.fn> };
+  let receipts: { extractReceipt: ReturnType<typeof vi.fn> };
+  const linea = (over: object) => ({
+    raw_text: 'X',
+    kind: 'product',
+    name: null,
+    matched_list_item: null,
+    quantity: 1,
+    unit: 'un',
+    unit_price: null,
+    line_total: null,
+    applies_to: null,
+    legible: true,
+    ...over,
+  });
 
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -20,7 +33,7 @@ describe('ReceiptScannerFacade', () => {
       updatePrice: vi.fn().mockResolvedValue(undefined),
       create: vi.fn().mockResolvedValue({ id: 'p-new' }),
     };
-    receipts = { extractItems: vi.fn() };
+    receipts = { extractReceipt: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -36,26 +49,54 @@ describe('ReceiptScannerFacade', () => {
   describe('processReceiptImage', () => {
     const file = new File(['fake-image'], 'boleta.jpg', { type: 'image/jpeg' });
 
-    it('envía la imagen en base64 (sin prefijo data:) y normaliza los ítems', async () => {
-      receipts.extractItems.mockResolvedValue([
-        { name: 'Leche', price: 1200 },
-        { name: '', price: null },
-      ]);
+    it('envía la imagen en base64 (sin prefijo data:) y toma los productos legibles con su precio unitario', async () => {
+      receipts.extractReceipt.mockResolvedValue({
+        store: 'Líder',
+        date: null,
+        total: 3260,
+        lines: [
+          linea({ raw_text: 'LCH ENT', name: 'Leche entera', quantity: 2, unit_price: 1200, line_total: 2400 }),
+          linea({ kind: 'discount', quantity: null, unit: null, line_total: -200, applies_to: 0 }),
+          linea({ raw_text: 'PAN', name: null, quantity: null, unit_price: null, line_total: 900 }),
+          linea({ raw_text: null, legible: false }),
+          linea({ kind: 'bag', raw_text: 'BOLSA', quantity: null, line_total: 160 }),
+        ],
+      });
 
       await facade.processReceiptImage(file);
 
-      expect(receipts.extractItems).toHaveBeenCalledWith(btoa('fake-image'), 'image/jpeg');
+      expect(receipts.extractReceipt).toHaveBeenCalledWith([
+        { base64: btoa('fake-image'), mimeType: 'image/jpeg' },
+      ]);
       const items = facade.scannedItems();
+      // Descuentos, bolsas e ilegibles no son productos; sin nombre legible se usa el texto impreso.
       expect(items.map(({ name, price }) => ({ name, price }))).toEqual([
-        { name: 'Leche', price: 1200 },
-        { name: 'Producto Desconocido', price: 0 },
+        { name: 'Leche entera', price: 1200 },
+        { name: 'PAN', price: 900 },
       ]);
       expect(new Set(items.map((i) => i.id)).size).toBe(2);
       expect(facade.isScanning()).toBe(false);
     });
 
+    it('expone la revisión aritmética de la boleta', async () => {
+      receipts.extractReceipt.mockResolvedValue({
+        store: null,
+        date: null,
+        total: 5000,
+        lines: [linea({ unit_price: 1000, line_total: 1000 }), linea({ raw_text: null, legible: false })],
+      });
+
+      await facade.processReceiptImage(file);
+
+      expect(facade.validation()).toEqual({
+        computedTotal: 1000,
+        totalMatches: false,
+        doubtfulLines: [{ index: 1, reason: 'ilegible' }],
+      });
+    });
+
     it('setea error y deja la lista vacía si el OCR falla', async () => {
-      receipts.extractItems.mockRejectedValue(new Error('500'));
+      receipts.extractReceipt.mockRejectedValue(new Error('500'));
 
       await facade.processReceiptImage(file);
 
