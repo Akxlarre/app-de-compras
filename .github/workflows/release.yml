@@ -34,6 +34,7 @@ jobs:
             exit 1
           fi
           case "$SUPABASE_URL" in https://*.supabase.co*) ;; *) echo "❌ SUPABASE_URL no tiene el formato https://<ref>.supabase.co"; exit 1;; esac
+          case "$SUPABASE_URL" in https://*.supabase.co) ;; *) echo "⚠️ SUPABASE_URL trae algo después del dominio; se usa https://<ref>.supabase.co (conviene dejar el secreto así).";; esac
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
             echo "⚠️ Sin ANDROID_KEYSTORE_BASE64: el APK se firma con una llave nueva en cada release y"
             echo "   Android NO dejará instalarlo encima del anterior (hay que desinstalar primero)."
@@ -96,6 +97,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          # SUPABASE_URL puede venir con "/" final o "/rest/v1": se normaliza a https://<ref>.supabase.co.
+          export SUPABASE_URL="https://$(echo "$SUPABASE_URL" | sed -E 's|https://([^.]+)\.supabase\.co.*|\1|').supabase.co"
           faltan=0
           # PostgREST busca la función por nombre Y parámetros: hay que mandar los de su firma.
           nil='00000000-0000-0000-0000-000000000000'
@@ -150,7 +153,10 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: node scripts/set-env.js
+        run: |
+          # SUPABASE_URL puede venir con "/" final o "/rest/v1": se normaliza a https://<ref>.supabase.co.
+          export SUPABASE_URL="https://$(echo "$SUPABASE_URL" | sed -E 's|https://([^.]+)\.supabase\.co.*|\1|').supabase.co"
+          node scripts/set-env.js
 
       - name: Build Web (Angular)
         run: npm run build:raw
@@ -238,4 +244,7 @@ jobs:
           VERSION_TAG: ${{ github.ref_name }}
           RELEASE_NOTES: ${{ github.event.release.body }}
           VERSION_CODE: ${{ github.run_number }}
-        run: node scripts/publish-update.js
+        run: |
+          # SUPABASE_URL puede venir con "/" final o "/rest/v1": se normaliza a https://<ref>.supabase.co.
+          export SUPABASE_URL="https://$(echo "$SUPABASE_URL" | sed -E 's|https://([^.]+)\.supabase\.co.*|\1|').supabase.co"
+          node scripts/publish-update.js
