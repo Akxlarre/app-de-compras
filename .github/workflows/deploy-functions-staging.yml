@@ -26,10 +26,12 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
+      # CLI desde npm: setup-cli con `latest` consulta la API de GitHub sin token y choca con el
+      # límite de solicitudes ("rate limit exceeded").
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/cli" supabase@2
+          echo "$RUNNER_TEMP/cli/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Publicar GEMINI_API_KEY como secreto de staging
         env:
