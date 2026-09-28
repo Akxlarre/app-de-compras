@@ -1,8 +1,8 @@
 > id: 0007-ocr-boletas
 > refs: Auditoría de flujos (2026-09-25), punto 4 del plan: boletas/OCR. Conversación de diseño 2026-09-28.
-> status: draft
+> status: in-progress
 > created: 2026-09-28
-> bloqueo: set de prueba (15–20 fotos de boletas reales; el usuario las junta, con RUT y tarjeta tapados)
+> fotos: 11 boletas de internet en eval/fotos (git-ignored), 2026-09-28
 
 ## Problema
 1. `process-receipt` usa `gemini-1.5-pro` con `gemini-1.5-flash` de respaldo. La familia 1.5 fue

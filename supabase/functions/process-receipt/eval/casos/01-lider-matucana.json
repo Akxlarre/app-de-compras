@@ -1,0 +1,241 @@
+{
+  "caso": "01-lider-matucana",
+  "foto": "01-lider-matucana.jpg",
+  "origen": "TikTok @arianiperalta (captura adjuntada en el chat)",
+  "store": "Líder",
+  "date": "2022-06-29",
+  "total": 38930,
+  "items_count": 26,
+  "lines": [
+    {
+      "raw_text": "PROTEIN D L",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1950,
+      "line_total": 3900,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ARROZ PREG.G",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1360,
+      "line_total": 2720,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "HNA MONT BLA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1060,
+      "line_total": 1060,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "LENTEJA 6MM",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2260,
+      "line_total": 2260,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AZUCAR 1KG",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ATUN LOMITO",
+      "kind": "product",
+      "quantity": 4,
+      "unit": "un",
+      "unit_price": 1090,
+      "line_total": 4360,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AVENA INSTAN",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1000,
+      "line_total": 2000,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "SUC LIM 500",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 800,
+      "line_total": 800,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "V MANZAN 500",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1000,
+      "line_total": 1000,
+      "applies_to": null,
+      "legible": true,
+      "dudoso": true
+    },
+    {
+      "raw_text": "D.LECHE ENLI",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 3610,
+      "line_total": 3610,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "Q.RANCO 250",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2990,
+      "line_total": 2990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "SODA COSTA C",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 780,
+      "line_total": 780,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "NESC CHO 400",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2300,
+      "line_total": 2300,
+      "applies_to": null,
+      "legible": true,
+      "dudoso": true
+    },
+    {
+      "raw_text": "RF Precio Antes Ahora",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -460,
+      "applies_to": 12,
+      "legible": true
+    },
+    {
+      "raw_text": "CHOC COO.CRE",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1400,
+      "line_total": 1400,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ID LIN CHIA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2360,
+      "line_total": 2360,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "RF Precio Antes Ahora",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -260,
+      "applies_to": 15,
+      "legible": true
+    },
+    {
+      "raw_text": "TOMILLO HOJA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 370,
+      "line_total": 370,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "DAN LI BOL",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1720,
+      "line_total": 1720,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CHOCLO GRANO",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1390,
+      "line_total": 1390,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "JAMON PIERN",
+      "kind": "product",
+      "quantity": 0.245,
+      "unit": "kg",
+      "unit_price": 9159,
+      "line_total": 2244,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "TOCINO",
+      "kind": "product",
+      "quantity": 0.1,
+      "unit": "kg",
+      "unit_price": 13960,
+      "line_total": 1396,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "\"2X1.950\" = 2 unidades x $1.950, NO una promo 2x1.",
+    "\"CODIGO: 780...\" va en la línea de arriba del producto con cantidad: no es un producto.",
+    "\"RF Precio Antes Ahora -460\" es un descuento del producto anterior.",
+    "Granel: \"x 0.245 KG\" va DEBAJO del producto; el precio por kg no aparece (se deriva).",
+    "V MANZAN y NESC CHO se leen mal en la foto; suman 3.300 según el total (1.000 + 2.300 es la lectura más probable).",
+    "Foto arrugada, en ángulo, con un dedo sobre la zona de Mi Club (fuera de los productos)."
+  ]
+}

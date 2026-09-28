@@ -1,0 +1,26 @@
+{
+  "caso": "04-jumbo-ilegible",
+  "foto": "04-jumbo-ilegible.jpg",
+  "origen": "internet",
+  "store": "Jumbo",
+  "date": null,
+  "total": 19711,
+  "items_count": null,
+  "lines": [
+    {
+      "raw_text": null,
+      "kind": "product",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": null,
+      "applies_to": null,
+      "legible": false,
+      "lineas": 5
+    }
+  ],
+  "notas": [
+    "Foto chica, en ángulo y doblada: los productos NO se pueden leer. Lo correcto es marcar las líneas como ilegibles, nunca inventarlas.",
+    "El total $19.711 se lee en el comprobante de tarjeta de débito, abajo."
+  ]
+}

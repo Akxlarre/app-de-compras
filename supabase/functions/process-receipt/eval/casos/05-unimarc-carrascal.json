@@ -1,0 +1,147 @@
+{
+  "caso": "05-unimarc-carrascal",
+  "foto": "05-unimarc-carrascal.jpg",
+  "origen": "internet",
+  "store": "Unimarc",
+  "date": "2023-03-18",
+  "total": 29770,
+  "items_count": null,
+  "lines": [
+    {
+      "raw_text": "LIMON KG",
+      "kind": "product",
+      "quantity": 0.306,
+      "unit": "kg",
+      "unit_price": 2092,
+      "line_total": 640,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PALMITO EN RODAJA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2190,
+      "line_total": 2190,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "DURAZNO NUESTRA CO",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1410,
+      "line_total": 1410,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "SALCHICHA LLANQUI",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2990,
+      "line_total": 2990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "LONGANICILLA DE CA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 3790,
+      "line_total": 3790,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "MALAYITA RAIHUEN 450 GR CAT. V",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 5699,
+      "line_total": 5699,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "Club Ahorro RAIHU",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -109,
+      "applies_to": 5,
+      "legible": true
+    },
+    {
+      "raw_text": "CERVEZA MARACUYA STONES 350 CC LATA 6 2.5",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 5190,
+      "line_total": 5190,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "Club Ahorro STONE",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -1495,
+      "applies_to": 7,
+      "legible": true
+    },
+    {
+      "raw_text": "CHORIZO PARRILLERO",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2990,
+      "line_total": 2990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CERVEZA LEMON STONES 350 CC LATA 6 2.5",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 5190,
+      "line_total": 5190,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "Club Ahorro STONE",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -1495,
+      "applies_to": 10,
+      "legible": true
+    },
+    {
+      "raw_text": "CERVEZA HEINEKEN C",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1390,
+      "line_total": 2780,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Formato Unimarc: columnas CODIGO / DESC.ARTICULO / VALOR; la descripción CONTINÚA en la línea siguiente (\"MALAYITA RAIHUEN 4\" + \"50 GR CAT. V\").",
+    "Cantidad DEBAJO del producto: \"2 x 1 UN $1390 c/u\", \"0,306 x 1 KG $2092 c/\".",
+    "\"Club Ahorro X $-1495\" descuenta el producto de arriba.",
+    "El logo de Unimarc tapa la palabra TOTAL; $29.770 se repite en DETALLE DE PAGOS. Neto 25.017 + IVA 4.753 no es un producto."
+  ]
+}

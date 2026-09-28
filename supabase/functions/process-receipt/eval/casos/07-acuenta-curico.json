@@ -1,0 +1,126 @@
+{
+  "caso": "07-acuenta-curico",
+  "foto": "07-acuenta-curico.webp",
+  "origen": "internet",
+  "store": "aCuenta",
+  "date": "2018-05-27",
+  "total": 20230,
+  "items_count": 17,
+  "lines": [
+    {
+      "raw_text": "ACEITE MARAV",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1090,
+      "line_total": 1090,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AROM VAINILL",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1350,
+      "line_total": 1350,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "S.CALO CHOC",
+      "kind": "product",
+      "quantity": 6,
+      "unit": "un",
+      "unit_price": 250,
+      "line_total": 1500,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ARROZ BLUE B",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 840,
+      "line_total": 840,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "V CHOCLILLO",
+      "kind": "product",
+      "quantity": 1.349,
+      "unit": "kg",
+      "unit_price": 4989,
+      "line_total": 6730,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CEYLAN PREM",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1490,
+      "line_total": 1490,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CERA LIQUIDA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1520,
+      "line_total": 1520,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CLORO LAVAN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1090,
+      "line_total": 1090,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PACKX8CALAN.",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 1980,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "TP ACUENTA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1450,
+      "line_total": 1450,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "FID ESPIRAL.",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1190,
+      "line_total": 1190,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Mismo formato que Líder (Walmart): \"6X250\" arriba del producto, \"x 1.349 KG\" debajo.",
+    "Sin línea TOTAL: el total es el SUBTOTAL (y lo pagado en EFECTIVO).",
+    "Buena foto, arrugada pero nítida."
+  ]
+}

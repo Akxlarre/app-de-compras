@@ -1,0 +1,282 @@
+{
+  "caso": "09-tottus-santiago-dedo",
+  "foto": "09-tottus-santiago-dedo.jpg",
+  "origen": "internet",
+  "store": "Tottus",
+  "date": "2018-01-29",
+  "total": 55759,
+  "items_count": null,
+  "lines": [
+    {
+      "raw_text": "ABS DE LECHE PREM",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 3389,
+      "line_total": 3389,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ACO. KERATIN 300M",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 4989,
+      "line_total": 4989,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CAF.WILD DESCAFEI",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 3039,
+      "line_total": 3039,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CEP.DURALON 2X1 6",
+      "kind": "product",
+      "quantity": 3,
+      "unit": "un",
+      "unit_price": 1689,
+      "line_total": 5067,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CREMAPEPSODAX3",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2490,
+      "line_total": 2490,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "GARBANZO SIN PIEL",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2369,
+      "line_total": 2369,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "LENTEJAS 6 MM",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2119,
+      "line_total": 2119,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "MARRAQUETA",
+      "kind": "product",
+      "quantity": 0.585,
+      "unit": "kg",
+      "unit_price": 1299,
+      "line_total": 760,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "MERLUZA GAYI FILE",
+      "kind": "product",
+      "quantity": 0.29,
+      "unit": "kg",
+      "unit_price": 5390,
+      "line_total": 1563,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "MERLUZA GAYI FILE",
+      "kind": "product",
+      "quantity": 0.36,
+      "unit": "kg",
+      "unit_price": 5390,
+      "line_total": 1940,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PARA SOD GRA SUPE",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 690,
+      "line_total": 690,
+      "applies_to": null,
+      "legible": true,
+      "dudoso": true
+    },
+    {
+      "raw_text": "PECH.PAVO DES S/P",
+      "kind": "product",
+      "quantity": 0.455,
+      "unit": "kg",
+      "unit_price": 3490,
+      "line_total": 1588,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PECHU.POLL. S/H",
+      "kind": "product",
+      "quantity": 0.31,
+      "unit": "kg",
+      "unit_price": 2990,
+      "line_total": 927,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PECHU.POLLO",
+      "kind": "product",
+      "quantity": 1.585,
+      "unit": "kg",
+      "unit_price": 2690,
+      "line_total": 4264,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PECHU.POLLO (col. DESC.)",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -1110,
+      "applies_to": 13,
+      "legible": true
+    },
+    {
+      "raw_text": "PECHUGA ACARA PAVO",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2150,
+      "line_total": 2150,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "POLL.GAN.TOTTUS,V",
+      "kind": "product",
+      "quantity": 0.385,
+      "unit": "kg",
+      "unit_price": 6190,
+      "line_total": 2383,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "QUESO GAUDA TOTTU",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2800,
+      "line_total": 2800,
+      "applies_to": null,
+      "legible": true,
+      "dudoso": true
+    },
+    {
+      "raw_text": "QUESO GAUDA (col. DESC.)",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -760,
+      "applies_to": 17,
+      "legible": true
+    },
+    {
+      "raw_text": "SHAMPOO ORTIGA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 5189,
+      "line_total": 5189,
+      "applies_to": null,
+      "legible": true,
+      "dudoso": true
+    },
+    {
+      "raw_text": "TARTARO 3 8",
+      "kind": "product",
+      "quantity": 0.31,
+      "unit": "kg",
+      "unit_price": 8796,
+      "line_total": 2727,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "TARTARO 3 8",
+      "kind": "product",
+      "quantity": 0.285,
+      "unit": "kg",
+      "unit_price": 8796,
+      "line_total": 2507,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "TOALLA HUM GLOSS",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2989,
+      "line_total": 2989,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "TOALLA HUM GLOSS (col. DESC.)",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -499,
+      "applies_to": 22,
+      "legible": true
+    },
+    {
+      "raw_text": "VARITAS ALGOD BEB",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1149,
+      "line_total": 1149,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": null,
+      "kind": "product",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": null,
+      "applies_to": null,
+      "legible": false,
+      "lineas": 1
+    }
+  ],
+  "notas": [
+    "Formato Tottus: columnas VALOR y DESC. en la MISMA línea del producto; la cantidad/granel va DEBAJO (\"0.585 X $1.299 /Kg\").",
+    "Un dedo tapa códigos y nombres de ~4 líneas (POLL.GAN, QUESO GAUDA, SHAMPOO, TARTARO): los valores se leen, los nombres a medias.",
+    "Las líneas legibles suman 57.088 y el SUB TOTAL es 58.128: faltan 1.040, probablemente una línea tapada por el dedo o un valor mal leído. Lo correcto es que la validación lo detecte.",
+    "Abajo, \"DESCUENTOS Y PROMOCIONES\" repite los descuentos: NO se cuentan dos veces.",
+    "Hay un recuadro rojo dibujado a mano sobre las merluzas."
+  ]
+}

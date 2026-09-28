@@ -1,0 +1,56 @@
+{
+  "caso": "06-unimarc-libreria",
+  "foto": "06-unimarc-libreria.jpg",
+  "origen": "internet",
+  "store": "Unimarc",
+  "date": "2025-07-21",
+  "total": 2552,
+  "items_count": 2,
+  "lines": [
+    {
+      "raw_text": "BL BOLIGRAFO INKJO",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2590,
+      "line_total": 2590,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "Club Unimarc 60%",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -1554,
+      "applies_to": 0,
+      "legible": true
+    },
+    {
+      "raw_text": "MARCADOR FINE 4 CO",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 3790,
+      "line_total": 3790,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "Club Unimarc 60%",
+      "kind": "discount",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "line_total": -2274,
+      "applies_to": 2,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "No es comida: los productos igual son \"product\" (la app los concilia o los descarta).",
+    "\"TOTAL AHORRO ULTIMOS 12 MESES $99591\" y \"TOTAL AHORRO HOY -$3828\" NO son el total.",
+    "Dedo tapa el encabezado (comercio y fecha siguen legibles abajo)."
+  ]
+}

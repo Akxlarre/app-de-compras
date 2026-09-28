@@ -1,0 +1,25 @@
+{
+  "caso": "02-lider-quilicura-betun",
+  "foto": "02-lider-quilicura-betun.png",
+  "origen": "internet",
+  "store": "Líder",
+  "date": "2012-04-24",
+  "total": 1280,
+  "items_count": 2,
+  "lines": [
+    {
+      "raw_text": "BETUN LIQ NE",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 640,
+      "line_total": 1280,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Caso de control: 1 producto, \"2X 640\".",
+    "Pie con \"SI FUERAS SOCIO... ACUMULADO $12\": no es parte de la compra."
+  ]
+}
