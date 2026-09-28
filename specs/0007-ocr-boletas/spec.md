@@ -72,10 +72,20 @@
 - [ ] AC2: La respuesta cumple el contrato con un esquema estricto; un test de la función rechaza una
   respuesta fuera del esquema.
 - [ ] AC3: Acepta varias fotos y la lista de contexto.
-- [ ] AC4: `validateReceipt` con tests: línea que cuadra, línea que no, descuento aplicado, granel,
+- [x] AC4: `validateReceipt` con tests: línea que cuadra, línea que no, descuento aplicado, granel,
   total que no cuadra, línea ilegible.
 - [ ] AC5: Set de prueba con ≥ 15 boletas de los comercios que usa la familia y un script de evaluación.
   Se registran la línea base y el resultado final.
 - [ ] AC6: Resultado final en el set: ≥ 90 % de las líneas bien y ≥ 80 % de las boletas con total
   cuadrado. Umbrales a revisar con la línea base.
 - [ ] AC7: El historial de git no contiene ninguna foto ni dato personal (RUT, tarjeta).
+
+## Evidencia (2026-09-28, en curso)
+- AC1 (parcial): staging (workflow `deploy-functions-staging.yml`) confirmó que 1.5 no existe y que 2.5
+  "is no longer available to new users" (404); modelos configurables con `GEMINI_MODEL` /
+  `GEMINI_FALLBACK_MODEL`. La familia 3.5 respondió 503 (high demand) en 9/11 boletas: se agregó un
+  reintento por modelo y se pasó a `gemini-3.8-flash` con respaldo `gemini-3.5-flash`.
+- AC4: `validateReceipt` (`1147b0e`), 22 tests: 10 casos puntuales + las 11 boletas transcritas
+  (cuadran las 9 legibles; 04 y 09 marcan sus líneas ilegibles).
+- Primeras lecturas con el prompt viejo: 04 (Jumbo ilegible) inventó 3 productos y un total de $8.110
+  (real $19.711); 09 leyó 18/19 líneas pero no marcó las tapadas por el dedo.
