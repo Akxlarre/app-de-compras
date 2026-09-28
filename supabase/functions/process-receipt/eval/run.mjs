@@ -71,6 +71,12 @@ for (const [n, archivo] of casos.entries()) {
   }
   const suma = leidas.reduce((s, l) => s + (typeof l.line_total === 'number' ? l.line_total : 0), 0);
   const totalLeido = typeof data?.total === 'number' ? data.total : suma;
+  // Igual que validateReceipt en la app: productos/bolsas/envases − descuentos vs el total leído.
+  const sumaLineas = leidas.reduce((s, l) => {
+    if (l.legible === false || l.kind === 'other' || typeof l.line_total !== 'number') return s;
+    return l.kind === 'discount' ? s - Math.abs(l.line_total) : s + l.line_total;
+  }, 0);
+  const cuadra = typeof data?.total === 'number' && Math.abs(sumaLineas - data.total) <= 2;
   const ilegibles = caso.lines.some((l) => !l.legible);
   const marcoIlegibles = leidas.some((l) => l.legible === false);
 
@@ -84,12 +90,17 @@ for (const [n, archivo] of casos.entries()) {
     total_esperado: caso.total,
     total_leido: totalLeido,
     total_ok: totalLeido === caso.total,
+    suma_lineas: sumaLineas,
+    cuadra,
+    // Un caso con líneas ilegibles NO debe cuadrar: si cuadra, el modelo inventó lo que falta.
+    esperado_cuadra: !caso.lines.some((l) => !l.legible),
     ...(ilegibles ? { marco_ilegibles: marcoIlegibles } : {}),
   };
   resultados.push({ ...r, respuesta: data });
   console.log(
     `${r.total_ok ? '✓' : '·'} ${caso.caso.padEnd(28)} líneas ${bien}/${esperadas.length} (leyó ${leidas.length})` +
-      `  total ${totalLeido} vs ${caso.total}${ilegibles ? `  ilegibles marcados: ${marcoIlegibles}` : ''}` +
+      `  total ${totalLeido} vs ${caso.total}  líneas suman ${sumaLineas} (${cuadra ? 'cuadra' : 'NO cuadra'})` +
+      `${ilegibles ? `  ilegibles marcados: ${marcoIlegibles}` : ''}` +
       `  ${r.modelo} ${ms} ms`
   );
 }
@@ -100,6 +111,11 @@ const lineasEsperadas = ok.reduce((s, r) => s + r.lineas_esperadas, 0);
 console.log(
   `\nLíneas bien: ${lineasBien}/${lineasEsperadas} (${Math.round((100 * lineasBien) / (lineasEsperadas || 1))} %)` +
     ` · Totales ok: ${ok.filter((r) => r.total_ok).length}/${ok.length} · Errores: ${resultados.length - ok.length}`
+);
+const legibles = ok.filter((r) => r.esperado_cuadra);
+console.log(
+  `Cuadran (legibles): ${legibles.filter((r) => r.cuadra).length}/${legibles.length}` +
+    ` · Con líneas ilegibles que (mal) cuadran: ${ok.filter((r) => !r.esperado_cuadra && r.cuadra).length}`
 );
 
 mkdirSync(join(HERE, 'resultados'), { recursive: true });

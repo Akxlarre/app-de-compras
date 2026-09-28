@@ -62,12 +62,15 @@ CANTIDADES (la posición cambia según la cadena; léela siempre junto al produc
 - Cencosud (Jumbo, Santa Isabel): la cantidad va ARRIBA: "0,290 KG X $889" y abajo "PAN FRIO P P 258"; "2 X $449" y abajo "PEBRE DON JUAN BOL 898". Un mismo producto repetido en varias líneas son varias líneas.
 - Tottus, Unimarc: la cantidad va DEBAJO del producto: "0.585 X $1.299 /Kg", "3 X $1.689 c/u", "2 x 1 UN $1390 c/u", "0,306 x 1 KG $2092 c/". En Unimarc la descripción puede seguir en la línea de abajo ("MALAYITA RAIHUEN 4" + "50 GR CAT. V" = un solo producto).
 - Sin cantidad impresa: quantity 1, unit "un", unit_price = line_total.
+- Una línea que solo trae cantidad o peso ("2X1.950", "x 0.245 KG", "0,290 KG X $889", "3 X $1.689 c/u") NUNCA es un producto propio: es parte del producto de arriba o de abajo según la cadena. Cada producto aparece UNA vez y con SU monto; revisa que no se corran los montos de una línea a otra.
+- Antes de responder, suma los line_total (productos, bolsas y envases) menos los descuentos: debe dar el total. Si no da, vuelve a leer las cantidades, los pesos y los descuentos; si igual no da, deja los montos como los ves (no los ajustes para que cuadre).
 
 TOTAL
 - total = lo que se pagó por la compra: la línea TOTAL; si no hay, el SUBTOTAL; si tampoco se ve, el monto pagado con tarjeta o efectivo menos el vuelto. Si no se puede saber, null.
 
 LO QUE NO SE PUEDE LEER
-- Si una línea está tapada (dedo, doblez, logo), borrosa o fuera de la foto: inclúyela con legible false y null en lo que no se lea. NUNCA inventes productos, cantidades ni montos. Es preferible una línea ilegible a una inventada: la app pedirá revisarla.
+- Si una línea está tapada (dedo, doblez, logo), borrosa o fuera de la foto: inclúyela con legible false y null en lo que no se lea. Si de un producto no lees su nombre o su monto (aunque veas la cantidad), es legible false.
+- Si la foto es tan chica o borrosa que no distingues los productos, devuelve las líneas que sí veas como legible false; no reconstruyas productos a partir de fragmentos. NUNCA inventes productos, cantidades ni montos. Es preferible una línea ilegible a una inventada: la app pedirá revisarla.
 - Si varias fotos son partes de la MISMA boleta larga, únelas en orden sin duplicar las líneas que se repitan en el borde entre fotos.
 
 NOMBRES
