@@ -6,8 +6,8 @@ const geminiApiKey = Deno.env.get('GEMINI_API_KEY') || '';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 // Configurables sin redeploy de código. 1.5 fue retirada y 2.5 no está disponible para keys nuevas (404).
-const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.5-flash';
-const GEMINI_FALLBACK_MODEL = Deno.env.get('GEMINI_FALLBACK_MODEL') || 'gemini-3.5-flash-lite';
+const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.8-flash';
+const GEMINI_FALLBACK_MODEL = Deno.env.get('GEMINI_FALLBACK_MODEL') || 'gemini-3.5-flash';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -98,30 +98,34 @@ Deno.serve(async (req: Request) => {
       temperature: 0.1,
     });
 
-    let upstreamResponse = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${geminiApiKey}`,
-      },
-      body: JSON.stringify(buildPayload(currentModel)),
-    });
-
-    // Respaldo ante cualquier error de Gemini (cuota, saturación o un modelo retirado, que da 404).
-    if (!upstreamResponse.ok && fallbackModel !== currentModel) {
-      console.warn(
-        `[Gemini API] Error ${upstreamResponse.status} con ${currentModel}, haciendo fallback a ${fallbackModel}`
-      );
-      currentModel = fallbackModel;
-
-      upstreamResponse = await fetch(GEMINI_URL, {
+    const call = (model: string) =>
+      fetch(GEMINI_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${geminiApiKey}`,
         },
-        body: JSON.stringify(buildPayload(currentModel)),
+        body: JSON.stringify(buildPayload(model)),
       });
+    // La saturación (503) y la cuota (429) suelen pasar en segundos: un reintento por modelo.
+    const callWithRetry = async (model: string) => {
+      const first = await call(model);
+      if (first.status !== 503 && first.status !== 429) return first;
+      await first.body?.cancel();
+      await new Promise((r) => setTimeout(r, 2000));
+      return call(model);
+    };
+    const attempts: string[] = [];
+
+    let upstreamResponse = await callWithRetry(currentModel);
+
+    // Respaldo ante cualquier error de Gemini (cuota, saturación o un modelo retirado, que da 404).
+    if (!upstreamResponse.ok && fallbackModel !== currentModel) {
+      attempts.push(`${currentModel}: HTTP ${upstreamResponse.status}`);
+      await upstreamResponse.body?.cancel();
+      console.warn(`[Gemini API] ${attempts[0]}, haciendo fallback a ${fallbackModel}`);
+      currentModel = fallbackModel;
+      upstreamResponse = await callWithRetry(currentModel);
     }
 
     if (!upstreamResponse.ok) {
@@ -146,6 +150,7 @@ Deno.serve(async (req: Request) => {
           error: {
             message: `Error procesando la imagen en Gemini (${currentModel}, HTTP ${upstreamResponse.status}).`,
             upstream: errBody.slice(0, 300),
+            attempts,
             availableModels,
           },
         }),
