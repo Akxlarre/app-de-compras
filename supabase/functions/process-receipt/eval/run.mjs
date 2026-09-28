@@ -39,8 +39,12 @@ function lineasDe(data) {
   return (data?.items ?? []).map((i) => ({ raw_text: i.name, kind: 'product', line_total: i.price, unit_price: i.price, legible: true }));
 }
 
+// Pausa entre boletas: el plan gratuito de Gemini limita las solicitudes por minuto.
+const PAUSA_MS = Number(process.env.EVAL_PAUSE_MS ?? 12000);
+
 const resultados = [];
-for (const archivo of casos) {
+for (const [n, archivo] of casos.entries()) {
+  if (n > 0) await new Promise((r) => setTimeout(r, PAUSA_MS));
   const caso = JSON.parse(readFileSync(join(HERE, 'casos', archivo), 'utf8'));
   const foto = readFileSync(join(HERE, 'fotos', caso.foto));
   const ext = caso.foto.split('.').pop().toLowerCase();
@@ -72,6 +76,7 @@ for (const archivo of casos) {
 
   const r = {
     caso: caso.caso,
+    modelo: data?._model ?? '?',
     ms,
     lineas_bien: bien,
     lineas_esperadas: esperadas.length,
@@ -84,7 +89,8 @@ for (const archivo of casos) {
   resultados.push({ ...r, respuesta: data });
   console.log(
     `${r.total_ok ? '✓' : '·'} ${caso.caso.padEnd(28)} líneas ${bien}/${esperadas.length} (leyó ${leidas.length})` +
-      `  total ${totalLeido} vs ${caso.total}${ilegibles ? `  ilegibles marcados: ${marcoIlegibles}` : ''}  ${ms} ms`
+      `  total ${totalLeido} vs ${caso.total}${ilegibles ? `  ilegibles marcados: ${marcoIlegibles}` : ''}` +
+      `  ${r.modelo} ${ms} ms`
   );
 }
 

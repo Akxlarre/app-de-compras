@@ -5,9 +5,17 @@ const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const geminiApiKey = Deno.env.get('GEMINI_API_KEY') || '';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-// Configurables sin redeploy de código. 1.5 fue retirada y 2.5 no está disponible para keys nuevas (404).
-const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-3.8-flash';
-const GEMINI_FALLBACK_MODEL = Deno.env.get('GEMINI_FALLBACK_MODEL') || 'gemini-3.5-flash';
+// Cadena de modelos, en orden. En el plan gratuito de Gemini la cuota es POR MODELO y los modelos
+// se saturan (503) en horas punta: si uno falla se pasa al siguiente, sin reintentar el mismo (un
+// reintento gasta cuota). Configurable con GEMINI_MODELS="a,b,c". 1.5 fue retirada y 2.5 no está
+// disponible para keys nuevas (404).
+const GEMINI_MODELS = (
+  Deno.env.get('GEMINI_MODELS') ||
+  'gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-flash-latest'
+)
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -72,9 +80,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    let currentModel = GEMINI_MODEL;
-    const fallbackModel = GEMINI_FALLBACK_MODEL;
-
     const buildPayload = (model: string) => ({
       model,
       messages: [
@@ -107,26 +112,19 @@ Deno.serve(async (req: Request) => {
         },
         body: JSON.stringify(buildPayload(model)),
       });
-    // La saturación (503) y la cuota (429) suelen pasar en segundos: un reintento por modelo.
-    const callWithRetry = async (model: string) => {
-      const first = await call(model);
-      if (first.status !== 503 && first.status !== 429) return first;
-      await first.body?.cancel();
-      await new Promise((r) => setTimeout(r, 2000));
-      return call(model);
-    };
     const attempts: string[] = [];
+    let currentModel = GEMINI_MODELS[0];
+    let upstreamResponse = await call(currentModel);
 
-    let upstreamResponse = await callWithRetry(currentModel);
-
-    // Respaldo ante cualquier error de Gemini (cuota, saturación o un modelo retirado, que da 404).
-    if (!upstreamResponse.ok && fallbackModel !== currentModel) {
+    // 429 (cuota), 503 (saturado) o 404 (modelo no disponible): siguiente modelo de la cadena.
+    for (const next of GEMINI_MODELS.slice(1)) {
+      if (![429, 503, 404].includes(upstreamResponse.status)) break;
       attempts.push(`${currentModel}: HTTP ${upstreamResponse.status}`);
       await upstreamResponse.body?.cancel();
-      console.warn(`[Gemini API] ${attempts[0]}, haciendo fallback a ${fallbackModel}`);
-      currentModel = fallbackModel;
-      upstreamResponse = await callWithRetry(currentModel);
+      currentModel = next;
+      upstreamResponse = await call(currentModel);
     }
+    if (attempts.length) console.warn(`[Gemini API] ${attempts.join(' · ')} → ${currentModel}`);
 
     if (!upstreamResponse.ok) {
       const errBody = await upstreamResponse.text();
@@ -161,8 +159,14 @@ Deno.serve(async (req: Request) => {
     const result = await upstreamResponse.json();
     const contentStr = result.choices?.[0]?.message?.content;
 
-    // Devolvemos el JSON parseado (esperamos que Gemini haya cumplido con el response_format)
-    return new Response(contentStr, {
+    // Se agrega qué modelo leyó la boleta (la calidad cambia entre modelos; lo usa el eval).
+    let body = contentStr;
+    try {
+      body = JSON.stringify({ ...JSON.parse(contentStr), _model: currentModel });
+    } catch {
+      // JSON inválido del modelo: se devuelve tal cual y la app lo trata como error.
+    }
+    return new Response(body, {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
     });
