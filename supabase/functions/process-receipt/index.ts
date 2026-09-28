@@ -127,10 +127,26 @@ Deno.serve(async (req: Request) => {
     if (!upstreamResponse.ok) {
       const errBody = await upstreamResponse.text();
       console.error('Gemini error:', upstreamResponse.status, errBody);
+      // Un 404 casi siempre es un modelo que la key no ve: listar los disponibles evita adivinar
+      // nombres (la respuesta de Gemini no incluye la key).
+      let availableModels: string[] | undefined;
+      if (upstreamResponse.status === 404) {
+        const list = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`
+        );
+        const models = list.ok ? (await list.json()).models ?? [] : [];
+        availableModels = models
+          .filter((m: { supportedGenerationMethods?: string[] }) =>
+            m.supportedGenerationMethods?.includes('generateContent')
+          )
+          .map((m: { name: string }) => m.name.replace('models/', ''));
+      }
       return new Response(
         JSON.stringify({
           error: {
             message: `Error procesando la imagen en Gemini (${currentModel}, HTTP ${upstreamResponse.status}).`,
+            upstream: errBody.slice(0, 300),
+            availableModels,
           },
         }),
         { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } }
