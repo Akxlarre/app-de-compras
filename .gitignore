@@ -50,3 +50,4 @@ error-value.json
 
 # Set de prueba del OCR: fotos de boletas, nunca en el repo (público). Ver specs/0007.
 supabase/functions/process-receipt/eval/fotos/
+supabase/functions/process-receipt/eval/resultados/
