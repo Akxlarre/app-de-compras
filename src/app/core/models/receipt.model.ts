@@ -49,6 +49,58 @@ export interface ReceiptValidation {
   doubtfulLines: { index: number; reason: DoubtReason }[];
 }
 
+/** De dónde sale el total de una compra cerrada (`shopping_lists.total_source`). */
+export type TotalSource = 'receipt' | 'manual' | 'estimated';
+
+/** Ítem marcado de la compra, candidato a coincidir con una línea de la boleta. */
+export interface ReconcileListItem {
+  itemId: string;
+  productId: string;
+  name: string;
+  quantity: number;
+}
+
+/** Producto del catálogo de la familia. */
+export interface CatalogProduct {
+  productId: string;
+  name: string;
+}
+
+/** Texto de boleta ya confirmado como un producto (`shop.product_aliases`). */
+export interface ReceiptAlias {
+  rawText: string;
+  productId: string;
+}
+
+export interface MatchCandidate {
+  productId: string;
+  /** Ítem de la compra; null si el producto no estaba en la lista. */
+  itemId: string | null;
+  name: string;
+  score: number;
+}
+
+/**
+ * Una línea de producto de la boleta después de conciliar:
+ * - `matched`: coincide con un ítem de la compra (por alias, por el OCR o por similitud alta);
+ * - `candidate`: parecida a uno o más productos, el usuario elige ("¿Es este?");
+ * - `extra`: no estaba en la lista (suma al gasto; opcionalmente se guarda en el catálogo).
+ */
+export interface ReconciledLine {
+  index: number;
+  line: OcrReceiptLine;
+  status: 'matched' | 'candidate' | 'extra';
+  via: 'alias' | 'ocr' | 'similarity' | null;
+  match: MatchCandidate | null;
+  candidates: MatchCandidate[];
+}
+
+export interface ReconciliationResult {
+  lines: ReconciledLine[];
+  /** Ítems marcados que no aparecen en la boleta: "¿no lo compraste?". */
+  missing: ReconcileListItem[];
+}
+
 /** Ítem tal como lo devuelve la Edge Function `process-receipt` (sin normalizar). */
 export interface OcrReceiptItem {
   name?: string | null;
