@@ -1,6 +1,6 @@
 > id: 0010-pulido-ui
 > refs: Punto 5 del plan (pulido de UI). Observado en 0005 AC8. Conversación 2026-09-29.
-> status: in-progress
+> status: done
 > created: 2026-09-29
 
 ## Problema
