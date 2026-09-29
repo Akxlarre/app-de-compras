@@ -3,20 +3,6 @@
 Lo que depende del dueño del proyecto (secretos, producción) y quedó anotado para después.
 Al completar uno, bórralo de aquí en el mismo commit que lo cierra.
 
-## Borrar el escáner viejo de boletas (spec 0010, AC4)
-
-Quedó sin uso desde la spec 0008 y el guardia de la sesión no deja borrar archivos. En tu PC, dentro
-del repo actualizado:
-```bash
-git rm src/app/features/shopping/receipt-scanner/receipt-scanner.page.ts \
-  src/app/core/facades/receipt-scanner.facade.ts \
-  src/app/core/facades/receipt-scanner.facade.spec.ts
-git commit -m "chore(boletas): borrar el escáner viejo (reemplazado por el cierre de compra)"
-git push
-```
-Después, en `indices/REPOSITORIES.md` y `indices/FACADES.md` se quita `ReceiptScannerFacade`
-(`npm run indices:sync` actualiza FACADES).
-
 ## Firma estable del APK (fix-046): aplicar plataforma-db#12 en producción
 
 La llave de firma ya es automática: el release la genera una vez y la guarda en el bucket privado

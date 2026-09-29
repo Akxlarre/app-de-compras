@@ -48,7 +48,7 @@
   - Evidencia: "Repetir última compra" (`repeat`), plantillas (`bookmark`) y "Tus Esenciales"
     (`shopping-cart`) con `app-icon`; `repeat` y `bookmark` registrados localmente (sin CDN). Queda
     el `EMOJI_MAP` de `icon.component.ts`, que convierte emojis en íconos (es lo contrario).
-- [~] AC4: El escáner viejo ya no está en el repo y los índices no lo mencionan.
+- [x] AC4: El escáner viejo ya no está en el repo y los índices no lo mencionan.
   - El guardia de Bash bloquea borrar archivos desde la sesión ("eliminación recursiva de directorio
     crítico", también con `git rm` de archivos sueltos). Lo borra el dueño con el comando de
     `docs/PENDIENTES.md`; sin ruta ni importaciones, no afecta la app.

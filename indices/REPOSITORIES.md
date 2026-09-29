@@ -26,7 +26,6 @@
 | `PurchaseHistoryFacade` | Family, ShoppingLists, Receipts (URL firmada de la foto) |
 | `ProductSearchFacade` | Products |
 | `PurchaseCloseFacade` | Family, ShoppingLists, Receipts, Products |
-| `ReceiptScannerFacade` (sin uso desde 0008; pendiente de borrar) | Family, Products, Receipts |
 | `FamilyFacade` | Family |
 | `AuthFacade` | Profiles (+ API de sesión de `SupabaseService`) |
 | `AppUpdateService` | AppUpdates |
