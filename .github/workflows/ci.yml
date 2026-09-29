@@ -29,5 +29,10 @@ jobs:
       - name: Pruebas Unitarias
         run: npm run test:ci
 
+      # fix-046: la llave de firma de los APK no cambia entre releases (Supabase simulado; keytool
+      # viene en la imagen de ubuntu-latest).
+      - name: Test de la firma estable del APK
+        run: bash scripts/ci/ensure-keystore.test.sh
+
       - name: Build Web (Angular)
         run: npm run build:raw

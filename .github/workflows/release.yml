@@ -43,8 +43,8 @@ jobs:
           case "$SUPABASE_URL" in https://*.supabase.co*) ;; *) echo "❌ SUPABASE_URL no tiene el formato https://<ref>.supabase.co"; exit 1;; esac
           case "$SUPABASE_URL" in https://*.supabase.co) ;; *) echo "⚠️ SUPABASE_URL trae algo después del dominio; se usa https://<ref>.supabase.co (conviene dejar el secreto así).";; esac
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "⚠️ Sin ANDROID_KEYSTORE_BASE64: el APK se firma con una llave nueva en cada release y"
-            echo "   Android NO dejará instalarlo encima del anterior (hay que desinstalar primero)."
+            echo "ℹ️ Sin ANDROID_KEYSTORE_BASE64: se firma con la llave guardada en Supabase (bucket"
+            echo "   privado ci-signing, fix-046); la primera vez se genera y se guarda ahí."
           fi
           echo "✅ Secretos completos."
 
@@ -188,27 +188,17 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SIGNING_APP: shop
         run: |
-          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > release.keystore 2>/dev/null || true
-          KEYSTORE_SIZE=$(wc -c < release.keystore 2>/dev/null || echo 0)
-          echo "Tamaño del archivo keystore decodificado: $KEYSTORE_SIZE bytes"
-          
-          if [ "$KEYSTORE_SIZE" -lt 50 ]; then
-            echo "⚠️ No se detectó un keystore válido en los Secrets (ANDROID_KEYSTORE_BASE64 está vacío o no configurado)."
-            echo "🛠️ Generando keystore de release automático para completar el despliegue..."
-            rm -f release.keystore
-            keytool -genkeypair -v -keystore release.keystore \
-              -alias "app-release-key" \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "entrenamiento2026" -keypass "entrenamiento2026" \
-              -deststoretype PKCS12 \
-              -dname "CN=AppEntrenamiento, OU=Mobile, O=AppEntrenamiento, L=Chillan, ST=Nuble, C=CL"
-            KEY_ALIAS="app-release-key"
-            KEYSTORE_PASSWORD="entrenamiento2026"
-            KEY_PASSWORD="entrenamiento2026"
-          fi
-          
+          # Siempre la MISMA llave (fix-046): secret → la guardada en Supabase (ci-signing/shop) → se
+          # genera una vez y se guarda. Una llave distinta hace que Android rechace la actualización.
+          bash scripts/ci/ensure-keystore.sh "$RUNNER_TEMP/signing"
+          set -a; . "$RUNNER_TEMP/signing/signing.env"; set +a
+          cp "$RUNNER_TEMP/signing/release.keystore" release.keystore
+          echo "Origen de la llave de firma: $SIGNING_SOURCE"
+
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
           echo "Usando Android Build Tools desde: $BUILD_TOOLS_DIR"
           
