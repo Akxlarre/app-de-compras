@@ -107,6 +107,96 @@ describe('ReceiptsRepository', () => {
     });
   });
 
+  describe('boleta sobre compras cerradas (spec 0009)', () => {
+    const input = {
+      listId: 'l1',
+      carryPending: false,
+      store: 'Jumbo',
+      purchasedAt: '2026-09-27',
+      total: 3990,
+      imagePath: 'fam/b.jpg',
+      ocrResult: null,
+      ocrCheck: null,
+      items: [{ itemId: 'i1', unitPrice: 640, quantity: 2, rawText: 'BETUN', saveAlias: true }],
+      extras: [
+        { productId: null, rawText: 'BOLSA', name: 'Bolsa basura', unitPrice: 450, quantity: 1 },
+      ],
+      uncheckItemIds: ['i2'],
+    };
+    const receipt = {
+      store: 'Jumbo',
+      purchased_at: '2026-09-27',
+      total: 3990,
+      image_path: 'fam/b.jpg',
+      ocr_result: null,
+      ocr_check: null,
+    };
+    const items = [
+      { item_id: 'i1', unit_price: 640, quantity: 2, raw_text: 'BETUN', save_alias: true },
+      { item_id: 'i2', checked: false },
+    ];
+    const extras = [
+      { product_id: null, raw_text: 'BOLSA', name: 'Bolsa basura', unit_price: 450, quantity: 1 },
+    ];
+
+    it('attachReceipt agrega la boleta a una compra ya cerrada (sin pendientes que mover)', async () => {
+      mock.shop.rpc.mockResolvedValue({ data: 'r1', error: null });
+
+      expect(await repo.attachReceipt(input)).toBe('r1');
+      expect(mock.shop.rpc).toHaveBeenCalledWith('attach_receipt', {
+        p_list_id: 'l1',
+        p_receipt: receipt,
+        p_items: items,
+        p_extras: extras,
+      });
+    });
+
+    it('attachReceipt lanza el error de Supabase', async () => {
+      const error = { message: 'receipt_exists' };
+      mock.shop.rpc.mockResolvedValue({ data: null, error });
+      await expect(repo.attachReceipt(input)).rejects.toBe(error);
+    });
+
+    it('createReceiptPurchase crea una compra completada desde la boleta, sin lista', async () => {
+      mock.shop.rpc.mockResolvedValue({ data: 'r2', error: null });
+
+      expect(await repo.createReceiptPurchase(input)).toBe('r2');
+      expect(mock.shop.rpc).toHaveBeenCalledWith('create_receipt_purchase', {
+        p_receipt: receipt,
+        p_extras: extras,
+        p_name: 'Compra sin lista',
+      });
+    });
+
+    it('createReceiptPurchase lanza el error de Supabase', async () => {
+      const error = { message: 'product_not_found' };
+      mock.shop.rpc.mockResolvedValue({ data: null, error });
+      await expect(repo.createReceiptPurchase(input)).rejects.toBe(error);
+    });
+
+    it('getSignedUrl da una URL firmada de 1 hora para la foto privada', async () => {
+      const createSignedUrl = vi
+        .fn()
+        .mockResolvedValue({
+          data: { signedUrl: 'https://x/receipts/fam/b.jpg?token=t' },
+          error: null,
+        });
+      mock.client.storage.from.mockReturnValue({ createSignedUrl });
+
+      expect(await repo.getSignedUrl('fam/b.jpg')).toBe('https://x/receipts/fam/b.jpg?token=t');
+      expect(mock.client.storage.from).toHaveBeenCalledWith('receipts');
+      expect(createSignedUrl).toHaveBeenCalledWith('fam/b.jpg', 3600);
+    });
+
+    it('getSignedUrl lanza si no hay acceso a la foto', async () => {
+      const error = new Error('Object not found');
+      mock.client.storage.from.mockReturnValue({
+        createSignedUrl: vi.fn().mockResolvedValue({ data: null, error }),
+      });
+      await expect(repo.getSignedUrl('otra-familia/b.jpg')).rejects.toBe(error);
+    });
+  });
+
   it('applyReceipt lanza el error de Supabase', async () => {
     const error = { message: 'list_not_active' };
     mock.shop.rpc.mockResolvedValue({ data: null, error });

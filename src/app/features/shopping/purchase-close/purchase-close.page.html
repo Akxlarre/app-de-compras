@@ -23,7 +23,7 @@
         </button>
       </div>
 
-      @if (pendingCount() > 0) {
+      @if (close.kind() === 'active' && pendingCount() > 0) {
       <label class="flex items-center gap-3 text-sm text-text-muted">
         <input
           type="checkbox"
@@ -45,13 +45,14 @@
           id="total"
           inputmode="numeric"
           class="w-full bg-surface border border-border-default rounded-xl px-4 py-3 text-lg text-text-primary"
-          placeholder="Opcional"
+          [placeholder]="close.kind() === 'completed' ? 'Total de la compra' : 'Opcional'"
           data-llm-description="total pagado en la compra, en pesos; vacío si no se sabe"
           [value]="close.manualTotal() ?? ''"
           (input)="close.manualTotal.set(toAmount($any($event.target).value))"
         />
         <p class="text-xs text-text-muted">
-          Si no lo sabes, déjalo vacío: la compra queda con el total estimado.
+          @if (close.kind() === 'completed') { Con el total, el gasto de esa compra deja de ser
+          estimado. } @else { Si no lo sabes, déjalo vacío: la compra queda con el total estimado. }
         </p>
       </div>
 
@@ -86,7 +87,7 @@
       <button
         class="btn-primary w-full"
         data-llm-action="cerrar-compra-sin-boleta"
-        [disabled]="close.isSaving()"
+        [disabled]="close.isSaving() || !close.canConfirmManual()"
         (click)="confirm()"
       >
         @if (close.isSaving()) {
@@ -124,6 +125,15 @@
           >Si es larga, puedes subir hasta 5 fotos (de arriba hacia abajo).</span
         >
       </button>
+      @if (close.kind() === 'active') {
+      <button
+        class="self-center text-sm text-text-muted underline"
+        data-llm-action="escanear-compra-sin-lista"
+        (click)="otherPurchase()"
+      >
+        Es otra compra (no de esta lista)
+      </button>
+      }
       <input
         #fileInput
         type="file"

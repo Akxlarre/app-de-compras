@@ -76,7 +76,7 @@ export class ShoppingListsRepository {
   async findCompleted(familyId: string, limit = 50): Promise<ActiveShoppingList[]> {
     const { data, error } = await this.db
       .from('shopping_lists')
-      .select(WITH_ITEMS)
+      .select(`${WITH_ITEMS}, receipts(id, image_url, store)`)
       .eq('family_id', familyId)
       .eq('status', 'completed')
       .order('completed_at', { ascending: false, nullsFirst: false })
@@ -97,6 +97,19 @@ export class ShoppingListsRepository {
     });
     if (error) throw error;
     return (data as string | null) ?? null;
+  }
+
+  /**
+   * "Ingresar total" de una compra ya cerrada y sin boleta (RPC `set_purchase_total`): el total
+   * pagado y, opcionalmente, los precios confirmados de lo marcado.
+   */
+  async setPurchaseTotal(listId: string, total: number, prices: ManualPrice[]): Promise<void> {
+    const { error } = await this.db.rpc('set_purchase_total', {
+      p_list_id: listId,
+      p_total: total,
+      p_prices: prices.map((p) => ({ item_id: p.itemId, unit_price: p.unitPrice })),
+    });
+    if (error) throw error;
   }
 
   /**

@@ -19,7 +19,9 @@ Lenguaje ubicuo. Usar estos términos en código, UI y specs.
 | Pendiente | `is_checked = false` | Ítem de la lista que aún no está en el carro. |
 | Finalizar compra | `completeList(id, carryPending)` → RPC `complete_list` | La lista pasa a `completed` con lo marcado; los pendientes pasan a la próxima lista o se descartan. |
 | Precio pagado | `list_items.unit_price` | Precio del producto al finalizar la compra (el `last_price` de ese momento). |
-| Historial | `PurchaseHistoryFacade`, `/app/history` | Compras finalizadas con su total y el gasto del mes. |
+| Historial | `PurchaseHistoryFacade`, `/app/history` | Compras finalizadas con su total y el gasto del mes. Cada compra dice si su total es de la **boleta**, **ingresado** o **estimado**; en las estimadas se puede "Agregar boleta" o "Ingresar total". |
+| Gasto real | `total_paid ?? estimado` | El gasto del mes suma lo pagado de verdad y cuenta cuántas compras siguen estimadas. |
+| Compra sin lista | `create_receipt_purchase`, `startNew()` | Compra no planificada: la boleta crea la compra (ya finalizada), conciliada contra catálogo y alias. |
 | Reponer | `needsRestock` | Producto comprado hace al menos su `estimated_duration_days` (7 si no tiene). Nunca comprado ⇒ no se sugiere. |
 | Boleta | `receipts` | Ticket del súper. Siempre cierra una compra (una por compra). Se lee con OCR (Edge Function `process-receipt`, Gemini) y se concilia con la compra. |
 | Cerrar compra | `PurchaseCloseFacade`, `/app/close` | Al Finalizar: **Escanear boleta**, **Sin boleta** (total y precios a mano) o **Ahora no** (precios estimados). |

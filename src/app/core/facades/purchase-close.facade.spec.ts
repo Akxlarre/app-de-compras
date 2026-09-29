@@ -59,7 +59,7 @@ const line = (over: object) => ({
 
 describe('PurchaseCloseFacade', () => {
   let facade: PurchaseCloseFacade;
-  let lists: { closeManual: ReturnType<typeof vi.fn> };
+  let lists: Record<string, ReturnType<typeof vi.fn>>;
   let receipts: Record<string, ReturnType<typeof vi.fn>>;
   let products: { findByFamily: ReturnType<typeof vi.fn> };
   let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
@@ -67,12 +67,17 @@ describe('PurchaseCloseFacade', () => {
 
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    lists = { closeManual: vi.fn().mockResolvedValue(null) };
+    lists = {
+      closeManual: vi.fn().mockResolvedValue(null),
+      setPurchaseTotal: vi.fn().mockResolvedValue(undefined),
+    };
     receipts = {
       extractReceipt: vi.fn(),
       findAliases: vi.fn().mockResolvedValue([]),
       uploadImage: vi.fn().mockResolvedValue('fam-1/x.jpg'),
       applyReceipt: vi.fn().mockResolvedValue('r1'),
+      attachReceipt: vi.fn().mockResolvedValue('r2'),
+      createReceiptPurchase: vi.fn().mockResolvedValue('r3'),
     };
     products = {
       findByFamily: vi.fn().mockResolvedValue([
@@ -245,6 +250,109 @@ describe('PurchaseCloseFacade', () => {
       expect(await facade.confirmReceipt()).toBe(false);
       expect(toast.error).toHaveBeenCalled();
       expect(facade.isSaving()).toBe(false);
+    });
+  });
+
+  describe('compra ya cerrada (Historial, spec 0009)', () => {
+    const cerrada = { ...list, status: 'completed' } as ActiveShoppingList;
+    const ocr = {
+      store: 'Líder',
+      date: '2026-09-27',
+      total: 2200,
+      lines: [line({ raw_text: 'LECHE ENTERA', quantity: 2, unit_price: 1100, line_total: 2200 })],
+    };
+
+    it('"Agregar boleta": concilia con lo comprado y usa attach_receipt (sin mover pendientes)', async () => {
+      facade.start(cerrada, false, 'receipt', 'completed');
+      receipts['extractReceipt'].mockResolvedValue(ocr);
+      await facade.scan([file]);
+
+      expect(facade.kind()).toBe('completed');
+      expect(facade.decisions()[0].target).toMatchObject({ kind: 'item', itemId: 'i-leche' });
+
+      expect(await facade.confirmReceipt()).toBe(true);
+
+      expect(receipts['attachReceipt']).toHaveBeenCalledWith(
+        expect.objectContaining({ listId: 'l1', total: 2200, imagePath: 'fam-1/x.jpg' })
+      );
+      expect(receipts['applyReceipt']).not.toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith('Boleta agregada', expect.any(String));
+    });
+
+    it('"Ingresar total": pide un total y usa set_purchase_total con los precios editados', async () => {
+      facade.start(cerrada, false, 'manual', 'completed');
+      facade.setManualPrice('i-pan', 900);
+
+      expect(facade.canConfirmManual()).toBe(false);
+      expect(await facade.confirmManual()).toBe(false);
+      expect(lists['setPurchaseTotal']).not.toHaveBeenCalled();
+
+      facade.manualTotal.set(5000);
+      expect(facade.canConfirmManual()).toBe(true);
+      expect(await facade.confirmManual()).toBe(true);
+
+      expect(lists['setPurchaseTotal']).toHaveBeenCalledWith('l1', 5000, [
+        { itemId: 'i-leche', unitPrice: 1000 },
+        { itemId: 'i-pan', unitPrice: 900 },
+      ]);
+      expect(lists['closeManual']).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('compra sin lista (spec 0009)', () => {
+    const ocr = {
+      store: 'Jumbo',
+      date: '2026-09-27',
+      total: 5190,
+      lines: [
+        line({ raw_text: 'LECHE', name: 'Leche', unit_price: 1000, line_total: 1000 }),
+        line({ raw_text: 'CAFE JV', name: 'Café JV', unit_price: 3990, line_total: 3990 }),
+        line({ raw_text: 'BOLSA BASURA', name: 'Bolsa basura', unit_price: 200, line_total: 200 }),
+      ],
+    };
+
+    beforeEach(async () => {
+      receipts['findAliases'].mockResolvedValue([{ rawText: 'CAFE JV', productId: 'p-cafe' }]);
+      facade.startNew();
+      receipts['extractReceipt'].mockResolvedValue(ocr);
+      await facade.scan([file]);
+    });
+
+    it('empieza en modo boleta, sin lista, y concilia contra catálogo y alias', () => {
+      expect(facade.kind()).toBe('new');
+      expect(facade.mode()).toBe('receipt');
+      expect(receipts['extractReceipt']).toHaveBeenCalledWith(expect.anything(), []);
+      const [leche, cafe, bolsa] = facade.decisions();
+      expect(leche).toMatchObject({ status: 'candidate', target: null });
+      expect(cafe.target).toEqual({ kind: 'product', productId: 'p-cafe', name: 'Café molido' });
+      expect(bolsa.target).toEqual({ kind: 'new' });
+      expect(facade.missing()).toEqual([]);
+    });
+
+    it('lo nuevo entra al catálogo por defecto (si no, la compra quedaría vacía)', () => {
+      expect(facade.decisions()[2].saveToCatalog).toBe(true);
+    });
+
+    it('confirma con create_receipt_purchase y no toca la lista activa', async () => {
+      facade.chooseCandidate(0, facade.decisions()[0].candidates[0]);
+
+      expect(await facade.confirmReceipt()).toBe(true);
+
+      const input = receipts['createReceiptPurchase'].mock.calls[0][0];
+      expect(input.extras).toEqual([
+        { productId: 'p-leche', rawText: 'LECHE', name: 'Leche', unitPrice: 1000, quantity: 1 },
+        { productId: 'p-cafe', rawText: 'CAFE JV', name: 'Café molido', unitPrice: 3990, quantity: 1 },
+        { productId: null, rawText: 'BOLSA BASURA', name: 'Bolsa basura', unitPrice: 200, quantity: 1 },
+      ]);
+      expect(input.total).toBe(5190);
+      expect(receipts['applyReceipt']).not.toHaveBeenCalled();
+      expect(receipts['attachReceipt']).not.toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith('Compra registrada', expect.any(String));
+    });
+
+    it('elegir "Otro" en un "¿Es este?" también lo guarda en el catálogo', () => {
+      facade.chooseCandidate(0, 'new');
+      expect(facade.decisions()[0].saveToCatalog).toBe(true);
     });
   });
 

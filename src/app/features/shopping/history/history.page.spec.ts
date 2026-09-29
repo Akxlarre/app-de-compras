@@ -4,11 +4,13 @@ import { NavController } from '@ionic/angular';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { HistoryPage } from './history.page';
 import { PurchaseHistoryFacade } from '@core/facades/purchase-history.facade';
+import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 
 describe('HistoryPage', () => {
   let page: HistoryPage;
   let facade: any;
-  let nav: { navigateBack: ReturnType<typeof vi.fn> };
+  let nav: { navigateBack: ReturnType<typeof vi.fn>; navigateForward: ReturnType<typeof vi.fn> };
+  let close: { start: ReturnType<typeof vi.fn>; startNew: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     facade = {
@@ -17,14 +19,17 @@ describe('HistoryPage', () => {
       ]),
       initialize: vi.fn(),
       dispose: vi.fn(),
+      receiptUrl: vi.fn().mockResolvedValue('https://x/firmada'),
     };
-    nav = { navigateBack: vi.fn() };
+    nav = { navigateBack: vi.fn(), navigateForward: vi.fn() };
+    close = { start: vi.fn(), startNew: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
         HistoryPage,
         { provide: PurchaseHistoryFacade, useValue: facade },
         { provide: NavController, useValue: nav },
+        { provide: PurchaseCloseFacade, useValue: close },
       ],
     });
     page = TestBed.inject(HistoryPage);
@@ -50,5 +55,62 @@ describe('HistoryPage', () => {
   it('volver lleva a Mi Lista', () => {
     page.back();
     expect(nav.navigateBack).toHaveBeenCalledWith('/app/active');
+  });
+
+  describe('boleta y gasto real (spec 0009)', () => {
+    const source = { id: 'a', status: 'completed', list_items: [] };
+    const purchase = (over: object) =>
+      ({
+        id: 'a',
+        totalSource: 'estimated',
+        hasReceipt: false,
+        receiptImagePath: null,
+        source,
+        ...over,
+      }) as any;
+
+    it('"Agregar boleta" solo en compras sin boleta', () => {
+      expect(page.canAddReceipt(purchase({}))).toBe(true);
+      expect(page.canAddReceipt(purchase({ hasReceipt: true, totalSource: 'receipt' }))).toBe(false);
+    });
+
+    it('"Ingresar total" solo en compras estimadas (sin boleta ni total)', () => {
+      expect(page.canEnterTotal(purchase({}))).toBe(true);
+      expect(page.canEnterTotal(purchase({ totalSource: 'manual' }))).toBe(false);
+      expect(page.canEnterTotal(purchase({ hasReceipt: true, totalSource: 'receipt' }))).toBe(false);
+    });
+
+    it('"Agregar boleta" abre el cierre con boleta sobre la compra cerrada', () => {
+      page.addReceipt(purchase({}));
+      expect(close.start).toHaveBeenCalledWith(source, false, 'receipt', 'completed');
+      expect(nav.navigateForward).toHaveBeenCalledWith('/app/close');
+    });
+
+    it('"Ingresar total" abre el cierre sin boleta sobre la compra cerrada', () => {
+      page.enterTotal(purchase({}));
+      expect(close.start).toHaveBeenCalledWith(source, false, 'manual', 'completed');
+      expect(nav.navigateForward).toHaveBeenCalledWith('/app/close');
+    });
+
+    it('"Compra sin lista" abre el escaneo de una compra nueva', () => {
+      page.scanUnplanned();
+      expect(close.startNew).toHaveBeenCalled();
+      expect(nav.navigateForward).toHaveBeenCalledWith('/app/close');
+    });
+
+    it('"Ver boleta" pide la URL firmada y la muestra; se oculta al tocar de nuevo', async () => {
+      await page.toggleReceipt(purchase({ hasReceipt: true, receiptImagePath: 'fam/r1.jpg' }));
+      expect(facade.receiptUrl).toHaveBeenCalledWith('fam/r1.jpg');
+      expect(page.receiptPhoto()).toEqual({ id: 'a', url: 'https://x/firmada' });
+
+      await page.toggleReceipt(purchase({ hasReceipt: true, receiptImagePath: 'fam/r1.jpg' }));
+      expect(page.receiptPhoto()).toBeNull();
+    });
+
+    it('si la foto no se puede abrir lo avisa en vez de mostrar una imagen rota', async () => {
+      facade.receiptUrl.mockResolvedValue(null);
+      await page.toggleReceipt(purchase({ hasReceipt: true, receiptImagePath: 'fam/r1.jpg' }));
+      expect(page.receiptPhoto()).toEqual({ id: 'a', url: null });
+    });
   });
 });

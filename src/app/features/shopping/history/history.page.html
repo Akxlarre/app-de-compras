@@ -29,8 +29,25 @@
         <p class="kpi-value text-brand mt-1">${{ facade.thisMonth().total | number : '1.0-0' }}</p>
         <p class="text-sm text-text-muted mt-1">
           {{ facade.thisMonth().count }} {{ facade.thisMonth().count === 1 ? 'compra' : 'compras' }}
+          @if (facade.thisMonth().estimatedCount > 0) { ·
+          {{ facade.thisMonth().estimatedCount }}
+          {{ facade.thisMonth().estimatedCount === 1 ? 'estimada' : 'estimadas' }} }
         </p>
+        @if (facade.thisMonth().estimatedCount > 0) {
+        <p class="text-xs text-text-muted mt-2">
+          Agrega la boleta o el total de las estimadas para que el gasto sea el real.
+        </p>
+        }
       </section>
+
+      <button
+        class="w-full flex items-center justify-center gap-2 p-3 bg-surface border border-border-default rounded-2xl text-sm font-semibold text-text-primary active:scale-[0.99] transition-transform"
+        data-llm-action="escanear-compra-sin-lista"
+        (click)="scanUnplanned()"
+      >
+        <app-icon name="receipt" [size]="18" [attr.aria-label]="'Boleta'" />
+        Registrar una compra sin lista
+      </button>
 
       <!-- Compras -->
       <ul class="flex flex-col gap-3">
@@ -48,9 +65,15 @@
                 {{ purchase.itemCount === 1 ? 'producto' : 'productos' }}
               </p>
             </div>
-            <span class="font-bold text-text-primary shrink-0"
-              >${{ purchase.total | number : '1.0-0' }}</span
-            >
+            <span class="flex flex-col items-end shrink-0">
+              <span class="font-bold text-text-primary"
+                >${{ purchase.total | number : '1.0-0' }}</span
+              >
+              <span class="text-[11px] text-text-muted">
+                @switch (purchase.totalSource) { @case ('receipt') { Boleta } @case ('manual') {
+                Total ingresado } @default { Estimado } }
+              </span>
+            </span>
             <app-icon
               [name]="openId() === purchase.id ? 'chevron-up' : 'chevron-down'"
               [size]="18"
@@ -78,7 +101,51 @@
             <li class="py-2 text-sm text-text-muted">No se marcó ningún producto.</li>
             }
           </ul>
-          }
+
+          <div class="flex flex-wrap gap-2 border-t border-border-subtle px-4 py-3">
+            @if (purchase.store) {
+            <span class="text-xs text-text-muted self-center mr-auto">{{ purchase.store }}</span>
+            } @if (canAddReceipt(purchase)) {
+            <button
+              class="px-3 py-1.5 rounded-full text-sm font-semibold bg-brand text-brand-contrast active:scale-95 transition-transform"
+              data-llm-action="agregar-boleta"
+              (click)="addReceipt(purchase)"
+            >
+              Agregar boleta
+            </button>
+            } @if (canEnterTotal(purchase)) {
+            <button
+              class="px-3 py-1.5 rounded-full text-sm font-semibold border border-border-default text-text-primary active:scale-95 transition-transform"
+              data-llm-action="ingresar-total"
+              (click)="enterTotal(purchase)"
+            >
+              Ingresar total
+            </button>
+            } @if (purchase.receiptImagePath) {
+            <button
+              class="px-3 py-1.5 rounded-full text-sm font-semibold border border-border-default text-text-primary active:scale-95 transition-transform"
+              [attr.aria-expanded]="receiptPhoto()?.id === purchase.id"
+              (click)="toggleReceipt(purchase)"
+            >
+              {{ receiptPhoto()?.id === purchase.id ? 'Ocultar boleta' : 'Ver boleta' }}
+            </button>
+            }
+          </div>
+
+          @if (receiptPhoto()?.id === purchase.id) {
+          <div class="px-4 pb-4">
+            @if (receiptPhoto()!.url; as url) {
+            <img
+              [src]="url"
+              alt="Foto de la boleta"
+              class="w-full rounded-xl border border-border-subtle"
+              loading="lazy"
+            />
+            } @else {
+            <p class="text-sm text-text-muted">No se pudo abrir la foto. Revisa tu conexión.</p>
+            }
+          </div>
+          } }
         </li>
         }
       </ul>

@@ -1,6 +1,6 @@
 > id: 0009-boleta-historial-gasto-real
 > refs: Punto 4 del plan (boletas/OCR). Conversación de diseño 2026-09-28. Depende de 0008.
-> status: draft
+> status: done
 > created: 2026-09-28
 
 ## Problema
@@ -27,10 +27,26 @@
   compras con boleta.
 
 ## Acceptance Criteria
-- [ ] AC1: "Agregar boleta" en una compra completada sin boleta; una compra con boleta no lo ofrece.
-- [ ] AC2: Una boleta sin lista crea una compra completada con sus líneas conciliadas.
-- [ ] AC3: El Historial y el gasto del mes usan `total_paid` cuando existe (boleta o manual) e indican
+- [x] AC1: "Agregar boleta" en una compra completada sin boleta; una compra con boleta no lo ofrece.
+  - Evidencia: `history.page.spec.ts` (`canAddReceipt`, `addReceipt` → cierre `completed`),
+    `purchase-close.facade.spec.ts` ("Agregar boleta" usa `attach_receipt`) y pgTAP
+    `shop_receipts_history` (`receipt_exists`, `list_not_completed`).
+- [x] AC2: Una boleta sin lista crea una compra completada con sus líneas conciliadas.
+  - Evidencia: facade "compra sin lista" (concilia con catálogo y alias, lo nuevo al catálogo por
+    defecto, `create_receipt_purchase`); pgTAP: compra `completed` con su total, líneas, fecha de la
+    boleta y sin duplicar productos conocidos. Entradas: Historial → "Registrar una compra sin
+    lista", pestaña Boletas sin nada marcado y "Es otra compra".
+- [x] AC3: El Historial y el gasto del mes usan `total_paid` cuando existe (boleta o manual) e indican
   cuántas compras son estimadas.
-- [ ] AC4: La foto se ve solo con acceso de la familia (el bucket es privado y se usan URLs firmadas).
-- [ ] AC5: Staging: escanear desde el Historial y una compra no planificada; los totales cuadran.
-- [ ] AC6: `test:ci`, `lint:arch` y `ng build` en verde; índices actualizados.
+  - Evidencia: `purchase-history.utils.spec.ts` (total real, 0 es real, `estimatedCount`) y
+    `purchase-history.facade.spec.ts`; el Historial etiqueta cada compra (Boleta / Total ingresado /
+    Estimado) y el mes dice "N estimadas". "Ingresar total" usa `set_purchase_total` (pgTAP).
+- [x] AC4: La foto se ve solo con acceso de la familia (el bucket es privado y se usan URLs firmadas).
+  - Evidencia: `getSignedUrl` (1 hora) solo al tocar "Ver boleta"; si falla se avisa en vez de una
+    imagen rota. El bucket `receipts` es privado con policies por carpeta de familia (0008, pgTAP).
+- [~] AC5: Staging: escanear desde el Historial y una compra no planificada; los totales cuadran.
+  - Diferido a producción, igual que 0008 AC7: se verifica con las primeras compras reales.
+- [x] AC6: `test:ci` (402), `lint:arch` (0 errores; advertencias de tamaño en
+  `purchase-close.facade.ts`) y `ng build` en verde; índices actualizados.
+
+> "Precio al marcar" (opcional) queda fuera de esta entrega, como dice el plan.

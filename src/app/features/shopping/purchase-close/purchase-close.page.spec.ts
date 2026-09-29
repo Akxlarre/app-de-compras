@@ -33,8 +33,10 @@ describe('PurchaseClosePage', () => {
     close = {
       list: signal<any>(null),
       mode: signal<any>(null),
+      kind: signal<any>('active'),
       decisions,
       start: vi.fn(),
+      startNew: vi.fn(),
       reset: vi.fn(),
       confirmManual: vi.fn().mockResolvedValue(true),
       confirmReceipt: vi.fn().mockResolvedValue(true),
@@ -60,12 +62,60 @@ describe('PurchaseClosePage', () => {
   });
 
   it('desde la pestaña Boletas (sin cierre en curso) empieza con la compra activa', async () => {
-    const active = { id: 'l1', list_items: [] };
+    const active = { id: 'l1', list_items: [{ id: 'i1', is_checked: true }] };
     lists.initialize.mockImplementation(async () => lists.data.set(active));
 
     await page.ngOnInit();
 
     expect(close.start).toHaveBeenCalledWith(active, true, 'receipt');
+  });
+
+  it('desde la pestaña Boletas sin nada marcado (o sin lista) es una compra sin lista', async () => {
+    lists.initialize.mockImplementation(async () =>
+      lists.data.set({ id: 'l1', list_items: [{ id: 'i1', is_checked: false }] })
+    );
+    await page.ngOnInit();
+    expect(close.startNew).toHaveBeenCalled();
+    expect(close.start).not.toHaveBeenCalled();
+  });
+
+  it('"Es otra compra" cambia a una compra sin lista', () => {
+    page.otherPurchase();
+    expect(close.startNew).toHaveBeenCalled();
+  });
+
+  it('al agregar la boleta a una compra del Historial vuelve al Historial (sin recargar la lista)', async () => {
+    close.mode.set('receipt');
+    close.kind.set('completed');
+    await page.confirm();
+
+    expect(lists.reloadAfterClose).not.toHaveBeenCalled();
+    expect(nav.navigateRoot).toHaveBeenCalledWith('/app/history');
+  });
+
+  it('una compra sin lista también termina en el Historial', async () => {
+    close.mode.set('receipt');
+    close.kind.set('new');
+    await page.confirm();
+    expect(nav.navigateRoot).toHaveBeenCalledWith('/app/history');
+  });
+
+  it('cancelar desde el Historial vuelve al Historial', () => {
+    close.kind.set('completed');
+    page.cancel();
+    expect(nav.navigateRoot).toHaveBeenCalledWith('/app/history');
+  });
+
+  it('el título dice qué se está haciendo', () => {
+    close.mode.set('manual');
+    close.kind.set('completed');
+    expect(page.title()).toBe('Ingresar total');
+    close.mode.set('receipt');
+    expect(page.title()).toBe('Agregar boleta');
+    close.kind.set('new');
+    expect(page.title()).toBe('Compra sin lista');
+    close.kind.set('active');
+    expect(page.title()).toBe('Escanear boleta');
   });
 
   it('si ya viene un cierre desde Finalizar no lo reinicia', async () => {
