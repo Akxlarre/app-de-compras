@@ -92,29 +92,46 @@ Además:
   spec 0009.
 
 ## Acceptance Criteria
-- [ ] AC1: Migración + pgTAP: `receipts.list_id` único, `product_aliases` con RLS, bucket privado
+- [x] AC1: Migración + pgTAP: `receipts.list_id` único, `product_aliases` con RLS, bucket privado
   por familia y `apply_receipt` transaccional. CI de plataforma-db en verde.
-- [ ] AC2: `reconcileReceipt` con tests:
+  - Evidencia: plataforma-db #9 (mergeado, CI verde) y #10 (productos conocidos y "no lo
+    compraste"); `shop_receipts.test.sql` 31/31 en local.
+- [x] AC2: `reconcileReceipt` con tests (`reconcile.utils.spec.ts`, 14):
   - un alias gana siempre;
   - la lista tiene prioridad sobre el catálogo;
   - una línea sin coincidencia queda como "no estaba en la lista";
   - los ítems marcados sin línea en la boleta quedan como "¿no lo compraste?".
-- [ ] AC3: Al finalizar se ofrecen tres caminos: escanear, sin boleta y ahora no. "Ahora no" mantiene
+- [x] AC3: Al finalizar se ofrecen tres caminos: escanear, sin boleta y ahora no. "Ahora no" mantiene
   el comportamiento actual (`total_source = estimated`).
-- [ ] AC10: Sin boleta:
+  - Evidencia: `active-list.page.spec.ts` (tres caminos, pendientes, cancelar).
+- [x] AC10: Sin boleta (`purchase-close.facade.spec.ts` + pgTAP `close_list_manual`):
   - los precios de lo marcado vienen precargados y se pueden editar;
   - el total es opcional;
   - la compra queda con `unit_price` reales y `total_paid`/`total_source = manual`, o `estimated` si
     no se ingresó total;
   - `last_price` se actualiza solo con los precios que cambiaron.
-- [ ] AC4: La pantalla de conciliación muestra los tres grupos y las líneas dudosas, y permite
+- [x] AC4: La pantalla de conciliación muestra los tres grupos y las líneas dudosas, y permite
   corregir.
-- [ ] AC5: Al confirmar:
+  - Evidencia: `purchase-close.page` (grupos, "No es este", candidatos + "Otro", precio y cantidad
+    editables, borde de advertencia en dudosas); `purchase-close.page.spec.ts`.
+- [x] AC5: Al confirmar:
   - la compra queda con los precios y cantidades reales y con su total;
   - los alias quedan guardados;
   - el catálogo no crece con lo que no se marcó "guardar en catálogo".
-- [ ] AC6: La segunda boleta del mismo comercio concilia sola las líneas que ya tienen alias.
-- [ ] AC7: Staging con una boleta real: la compra, el historial y el catálogo quedan consistentes.
-- [ ] AC9: Cada boleta guarda su lectura (`ocr_result`), la revisión y las correcciones
-  (`ocr_check`); una consulta lista las que no cuadraron para sumarlas al set de 0007.
-- [ ] AC8: `test:ci`, `lint:arch` y `ng build` en verde; índices actualizados.
+  - Evidencia: `buildApplyReceipt` (`purchase-close.utils.spec.ts`, 18) + pgTAP `apply_receipt`.
+- [~] AC6: La segunda boleta del mismo comercio concilia sola las líneas que ya tienen alias.
+  - Lógica cubierta ("un alias gana siempre" + alias guardado por `apply_receipt`). Falta verlo con
+    dos boletas reales (junto con AC7).
+- [~] AC7: Staging con una boleta real: la compra, el historial y el catálogo quedan consistentes.
+  - Pendiente: requiere las migraciones de plataforma-db #10 aplicadas y una compra real.
+- [x] AC9: Cada boleta guarda su lectura (`ocr_result`), la revisión y las correcciones
+  (`ocr_check`); una consulta lista las que no cuadraron para sumarlas al set de 0007:
+  ```sql
+  select id, store, purchased_at, total_amount, ocr_result->>'_model' as model,
+         ocr_check->'corrections' as corrections
+  from shop.receipts
+  where (ocr_check->>'totalMatches')::boolean is false
+     or jsonb_array_length(coalesce(ocr_check->'corrections', '[]')) > 0
+  order by created_at desc;
+  ```
+- [x] AC8: `test:ci` (364), `lint:arch` (0 errores) y `ng build` en verde; índices actualizados.

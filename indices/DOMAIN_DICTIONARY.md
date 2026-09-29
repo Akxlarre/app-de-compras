@@ -21,4 +21,8 @@ Lenguaje ubicuo. Usar estos términos en código, UI y specs.
 | Precio pagado | `list_items.unit_price` | Precio del producto al finalizar la compra (el `last_price` de ese momento). |
 | Historial | `PurchaseHistoryFacade`, `/app/history` | Compras finalizadas con su total y el gasto del mes. |
 | Reponer | `needsRestock` | Producto comprado hace al menos su `estimated_duration_days` (7 si no tiene). Nunca comprado ⇒ no se sugiere. |
-| Boleta | `receipts` | Ticket del súper. Se lee con OCR (Edge Function `process-receipt`, Gemini). |
+| Boleta | `receipts` | Ticket del súper. Siempre cierra una compra (una por compra). Se lee con OCR (Edge Function `process-receipt`, Gemini) y se concilia con la compra. |
+| Cerrar compra | `PurchaseCloseFacade`, `/app/close` | Al Finalizar: **Escanear boleta**, **Sin boleta** (total y precios a mano) o **Ahora no** (precios estimados). |
+| Origen del total | `shopping_lists.total_source` | `receipt` (boleta), `manual` (lo escribió el usuario) o `estimated` (suma de últimos precios). |
+| Conciliación | `reconcileReceipt` | Cruce de líneas de la boleta con la compra: alias → lista → catálogo → "no estaba en la lista". |
+| Alias | `product_aliases` | Texto de boleta ("LCH ENT SOP") ya confirmado como un producto; la próxima boleta lo reconoce sola. |

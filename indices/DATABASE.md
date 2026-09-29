@@ -21,9 +21,12 @@ Los repositories de compras usan `client.schema('shop')` (guardia: `architecture
 | `families` | `id`, `name`, `invite_code` (8 caracteres sin 0/O/1/I, único) | SELECT/UPDATE si soy miembro. **Sin INSERT directo** → `get_or_create_family()`. |
 | `family_members` | PK (`family_id`, `user_id` → `public.profiles`), `role` owner/member | SELECT si soy miembro. **Sin INSERT directo** → RPCs. |
 | `products` | `family_id`, `name`, `category`, `last_price`, `estimated_duration_days`, `last_purchased_at` | ALL si es de mi familia. |
-| `shopping_lists` | `family_id`, `name`, `status` active/completed/archived/template, `completed_at` | ALL si es de mi familia. |
+| `shopping_lists` | `family_id`, `name`, `status` active/completed/archived/template, `completed_at`, `total_paid` (int, null = no se sabe), `total_source` receipt/manual/estimated (default estimated) | ALL si es de mi familia. |
 | `list_items` | `list_id`, `product_id`, `quantity`, `is_checked`, `checked_at`, `checked_by`, `unit_price` | ALL si la lista es de mi familia. Realtime (`supabase_realtime`) por `list_id`. Trigger `list_items_track_check`: marcar fija `checked_at`/`checked_by = auth.uid()`, desmarcar los limpia (no se escriben desde el cliente). |
-| `receipts` | `family_id`, `image_url`, `total_amount`, `status` pending_ocr/processed/error | ALL si es de mi familia. (Sin uso en la app todavía.) |
+| `receipts` | `family_id`, `list_id` (único: una boleta por compra), `image_url` (ruta en el bucket `receipts`), `total_amount`, `store`, `purchased_at`, `ocr_result` (lectura con `_model`), `ocr_check` (revisión + correcciones del usuario), `status` | ALL si es de mi familia. Se crea con `apply_receipt`. |
+| `product_aliases` | PK (`family_id`, `raw_text` normalizado con `normalize_receipt_text`), `product_id` | ALL si es de mi familia. Texto de boleta ya confirmado como un producto. |
+
+Storage: bucket privado **`receipts`**, ruta `<family_id>/<uuid>.<ext>`; policies por carpeta de familia.
 
 `anon` no tiene acceso al schema. Tests de RLS: `plataforma-db/supabase/tests/shop_rls.test.sql`.
 
@@ -38,6 +41,8 @@ Los repositories de compras usan `client.schema('shop')` (guardia: `architecture
 | `get_family_members() → (user_id, name, role, joined_at, is_me)` | Miembros de mi familia; `name` = `display_name` o parte local del email (nunca el email). |
 | `remove_family_member(p_user_id uuid)` | Solo el dueño, no a sí mismo; rota el código. Errores `not_owner`, `cannot_remove_self`, `not_member`. Migración `20260926010000_shop_family_invites_members`. |
 | `complete_list(p_list_id uuid, p_carry_pending boolean) → uuid` | Finaliza la compra (SECURITY INVOKER, RLS). Fija `unit_price` y `products.last_purchased_at` de lo marcado; los pendientes se mueven a la lista activa (o a una "Compra de la Semana" nueva, sumando cantidades) y devuelve su id, o se borran con `false` (devuelve null). Errores: `list_not_found`, `list_not_active`. Migración `20260925220000_shop_purchase_history`. |
+| `close_list_manual(p_list_id, p_carry_pending, p_prices jsonb, p_total int) → uuid` | Cierre sin boleta: fija `unit_price` confirmados (`[{item_id, unit_price}]`), actualiza `last_price` solo si cambió, llama `complete_list` y guarda `total_paid` (`manual`; sin total queda `estimated`). Error `invalid_total`. |
+| `apply_receipt(p_list_id, p_carry_pending, p_receipt jsonb, p_items jsonb, p_extras jsonb) → uuid` | Cierre con boleta (transaccional): `p_items` `[{item_id, unit_price, quantity, raw_text, save_alias}]` o `{item_id, checked:false}` ("no lo compraste"); `p_extras` `[{product_id?, raw_text, name, unit_price, quantity}]` (con `product_id` usa el producto conocido, sin él lo crea); guarda alias, la boleta y `total_paid` (`receipt`). Errores `list_not_found`, `list_not_active`, `product_not_found`. Migraciones `20260929010000`/`20260929020000`. |
 
 ## `public` (común)
 
