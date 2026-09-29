@@ -25,6 +25,7 @@ import { ErrorStateComponent } from '@shared/components/error-state/error-state.
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ProductSearchComponent } from '../product-search/product-search.component';
+import { ListShortcutsComponent } from './list-shortcuts.component';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import {
@@ -50,6 +51,7 @@ import {
     SkeletonBlockComponent,
     IconComponent,
     ProductSearchComponent,
+    ListShortcutsComponent,
     ConfirmDialogModule,
     IonList,
     IonItemSliding,
@@ -122,10 +124,19 @@ export class ActiveListPage implements OnInit {
     return this.family.memberNames().get(item.checked_by) ?? null;
   }
 
-  async cloneList(sourceListId: string) {
+  /** Hay "Repetir última compra" o plantillas para ofrecer. */
+  readonly hasShortcuts = computed(
+    () => !!this.facade.lastCompletedList() || this.facade.templates().length > 0
+  );
+
+  /**
+   * Atajo elegido (última compra o plantilla): con una lista vacía copia los ítems en ella; sin
+   * lista activa, crea la lista con esos ítems (spec 0010).
+   */
+  async startFrom(sourceListId: string) {
     const list = this.facade.data();
-    if (!list) return;
-    await this.facade.cloneListItems(sourceListId, list.id);
+    if (list) await this.facade.cloneListItems(sourceListId, list.id);
+    else await this.facade.startListFrom(sourceListId);
   }
 
   async saveTemplate() {

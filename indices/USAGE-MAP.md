@@ -7,7 +7,7 @@
 
 | Componente | Usado en |
 |------------|----------|
-| `app-icon` | `features/auth/login`, `features/profile/family-section`, `features/shopping/product-search` |
+| `app-icon` | `features/auth/login`, `features/profile/family-section`, `features/shopping/active-list`, `features/shopping/product-search` |
 
 ## Facades → Consumidores
 
@@ -31,6 +31,7 @@
 | `features/auth/login` | ❌ | ❌ | ❌ | ❌ |
 | `features/not-found` | ❌ | ❌ | ❌ | ❌ |
 | `features/profile/family-section` | ✅ | ❌ | ✅ | ❌ |
+| `features/shopping/active-list` | ❌ | ❌ | ❌ | ❌ |
 | `features/shopping/product-search` | ❌ | ❌ | ❌ | ❌ |
 
 

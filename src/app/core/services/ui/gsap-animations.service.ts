@@ -85,7 +85,7 @@ export class GsapAnimationsService {
    */
   animateBentoGrid(
     containerEl: HTMLElement | null | undefined,
-    options: { skipOpacity?: boolean } = {},
+    options: { skipOpacity?: boolean } = {}
   ): void {
     if (!containerEl) return;
 
@@ -105,12 +105,15 @@ export class GsapAnimationsService {
         (el) =>
           el.classList.contains('card-accent') ||
           el.classList.contains('bento-banner') ||
-          el.getAttribute('data-animate-hero') === 'true',
+          el.getAttribute('data-animate-hero') === 'true'
       );
       const gridCells = cells.filter((el) => !heroCells.includes(el));
 
       // Promover layers antes de animar
-      heroCells.forEach((el) => (el.style.willChange = useBlur ? 'transform, filter, opacity' : 'transform, opacity'));
+      heroCells.forEach(
+        (el) =>
+          (el.style.willChange = useBlur ? 'transform, filter, opacity' : 'transform, opacity')
+      );
       gridCells.forEach((el) => (el.style.willChange = 'transform, opacity'));
 
       const tl = gsap.timeline({
@@ -157,7 +160,7 @@ export class GsapAnimationsService {
             stagger: { amount: 0.25, from: 'start' },
             clearProps: 'transform' + (skipOpacity ? '' : ',opacity'),
           },
-          heroCells.length > 0 ? 0.08 : 0,
+          heroCells.length > 0 ? 0.08 : 0
         );
       }
     });
@@ -253,7 +256,7 @@ export class GsapAnimationsService {
         shimmerEl.style.width = '150%';
         // 105deg angle gives a subtle, premium directional flow compared to rigid 90deg
         shimmerEl.style.background =
-          'linear-gradient(105deg, transparent 0%, var(--shimmer-highlight, rgba(255,255,255,0.2)) 50%, transparent 100%)';
+          'linear-gradient(105deg, transparent 0%, var(--shimmer-highlight) 50%, transparent 100%)';
         shimmerEl.style.transform = 'translateX(-150%)';
 
         el.classList.add('relative', 'overflow-hidden');
@@ -382,7 +385,7 @@ export class GsapAnimationsService {
         yoyo: true,
         repeat: 1,
         clearProps: 'transform',
-      },
+      }
     );
   }
 
@@ -427,7 +430,7 @@ export class GsapAnimationsService {
         duration: 0.28,
         ease: 'power3.out',
         clearProps: 'transform',
-      },
+      }
     );
   }
 
@@ -450,7 +453,7 @@ export class GsapAnimationsService {
         duration: 0.4,
         delay,
         ease: 'power2.out',
-      },
+      }
     );
   }
 
@@ -462,7 +465,7 @@ export class GsapAnimationsService {
    */
   animateSkeletonToContent(
     el: HTMLElement,
-    options: { useBlur?: boolean; delay?: number } = {},
+    options: { useBlur?: boolean; delay?: number } = {}
   ): void {
     if (!this.shouldAnimate()) {
       gsap.set(el, { opacity: 1, y: 0, filter: 'none' });
@@ -549,7 +552,7 @@ export class GsapAnimationsService {
   animatePanelToDrawer(
     panelEl: HTMLElement,
     onLayoutChange: () => void,
-    onComplete?: () => void,
+    onComplete?: () => void
   ): void {
     if (!isPlatformBrowser(this.platformId)) {
       onLayoutChange();
@@ -699,7 +702,7 @@ export class GsapAnimationsService {
     containerEl: HTMLElement,
     onContentChange: () => void,
     onComplete?: () => void,
-    options?: { staggerChildren?: boolean; duration?: number; ease?: string },
+    options?: { staggerChildren?: boolean; duration?: number; ease?: string }
   ): void {
     if (!isPlatformBrowser(this.platformId)) {
       onContentChange();
@@ -754,7 +757,7 @@ export class GsapAnimationsService {
                   stagger: 0.05,
                   clearProps: 'transform',
                   onComplete: () => onComplete?.(),
-                },
+                }
               );
             } else {
               onComplete?.();
@@ -795,12 +798,12 @@ export class GsapAnimationsService {
       backdropEl,
       { opacity: 0 },
       { opacity: 1, duration: 0.35, ease: 'power2.out' },
-      0,
+      0
     ).fromTo(
       panelEl,
       { x: '100%' },
       { x: '0%', duration: 0.45, ease: 'power3.out', clearProps: 'transform' },
-      0,
+      0
     );
   }
 
@@ -820,7 +823,7 @@ export class GsapAnimationsService {
     tl.to(backdropEl, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0).to(
       panelEl,
       { x: '100%', duration: 0.35, ease: 'power3.in' },
-      0,
+      0
     );
   }
 
@@ -866,7 +869,7 @@ export class GsapAnimationsService {
           backdropEl,
           { opacity: 0 },
           { opacity: 0.5, duration: 0.3, ease: 'power2.out' },
-          0,
+          0
         );
       }
 
@@ -907,7 +910,7 @@ export class GsapAnimationsService {
           duration: 0.45,
           ease: 'power3.out',
           clearProps: 'opacity',
-        },
+        }
       );
     }
   }
@@ -925,7 +928,7 @@ export class GsapAnimationsService {
   animateLayoutDrawerLeave(
     drawerEl: HTMLElement,
     backdropEl: HTMLElement | null,
-    onComplete: () => void,
+    onComplete: () => void
   ): void {
     const isMobile = window.innerWidth < 768;
     const panelEl = drawerEl.querySelector('[data-drawer-panel]') as HTMLElement;
@@ -1207,7 +1210,7 @@ export class GsapAnimationsService {
     backdrop: HTMLElement,
     aside: HTMLElement,
     open: boolean,
-    onCloseComplete?: () => void,
+    onCloseComplete?: () => void
   ): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
@@ -1271,7 +1274,7 @@ export class GsapAnimationsService {
         duration,
         ease: 'power2.out',
         clearProps: 'transform',
-      },
+      }
     );
   }
 
@@ -1317,7 +1320,7 @@ export class GsapAnimationsService {
         duration: 0.35,
         ease: 'power3.out',
         clearProps: 'transform',
-      },
+      }
     );
   }
 
@@ -1340,7 +1343,7 @@ export class GsapAnimationsService {
         duration: 0.45,
         ease: 'back.out(1.2)',
         clearProps: 'transform',
-      },
+      }
     );
   }
 
@@ -1373,7 +1376,7 @@ export class GsapAnimationsService {
             ease: 'power2.out',
             clearProps: 'transform',
             onComplete,
-          },
+          }
         );
       },
     });
@@ -1447,7 +1450,7 @@ export class GsapAnimationsService {
         ease: 'power2.out',
         stagger: 0.08,
         clearProps: 'transform',
-      },
+      }
     );
   }
 
@@ -1524,14 +1527,14 @@ export class GsapAnimationsService {
       tl.fromTo(
         ceremonia,
         { opacity: 0, y: 18, scale: 0.985 },
-        { opacity: 1, y: 0, scale: 1, duration: total * 0.55 },
+        { opacity: 1, y: 0, scale: 1, duration: total * 0.55 }
       );
       if (bloques.length > 0) {
         tl.fromTo(
           bloques,
           { opacity: 0, y: 12 },
           { opacity: 1, y: 0, duration: total * 0.5, stagger: total * 0.09 },
-          `-=${total * 0.25}`,
+          `-=${total * 0.25}`
         );
       }
       return;
@@ -1540,7 +1543,7 @@ export class GsapAnimationsService {
     tl.fromTo(
       todos,
       { opacity: 0, y: 10 },
-      { opacity: 1, y: 0, duration: total, stagger: total * 0.15 },
+      { opacity: 1, y: 0, duration: total, stagger: total * 0.15 }
     );
   }
 
@@ -1587,7 +1590,7 @@ export class GsapAnimationsService {
    */
   animateScrollReveal(
     el: HTMLElement,
-    options?: { y?: number; delay?: number; threshold?: number },
+    options?: { y?: number; delay?: number; threshold?: number }
   ): () => void {
     if (!isPlatformBrowser(this.platformId)) return () => {};
 

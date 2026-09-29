@@ -35,6 +35,10 @@ describe('ActiveListPage', () => {
       toggleItemCheck: vi.fn(),
       deleteItem: vi.fn(),
       completeList: vi.fn(),
+      startListFrom: vi.fn().mockResolvedValue(true),
+      cloneListItems: vi.fn(),
+      lastCompletedList: signal(null),
+      templates: signal([]),
     };
     familyFacade = {
       currentFamily: signal(null),
@@ -188,6 +192,31 @@ describe('ActiveListPage', () => {
       expect(b.role).toBe('cancel');
       expect(mockFacade.completeList).not.toHaveBeenCalled();
       expect(closeFacade.start).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('atajos para empezar una lista (spec 0010)', () => {
+    it('sin lista activa, un atajo crea la lista con los ítems elegidos', async () => {
+      mockFacade.data.set(null);
+      await component.startFrom('ultima');
+      expect(mockFacade.startListFrom).toHaveBeenCalledWith('ultima');
+      expect(mockFacade.cloneListItems).not.toHaveBeenCalled();
+    });
+
+    it('con una lista vacía, el atajo copia los ítems en esa lista', async () => {
+      mockFacade.data.set({ id: 'list-1', list_items: [] });
+      await component.startFrom('plantilla');
+      expect(mockFacade.cloneListItems).toHaveBeenCalledWith('plantilla', 'list-1');
+      expect(mockFacade.startListFrom).not.toHaveBeenCalled();
+    });
+
+    it('hay atajos si existe una compra anterior o alguna plantilla', () => {
+      expect(component.hasShortcuts()).toBe(false);
+      mockFacade.templates.set([{ id: 't1', list_items: [] }]);
+      expect(component.hasShortcuts()).toBe(true);
+      mockFacade.templates.set([]);
+      mockFacade.lastCompletedList.set({ id: 'c1', list_items: [] });
+      expect(component.hasShortcuts()).toBe(true);
     });
   });
 });

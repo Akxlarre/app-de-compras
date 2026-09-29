@@ -27,12 +27,22 @@
       <app-empty-state
         icon="shopping-cart"
         message="No hay ninguna lista activa"
-        subtitle="Crea una lista nueva para empezar a agregar productos al carrito."
-        actionLabel="Crear Lista"
+        [subtitle]="
+          hasShortcuts()
+            ? 'Repite tu última compra, usa una plantilla o empieza una lista vacía.'
+            : 'Crea una lista nueva para empezar a agregar productos al carrito.'
+        "
+        [actionLabel]="hasShortcuts() ? 'Lista vacía' : 'Crear Lista'"
         actionIcon="plus"
         (action)="createNewList()"
       />
-      } @else {
+      @if (hasShortcuts()) {
+      <app-list-shortcuts
+        [lastList]="facade.lastCompletedList()"
+        [templates]="facade.templates()"
+        (pick)="startFrom($event)"
+      />
+      } } @else {
       <app-error-state
         [title]="'Error al cargar la lista'"
         [message]="facade.error()!"
@@ -98,33 +108,11 @@
             Empieza desde cero tocando el `+` o usa un atajo rápido.
           </p>
 
-          <div class="w-full flex flex-col gap-3">
-            @if (facade.lastCompletedList(); as lastList) {
-            <button
-              class="w-full bg-surface border border-brand/40 p-4 rounded-2xl flex items-center justify-between active:scale-95 transition-transform shadow-sm"
-              (click)="cloneList(lastList.id)"
-            >
-              <div class="text-left flex-1">
-                <p class="font-bold text-text-primary text-base">🔄 Repetir última compra</p>
-                <p class="text-xs text-text-muted mt-1">
-                  {{ lastList.list_items.length }} ítems guardados
-                </p>
-              </div>
-              <app-icon name="chevron-right" [size]="20" class="text-text-muted" />
-            </button>
-            } @for (template of facade.templates(); track template.id) {
-            <button
-              class="w-full bg-surface border border-border-default p-4 rounded-2xl flex items-center justify-between active:scale-95 transition-transform"
-              (click)="cloneList(template.id)"
-            >
-              <div class="text-left flex-1">
-                <p class="font-bold text-text-primary text-base">📝 {{ template.name }}</p>
-                <p class="text-xs text-text-muted mt-1">{{ template.list_items.length }} ítems</p>
-              </div>
-              <app-icon name="chevron-right" [size]="20" class="text-text-muted" />
-            </button>
-            }
-          </div>
+          <app-list-shortcuts
+            [lastList]="facade.lastCompletedList()"
+            [templates]="facade.templates()"
+            (pick)="startFrom($event)"
+          />
         </div>
         } @else {
         <ion-list #ionList style="background: transparent" class="m-0 p-0">
@@ -235,7 +223,7 @@
   <!-- Botón flotante Global (Fixed) -->
   @if (facade.data()) {
   <button
-    class="fixed bottom-[calc(env(safe-area-inset-bottom)+100px)] right-5 w-16 h-16 bg-brand text-brand-contrast rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] flex items-center justify-center hover:scale-105 transition-transform z-50"
+    class="fixed bottom-[calc(env(safe-area-inset-bottom)+100px)] right-5 w-16 h-16 bg-brand text-brand-contrast rounded-full shadow-[var(--shadow-lg)] flex items-center justify-center hover:scale-105 transition-transform z-50"
     (click)="isSearchOpen.set(true)"
   >
     <app-icon name="plus" [size]="28" />

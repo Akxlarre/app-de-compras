@@ -270,6 +270,49 @@ describe('ShoppingListFacade', () => {
       expect(loadSpy).toHaveBeenCalled();
     });
 
+    it('startListFrom: sin lista activa, crea la lista y copia los ítems de la compra elegida (0010)', async () => {
+      lists['findLatestActive'].mockResolvedValue(null);
+      await facade.initialize();
+      lists['create'].mockResolvedValue({ id: 'nueva' });
+      items['findByList'].mockResolvedValue([{ product_id: 'p1', quantity: 2 }]);
+      lists['findLatestActive'].mockResolvedValue(list());
+
+      expect(await facade.startListFrom('ultima')).toBe(true);
+
+      expect(lists['create']).toHaveBeenCalledWith({
+        name: 'Compra de la Semana',
+        familyId: 'fam-1',
+        status: 'active',
+      });
+      expect(items['findByList']).toHaveBeenCalledWith('ultima');
+      expect(items['addMany']).toHaveBeenCalledWith([
+        { list_id: 'nueva', product_id: 'p1', quantity: 2 },
+      ]);
+      expect(facade.error()).toBeNull();
+      expect(facade.data()?.id).toBe('list-1');
+    });
+
+    it('startListFrom: si falla copiar, avisa y deja la lista creada (vacía) visible', async () => {
+      lists['findLatestActive'].mockResolvedValue(null);
+      await facade.initialize();
+      items['findByList'].mockRejectedValue(new Error('red'));
+      lists['findLatestActive'].mockResolvedValue(list());
+
+      expect(await facade.startListFrom('ultima')).toBe(false);
+
+      expect(toast.error).toHaveBeenCalled();
+      expect(facade.data()?.id).toBe('list-1');
+    });
+
+    it('startListFrom: si falla crear la lista, avisa y no intenta copiar', async () => {
+      lists['create'].mockRejectedValue(new Error('rls'));
+
+      expect(await facade.startListFrom('ultima')).toBe(false);
+
+      expect(items['findByList']).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
+    });
+
     it('cloneListItems no inserta si la lista origen está vacía', async () => {
       await facade.cloneListItems('src', 'dst');
       expect(items['addMany']).not.toHaveBeenCalled();

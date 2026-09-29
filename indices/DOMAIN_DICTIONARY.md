@@ -13,7 +13,7 @@ Lenguaje ubicuo. Usar estos términos en código, UI y specs.
 | Lista | `shopping_lists` | Una compra. Estados: `active`, `completed`, `archived`, `template`. |
 | Lista activa | `status = 'active'` | La compra en curso (la más reciente). |
 | Plantilla | `status = 'template'` | Lista reutilizable (ej. "Asado"). Se clona a la lista activa. |
-| Repetir última compra | `lastCompletedList` | Clonar la última lista `completed`. |
+| Repetir última compra | `lastCompletedList`, `startListFrom` | Clonar la última lista `completed`. Sin lista activa crea la lista con esos ítems (spec 0010). |
 | Ítem | `list_items` | Producto + cantidad dentro de una lista. `is_checked` = ya está en el carro. |
 | Tachar / marcar | `toggleItemCheck` | Marcar un ítem como comprado. Se propaga por Realtime. La BD guarda quién y cuándo (`checked_by`, `checked_at`). |
 | Pendiente | `is_checked = false` | Ítem de la lista que aún no está en el carro. |
