@@ -101,6 +101,56 @@ export interface ReconciliationResult {
   missing: ReconcileListItem[];
 }
 
+/** A qué va una línea de la boleta al cerrar la compra. */
+export type LineTarget =
+  /** Un ítem de la compra. */
+  | { kind: 'item'; itemId: string; productId: string; name: string }
+  /** Un producto del catálogo que no estaba en la lista. */
+  | { kind: 'product'; productId: string; name: string }
+  /** Algo nuevo: suma al gasto; entra al catálogo solo si `saveToCatalog`. */
+  | { kind: 'new' };
+
+/** Una línea de la boleta en la pantalla de conciliación, con lo que decidió el usuario. */
+export interface LineDecision {
+  index: number;
+  rawText: string | null;
+  /** Nombre para un producto nuevo (lo que leyó el OCR; editable). */
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  /** null: "¿Es este?" todavía sin elegir. */
+  target: LineTarget | null;
+  status: ReconciledLine['status'];
+  candidates: MatchCandidate[];
+  saveToCatalog: boolean;
+  /** Línea que `validateReceipt` marcó para revisar. */
+  doubt: DoubtReason | null;
+  /**
+   * Lo que propuso la lectura, para registrar las correcciones (`ocr_check`). `target`: el
+   * producto, `'new'` o null (sin elegir), como `targetKey`.
+   */
+  ocr: { quantity: number; unitPrice: number; target: string | null };
+}
+
+/** Ítem marcado que no aparece en la boleta: "¿no lo compraste?". */
+export interface MissingDecision {
+  item: ReconcileListItem;
+  /** false: vuelve a pendiente. Por defecto true (la boleta no desmarca sin preguntar). */
+  bought: boolean;
+}
+
+export interface ReceiptCorrection {
+  index: number;
+  field: 'quantity' | 'unitPrice' | 'product';
+  ocr: number | string | null;
+  user: number | string | null;
+}
+
+/** Lo que se guarda en `receipts.ocr_check`: la revisión aritmética y lo que corrigió el usuario. */
+export interface ReceiptCheck extends ReceiptValidation {
+  corrections: ReceiptCorrection[];
+}
+
 /** Precio confirmado de un ítem marcado al cerrar sin boleta. */
 export interface ManualPrice {
   itemId: string;
@@ -117,8 +167,12 @@ export interface ReceiptItemInput {
   saveAlias: boolean;
 }
 
-/** Línea que no estaba en la lista y el usuario guarda en el catálogo (`apply_receipt.p_extras`). */
+/**
+ * Línea que no estaba en la lista y entra a la compra (`apply_receipt.p_extras`): un producto ya
+ * conocido (`productId`) o uno nuevo que el usuario guarda en el catálogo (`productId` null).
+ */
 export interface ReceiptExtraInput {
+  productId: string | null;
   rawText: string | null;
   name: string;
   unitPrice: number;
@@ -134,9 +188,11 @@ export interface ApplyReceiptInput {
   total: number | null;
   imagePath: string | null;
   ocrResult: OcrReceipt | null;
-  ocrCheck: ReceiptValidation | null;
+  ocrCheck: ReceiptCheck | ReceiptValidation | null;
   items: ReceiptItemInput[];
   extras: ReceiptExtraInput[];
+  /** "¿No lo compraste?": ítems marcados que vuelven a pendiente. */
+  uncheckItemIds: string[];
 }
 
 /** Ítem tal como lo devuelve la Edge Function `process-receipt` (sin normalizar). */

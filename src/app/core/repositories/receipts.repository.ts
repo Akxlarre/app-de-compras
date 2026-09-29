@@ -84,14 +84,18 @@ export class ReceiptsRepository {
         ocr_result: input.ocrResult,
         ocr_check: input.ocrCheck,
       },
-      p_items: input.items.map((i) => ({
-        item_id: i.itemId,
-        unit_price: i.unitPrice,
-        quantity: i.quantity,
-        raw_text: i.rawText,
-        save_alias: i.saveAlias,
-      })),
+      p_items: [
+        ...input.items.map((i) => ({
+          item_id: i.itemId,
+          unit_price: i.unitPrice,
+          quantity: i.quantity,
+          raw_text: i.rawText,
+          save_alias: i.saveAlias,
+        })),
+        ...input.uncheckItemIds.map((id) => ({ item_id: id, checked: false })),
+      ],
       p_extras: input.extras.map((e) => ({
+        product_id: e.productId,
         raw_text: e.rawText,
         name: e.name,
         unit_price: e.unitPrice,

@@ -71,7 +71,11 @@ describe('ReceiptsRepository', () => {
       ocrResult: ocr as never,
       ocrCheck: check,
       items: [{ itemId: 'i1', unitPrice: 640, quantity: 2, rawText: 'BETUN', saveAlias: true }],
-      extras: [{ rawText: 'BOLSA', name: 'Bolsa basura', unitPrice: 450, quantity: 1 }],
+      extras: [
+        { productId: null, rawText: 'BOLSA', name: 'Bolsa basura', unitPrice: 450, quantity: 1 },
+        { productId: 'p-cafe', rawText: 'CAFE JV', name: 'Café', unitPrice: 3990, quantity: 1 },
+      ],
+      uncheckItemIds: ['i2'],
     });
 
     expect(id).toBe('r1');
@@ -88,8 +92,18 @@ describe('ReceiptsRepository', () => {
       },
       p_items: [
         { item_id: 'i1', unit_price: 640, quantity: 2, raw_text: 'BETUN', save_alias: true },
+        { item_id: 'i2', checked: false },
       ],
-      p_extras: [{ raw_text: 'BOLSA', name: 'Bolsa basura', unit_price: 450, quantity: 1 }],
+      p_extras: [
+        {
+          product_id: null,
+          raw_text: 'BOLSA',
+          name: 'Bolsa basura',
+          unit_price: 450,
+          quantity: 1,
+        },
+        { product_id: 'p-cafe', raw_text: 'CAFE JV', name: 'Café', unit_price: 3990, quantity: 1 },
+      ],
     });
   });
 
@@ -108,6 +122,7 @@ describe('ReceiptsRepository', () => {
         ocrCheck: null,
         items: [],
         extras: [],
+        uncheckItemIds: [],
       })
     ).rejects.toBe(error);
   });
