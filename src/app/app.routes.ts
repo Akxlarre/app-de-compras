@@ -45,11 +45,19 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
       },
+      // Toda boleta cierra una compra (spec 0008): la pestaña Boletas y Finalizar llevan al cierre.
       {
         path: 'receipt',
         loadComponent: () =>
-          import('./features/shopping/receipt-scanner/receipt-scanner.page').then(
-            (m) => m.ReceiptScannerPage
+          import('./features/shopping/purchase-close/purchase-close.page').then(
+            (m) => m.PurchaseClosePage
+          ),
+      },
+      {
+        path: 'close',
+        loadComponent: () =>
+          import('./features/shopping/purchase-close/purchase-close.page').then(
+            (m) => m.PurchaseClosePage
           ),
       },
       {

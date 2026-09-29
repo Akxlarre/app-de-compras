@@ -95,6 +95,36 @@ describe('ShoppingListsRepository', () => {
     });
   });
 
+  it('closeManual cierra sin boleta con los precios confirmados y el total', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: 'l9', error: null });
+
+    const next = await repo.closeManual('l1', true, [{ itemId: 'i1', unitPrice: 1100 }], 5000);
+
+    expect(next).toBe('l9');
+    expect(mock.shop.rpc).toHaveBeenCalledWith('close_list_manual', {
+      p_list_id: 'l1',
+      p_carry_pending: true,
+      p_prices: [{ item_id: 'i1', unit_price: 1100 }],
+      p_total: 5000,
+    });
+  });
+
+  it('closeManual sin total manda null', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: null, error: null });
+
+    expect(await repo.closeManual('l1', false, [], null)).toBeNull();
+    expect(mock.shop.rpc).toHaveBeenCalledWith(
+      'close_list_manual',
+      expect.objectContaining({ p_prices: [], p_total: null })
+    );
+  });
+
+  it('closeManual lanza el error de Supabase', async () => {
+    const error = { message: 'invalid_total' };
+    mock.shop.rpc.mockResolvedValue({ data: null, error });
+    await expect(repo.closeManual('l1', true, [], -1)).rejects.toBe(error);
+  });
+
   it('complete lanza el error de Supabase', async () => {
     const error = { message: 'list_not_active' };
     mock.shop.rpc.mockResolvedValue({ data: null, error });

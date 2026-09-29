@@ -19,13 +19,18 @@
   - cada compra del Historial muestra el total de su boleta, y el estimado solo si no tiene boleta;
   - el gasto del mes suma los totales reales y marca cuántas compras son estimadas;
   - se puede ver la foto de la boleta desde la compra.
+- **Historial → compra estimada → "Agregar boleta" o "Ingresar total":** el mismo "sin boleta" de 0008
+  sobre una compra ya cerrada.
+- **(Opcional) Precio al marcar:** al tachar un ítem en el súper o la feria se puede anotar su precio;
+  al cerrar "sin boleta" ya viene cargado.
 - La pestaña Boletas deja de ser una isla. Pasa a ser un acceso rápido a "escanear" más la lista de
   compras con boleta.
 
 ## Acceptance Criteria
 - [ ] AC1: "Agregar boleta" en una compra completada sin boleta; una compra con boleta no lo ofrece.
 - [ ] AC2: Una boleta sin lista crea una compra completada con sus líneas conciliadas.
-- [ ] AC3: El Historial y el gasto del mes usan el total real cuando existe e indican lo estimado.
+- [ ] AC3: El Historial y el gasto del mes usan `total_paid` cuando existe (boleta o manual) e indican
+  cuántas compras son estimadas.
 - [ ] AC4: La foto se ve solo con acceso de la familia (el bucket es privado y se usan URLs firmadas).
 - [ ] AC5: Staging: escanear desde el Historial y una compra no planificada; los totales cuadran.
 - [ ] AC6: `test:ci`, `lint:arch` y `ng build` en verde; índices actualizados.

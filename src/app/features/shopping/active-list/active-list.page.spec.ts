@@ -4,17 +4,26 @@ import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import { ConfirmationService } from 'primeng/api';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ChangeDetectorRef, signal } from '@angular/core';
-import { AlertController } from '@ionic/angular';
+import { AlertController, NavController } from '@ionic/angular';
 import { FamilyFacade } from '@core/facades/family.facade';
+import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 
 describe('ActiveListPage', () => {
   let component: ActiveListPage;
   let mockFacade: any;
   let alertController: { create: ReturnType<typeof vi.fn> };
   let familyFacade: any;
+  let closeFacade: { start: ReturnType<typeof vi.fn> };
+  let nav: { navigateForward: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    alertController = { create: vi.fn().mockResolvedValue({ present: vi.fn() }) };
+    alertController = {
+      create: vi
+        .fn()
+        .mockResolvedValue({ present: vi.fn(), onDidDismiss: () => new Promise(() => {}) }),
+    };
+    closeFacade = { start: vi.fn() };
+    nav = { navigateForward: vi.fn() };
     // Mock del Facade y su Signal 'data'
     mockFacade = {
       data: signal(null),
@@ -46,6 +55,8 @@ describe('ActiveListPage', () => {
         { provide: FamilyFacade, useValue: familyFacade },
         { provide: ConfirmationService, useValue: { confirm: vi.fn() } },
         { provide: AlertController, useValue: alertController },
+        { provide: PurchaseCloseFacade, useValue: closeFacade },
+        { provide: NavController, useValue: nav },
         // La página se instancia como provider (sin render), así que no hay CDR de vista.
         { provide: ChangeDetectorRef, useValue: { detectChanges: vi.fn() } },
       ],
@@ -107,39 +118,76 @@ describe('ActiveListPage', () => {
   });
 
   describe('finalizar compra', () => {
-    const alertButtons = () => alertController.create.mock.calls[0][0].buttons as any[];
-    const button = (text: RegExp) => alertButtons().find((b) => text.test(b.text));
+    const conPendiente = {
+      id: 'list-1',
+      list_items: [
+        { id: '1', is_checked: true, quantity: 1 },
+        { id: '2', is_checked: false, quantity: 1 },
+      ],
+    };
+    const alertAt = (n: number) => alertController.create.mock.calls[n][0];
+    const press = async (n: number, text: RegExp) => {
+      await vi.waitFor(() => expect(alertController.create.mock.calls.length).toBeGreaterThan(n));
+      const b = (alertAt(n).buttons as any[]).find((x) => text.test(x.text));
+      b.handler();
+      return b;
+    };
 
-    it('con pendientes ofrece pasarlos a la próxima lista o descartarlos', async () => {
-      mockFacade.data.set({
-        id: 'list-1',
-        list_items: [
-          { id: '1', is_checked: true, quantity: 1 },
-          { id: '2', is_checked: false, quantity: 1 },
-        ],
-      });
+    it('ofrece tres caminos: escanear boleta, sin boleta y ahora no', async () => {
+      mockFacade.data.set(conPendiente);
+      void component.completeList('list-1');
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalled());
 
-      await component.completeList('list-1');
-
-      expect(alertController.create.mock.calls[0][0].message).toContain('1 pendiente');
-      await button(/pasar/i).handler();
-      expect(mockFacade.completeList).toHaveBeenLastCalledWith('list-1', true);
-
-      await button(/descartar/i).handler();
-      expect(mockFacade.completeList).toHaveBeenLastCalledWith('list-1', false);
-
-      expect(button(/cancelar/i).role).toBe('cancel');
+      const texts = (alertAt(0).buttons as any[]).map((b) => b.text);
+      expect(texts).toEqual(['Escanear boleta', 'Sin boleta', 'Ahora no', 'Cancelar']);
     });
 
-    it('sin pendientes pide una confirmación simple', async () => {
+    it('"Ahora no" con pendientes: pregunta qué hacer con ellos y cierra como hoy', async () => {
+      mockFacade.data.set(conPendiente);
+      const done = component.completeList('list-1');
+
+      await press(0, /ahora no/i);
+      await press(1, /pasar/i);
+      await done;
+
+      expect(alertAt(1).message).toContain('1 pendiente');
+      expect(mockFacade.completeList).toHaveBeenCalledWith('list-1', true);
+    });
+
+    it('"Sin boleta" empieza el cierre y navega a la pantalla de cierre', async () => {
+      mockFacade.data.set(conPendiente);
+      const done = component.completeList('list-1');
+
+      await press(0, /sin boleta/i);
+      await press(1, /descartar/i);
+      await done;
+
+      expect(closeFacade.start).toHaveBeenCalledWith(conPendiente, false, 'manual');
+      expect(nav.navigateForward).toHaveBeenCalledWith('/app/close');
+      expect(mockFacade.completeList).not.toHaveBeenCalled();
+    });
+
+    it('"Escanear boleta" sin pendientes no pregunta por ellos', async () => {
       mockFacade.data.set({ id: 'list-1', list_items: [{ id: '1', is_checked: true }] });
+      const done = component.completeList('list-1');
 
-      await component.completeList('list-1');
+      await press(0, /escanear/i);
+      await done;
 
-      expect(alertButtons()).toHaveLength(2);
-      expect(button(/pasar|descartar/i)).toBeUndefined();
-      await button(/finalizar/i).handler();
-      expect(mockFacade.completeList).toHaveBeenCalledWith('list-1', false);
+      expect(alertController.create).toHaveBeenCalledTimes(1);
+      expect(closeFacade.start).toHaveBeenCalledWith(expect.anything(), false, 'receipt');
+    });
+
+    it('cancelar no cierra nada', async () => {
+      mockFacade.data.set(conPendiente);
+      const done = component.completeList('list-1');
+
+      const b = await press(0, /cancelar/i);
+      await done;
+
+      expect(b.role).toBe('cancel');
+      expect(mockFacade.completeList).not.toHaveBeenCalled();
+      expect(closeFacade.start).not.toHaveBeenCalled();
     });
   });
 });

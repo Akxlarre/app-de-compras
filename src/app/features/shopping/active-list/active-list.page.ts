@@ -15,6 +15,9 @@ import { FormsModule } from '@angular/forms';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ShoppingListFacade, type PopulatedListItem } from '@core/facades/shopping-list.facade';
 import { FamilyFacade } from '@core/facades/family.facade';
+import { PurchaseCloseFacade, type CloseMode } from '@core/facades/purchase-close.facade';
+
+type CloseMethod = CloseMode | 'later';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -62,6 +65,7 @@ export class ActiveListPage implements OnInit {
   private destroyRef = inject(DestroyRef);
   private nav = inject(NavController);
   private family = inject(FamilyFacade);
+  private close = inject(PurchaseCloseFacade);
   private alertController = inject(AlertController);
   private gsap = inject(GsapAnimationsService);
   private cdr = inject(ChangeDetectorRef);
@@ -186,51 +190,79 @@ export class ActiveListPage implements OnInit {
     this.facade.deleteItem(itemId);
   }
 
-  /** Finalizar: si quedan pendientes se elige pasarlos a la próxima lista o descartarlos. */
+  /**
+   * Finalizar (spec 0008): con boleta, sin boleta (precios y total a mano) o "ahora no" (precios
+   * estimados, como antes). Si quedan pendientes se elige pasarlos a la próxima lista o descartarlos.
+   */
   async completeList(listId: string) {
-    const pending = this.listSummary().pending;
-    const cancel = { text: 'Cancelar', role: 'cancel', cssClass: 'alert-cancel-btn' };
-    const finish = (carryPending: boolean) => () => {
-      this.facade.completeList(listId, carryPending);
-    };
+    const list = this.facade.data();
+    if (!list) return;
 
-    const alert = await this.alertController.create(
-      pending > 0
-        ? {
-            header: '¿Finalizar compra?',
-            message:
-              pending === 1
-                ? 'Queda 1 pendiente sin comprar.'
-                : `Quedan ${pending} pendientes sin comprar.`,
-            cssClass: 'premium-alert',
-            buttons: [
-              {
-                text: 'Pasar a la próxima lista',
-                role: 'confirm',
-                cssClass: 'alert-confirm-btn',
-                handler: finish(true),
-              },
-              { text: 'Descartarlos', role: 'destructive', handler: finish(false) },
-              cancel,
-            ],
-          }
-        : {
-            header: '¿Finalizar compra?',
-            message: 'La compra quedará guardada en tu historial.',
-            cssClass: 'premium-alert',
-            buttons: [
-              cancel,
-              {
-                text: 'Finalizar',
-                role: 'confirm',
-                cssClass: 'alert-confirm-btn',
-                handler: finish(false),
-              },
-            ],
-          }
+    const method = await this.choose<CloseMethod>(
+      '¿Cómo cierras la compra?',
+      'Con la boleta queda lo que pagaste de verdad.',
+      [
+        { text: 'Escanear boleta', value: 'receipt', cssClass: 'alert-confirm-btn' },
+        { text: 'Sin boleta', value: 'manual' },
+        { text: 'Ahora no', value: 'later' },
+      ]
     );
+    if (!method) return;
 
-    await alert.present();
+    const pending = this.listSummary().pending;
+    let carryPending = false;
+    if (pending > 0) {
+      const carry = await this.choose<boolean>(
+        'Quedan pendientes',
+        pending === 1
+          ? 'Queda 1 pendiente sin comprar.'
+          : `Quedan ${pending} pendientes sin comprar.`,
+        [
+          { text: 'Pasar a la próxima lista', value: true, cssClass: 'alert-confirm-btn' },
+          { text: 'Descartarlos', value: false, role: 'destructive' },
+        ]
+      );
+      if (carry === null) return;
+      carryPending = carry;
+    }
+
+    if (method === 'later') {
+      await this.facade.completeList(listId, carryPending);
+      return;
+    }
+    this.close.start(list, carryPending, method);
+    this.nav.navigateForward('/app/close');
+  }
+
+  /** Alerta con opciones + "Cancelar". Resuelve con el valor elegido, o null si se cancela. */
+  private async choose<T>(
+    header: string,
+    message: string,
+    options: { text: string; value: T; role?: string; cssClass?: string }[]
+  ): Promise<T | null> {
+    return new Promise<T | null>(async (resolve) => {
+      const alert = await this.alertController.create({
+        header,
+        message,
+        cssClass: 'premium-alert',
+        buttons: [
+          ...options.map((o) => ({
+            text: o.text,
+            role: o.role ?? 'confirm',
+            cssClass: o.cssClass,
+            handler: () => resolve(o.value),
+          })),
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'alert-cancel-btn',
+            handler: () => resolve(null),
+          },
+        ],
+      });
+      alert.onDidDismiss().then(() => resolve(null));
+      await alert.present();
+    });
   }
 
   openHistory() {

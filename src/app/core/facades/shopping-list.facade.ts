@@ -128,11 +128,18 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       carriedTo ? 'Los pendientes pasaron a tu próxima lista.' : 'Quedó guardada en tu historial.'
     );
 
-    // Carga completa: la lista activa ahora es la que recibió los pendientes (o no hay ninguna).
+    await this.reloadAfterClose();
+    return true;
+  }
+
+  /**
+   * Recarga completa después de cerrar una compra (aquí o con `PurchaseCloseFacade`): la lista
+   * activa ahora es la que recibió los pendientes, o no hay ninguna.
+   */
+  async reloadAfterClose(): Promise<void> {
     this.dispose();
     this.reset();
     await Promise.all([this.initialize(), this.loadTemplates()]);
-    return true;
   }
 
   /**
