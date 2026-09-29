@@ -1,6 +1,6 @@
 > id: 0008-boleta-cierra-compra
 > refs: Punto 4 del plan (boletas/OCR). Conversación de diseño 2026-09-28. Depende de 0007.
-> status: draft
+> status: in-progress
 > created: 2026-09-28
 
 ## Problema
