@@ -127,6 +127,9 @@ jobs:
           remove_family_member {"p_user_id":"$nil"}
           close_list_manual {"p_list_id":"$nil","p_carry_pending":false}
           apply_receipt {"p_list_id":"$nil","p_carry_pending":false,"p_receipt":{}}
+          attach_receipt {"p_list_id":"$nil","p_receipt":{}}
+          create_receipt_purchase {"p_receipt":{}}
+          set_purchase_total {"p_list_id":"$nil","p_total":0}
           EOF
           if [ "$faltan" = 1 ]; then
             echo "Aplica las migraciones (plataforma-db → Deploy de migraciones, confirmar=produccion)"

@@ -32,9 +32,13 @@ export class PurchaseClosePage implements OnInit {
   private readonly lists = inject(ShoppingListFacade);
   private readonly nav = inject(NavController);
 
-  readonly title = computed(() =>
-    this.close.mode() === 'manual' ? 'Cerrar sin boleta' : 'Escanear boleta'
-  );
+  readonly title = computed(() => {
+    const kind = this.close.kind();
+    const manual = this.close.mode() === 'manual';
+    if (kind === 'new') return 'Compra sin lista';
+    if (kind === 'completed') return manual ? 'Ingresar total' : 'Agregar boleta';
+    return manual ? 'Cerrar sin boleta' : 'Escanear boleta';
+  });
   readonly pendingCount = computed(
     () => this.close.list()?.list_items.filter((i) => !i.is_checked).length ?? 0
   );
@@ -54,10 +58,17 @@ export class PurchaseClosePage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     if (this.close.list()) return;
-    // Pestaña Boletas: la boleta es de la compra activa; los pendientes pasan a la próxima lista.
+    // Pestaña Boletas: la boleta es de la compra activa (los pendientes pasan a la próxima lista);
+    // sin nada marcado en la lista, es una compra no planificada.
     await this.lists.initialize();
     const active = this.lists.data();
-    if (active) this.close.start(active, true, 'receipt');
+    if (active?.list_items.some((i) => i.is_checked)) this.close.start(active, true, 'receipt');
+    else this.close.startNew();
+  }
+
+  /** "Es otra compra": la boleta no es de la lista activa; crea una compra sin lista. */
+  otherPurchase(): void {
+    this.close.startNew();
   }
 
   /** Monto en pesos escrito por el usuario ("$12.990" → 12990). Vacío o inválido → null. */
@@ -86,18 +97,21 @@ export class PurchaseClosePage implements OnInit {
   }
 
   async confirm(): Promise<void> {
+    const fromHistory = this.close.kind() !== 'active';
     const ok =
       this.close.mode() === 'manual'
         ? await this.close.confirmManual()
         : await this.close.confirmReceipt();
     if (!ok) return;
-    await this.lists.reloadAfterClose();
+    // Una compra ya cerrada o sin lista no cambia la lista activa: se vuelve al Historial.
+    if (!fromHistory) await this.lists.reloadAfterClose();
     this.close.reset();
-    this.nav.navigateRoot('/app/active');
+    this.nav.navigateRoot(fromHistory ? '/app/history' : '/app/active');
   }
 
   cancel(): void {
+    const fromHistory = this.close.kind() === 'completed';
     this.close.reset();
-    this.nav.navigateRoot('/app/active');
+    this.nav.navigateRoot(fromHistory ? '/app/history' : '/app/active');
   }
 }
