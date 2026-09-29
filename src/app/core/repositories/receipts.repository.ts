@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import type { OcrReceipt } from '@core/models/receipt.model';
+import type { ApplyReceiptInput, OcrReceipt, ReceiptAlias } from '@core/models/receipt.model';
 import { parseOcrReceipt } from '@core/utils/receipt.utils';
 
 /** Foto de una boleta en base64 **sin** el prefijo `data:…;base64,`. */
@@ -9,10 +9,27 @@ export interface ReceiptImage {
   mimeType: string;
 }
 
-/** Boletas: OCR vía Edge Function `process-receipt` (Gemini). Lanza si la función falla. */
+/** Bucket privado; cada familia sube en su carpeta (`<family_id>/…`). */
+const BUCKET = 'receipts';
+
+const EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+};
+
+/**
+ * Boletas: OCR vía Edge Function `process-receipt` (Gemini), foto en Storage y cierre de la
+ * compra con `shop.apply_receipt`. Lanza el error de Supabase.
+ */
 @Injectable({ providedIn: 'root' })
 export class ReceiptsRepository {
   private readonly supabase = inject(SupabaseService);
+
+  private get db() {
+    return this.supabase.client.schema('shop');
+  }
 
   /**
    * Lee una boleta (varias fotos si es larga). `expectedItems` = lo que la familia pensaba comprar,
@@ -24,5 +41,64 @@ export class ReceiptsRepository {
     });
     if (error) throw error;
     return parseOcrReceipt(data);
+  }
+
+  /** Sube la foto de la boleta y devuelve su ruta en el bucket. */
+  async uploadImage(familyId: string, file: Blob): Promise<string> {
+    const ext = EXTENSIONS[file.type] ?? 'jpg';
+    const path = `${familyId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await this.supabase.client.storage
+      .from(BUCKET)
+      .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: false });
+    if (error) throw error;
+    return path;
+  }
+
+  /** Textos de boleta ya confirmados por la familia (`shop.product_aliases`). */
+  async findAliases(familyId: string): Promise<ReceiptAlias[]> {
+    const { data, error } = await this.db
+      .from('product_aliases')
+      .select('raw_text, product_id')
+      .eq('family_id', familyId);
+    if (error) throw error;
+    return ((data ?? []) as { raw_text: string; product_id: string }[]).map((a) => ({
+      rawText: a.raw_text,
+      productId: a.product_id,
+    }));
+  }
+
+  /**
+   * Cierra la compra con la boleta en una transacción (RPC `apply_receipt`): la boleta manda en
+   * precio y cantidad, guarda los alias confirmados y los extras que el usuario pasó al catálogo.
+   * @returns id de la boleta guardada.
+   */
+  async applyReceipt(input: ApplyReceiptInput): Promise<string> {
+    const { data, error } = await this.db.rpc('apply_receipt', {
+      p_list_id: input.listId,
+      p_carry_pending: input.carryPending,
+      p_receipt: {
+        store: input.store,
+        purchased_at: input.purchasedAt,
+        total: input.total,
+        image_path: input.imagePath,
+        ocr_result: input.ocrResult,
+        ocr_check: input.ocrCheck,
+      },
+      p_items: input.items.map((i) => ({
+        item_id: i.itemId,
+        unit_price: i.unitPrice,
+        quantity: i.quantity,
+        raw_text: i.rawText,
+        save_alias: i.saveAlias,
+      })),
+      p_extras: input.extras.map((e) => ({
+        raw_text: e.rawText,
+        name: e.name,
+        unit_price: e.unitPrice,
+        quantity: e.quantity,
+      })),
+    });
+    if (error) throw error;
+    return data as string;
   }
 }

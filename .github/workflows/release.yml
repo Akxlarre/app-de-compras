@@ -125,6 +125,8 @@ jobs:
           preview_family {"p_code":"AAAA2222"}
           join_family_by_code {"p_code":"AAAA2222"}
           remove_family_member {"p_user_id":"$nil"}
+          close_list_manual {"p_list_id":"$nil","p_carry_pending":false}
+          apply_receipt {"p_list_id":"$nil","p_carry_pending":false,"p_receipt":{}}
           EOF
           if [ "$faltan" = 1 ]; then
             echo "Aplica las migraciones (plataforma-db → Deploy de migraciones, confirmar=produccion)"

@@ -5,6 +5,7 @@ import type {
   ShoppingList,
   ShoppingListStatus,
 } from '@core/models/shopping-list.model';
+import type { ManualPrice } from '@core/models/receipt.model';
 
 /** Lista con ítems y el producto embebido de cada ítem. */
 const WITH_ITEMS = '*, list_items(*, product:products(id, name, category, last_price))';
@@ -93,6 +94,26 @@ export class ShoppingListsRepository {
     const { data, error } = await this.db.rpc('complete_list', {
       p_list_id: listId,
       p_carry_pending: carryPending,
+    });
+    if (error) throw error;
+    return (data as string | null) ?? null;
+  }
+
+  /**
+   * Cierra la compra sin boleta (RPC `close_list_manual`): precios confirmados de lo marcado y el
+   * total pagado (null = no lo sé → queda `estimated`). Mismo retorno que `complete`.
+   */
+  async closeManual(
+    listId: string,
+    carryPending: boolean,
+    prices: ManualPrice[],
+    total: number | null
+  ): Promise<string | null> {
+    const { data, error } = await this.db.rpc('close_list_manual', {
+      p_list_id: listId,
+      p_carry_pending: carryPending,
+      p_prices: prices.map((p) => ({ item_id: p.itemId, unit_price: p.unitPrice })),
+      p_total: total,
     });
     if (error) throw error;
     return (data as string | null) ?? null;

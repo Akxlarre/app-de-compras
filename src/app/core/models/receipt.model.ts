@@ -101,6 +101,44 @@ export interface ReconciliationResult {
   missing: ReconcileListItem[];
 }
 
+/** Precio confirmado de un ítem marcado al cerrar sin boleta. */
+export interface ManualPrice {
+  itemId: string;
+  unitPrice: number;
+}
+
+/** Línea de la boleta aplicada a un ítem de la compra (`apply_receipt.p_items`). */
+export interface ReceiptItemInput {
+  itemId: string;
+  unitPrice: number;
+  quantity: number;
+  rawText: string | null;
+  /** Guardar `rawText` como alias del producto (el usuario confirmó la coincidencia). */
+  saveAlias: boolean;
+}
+
+/** Línea que no estaba en la lista y el usuario guarda en el catálogo (`apply_receipt.p_extras`). */
+export interface ReceiptExtraInput {
+  rawText: string | null;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+}
+
+export interface ApplyReceiptInput {
+  listId: string;
+  carryPending: boolean;
+  store: string | null;
+  /** YYYY-MM-DD */
+  purchasedAt: string | null;
+  total: number | null;
+  imagePath: string | null;
+  ocrResult: OcrReceipt | null;
+  ocrCheck: ReceiptValidation | null;
+  items: ReceiptItemInput[];
+  extras: ReceiptExtraInput[];
+}
+
 /** Ítem tal como lo devuelve la Edge Function `process-receipt` (sin normalizar). */
 export interface OcrReceiptItem {
   name?: string | null;
