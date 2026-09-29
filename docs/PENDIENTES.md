@@ -26,8 +26,9 @@ y se guarda fuera de cualquier sesión de Claude, en un lugar seguro, con respal
 4. Guardar `compras-release.jks` y la contraseña en un gestor de contraseñas; borrar el `.b64`.
 5. La primera release firmada así exige desinstalar la versión anterior una última vez.
 
-## Migración de privacidad en producción (plataforma-db#8)
+## Migraciones de boletas en el Historial en producción (plataforma-db#11)
 
-Al mergear, staging se aplica solo. Producción: plataforma-db → Actions → *Deploy de migraciones* →
-Run workflow con `confirmar = produccion`. Cambia: perfiles privados (cada uno ve el suyo), bucket
-`releases` sin listado, y `app_updates.app_target` obligatorio.
+Antes de publicar la release que trae la spec 0009. Al mergear, staging se aplica solo. Producción:
+plataforma-db → Actions → *Deploy de migraciones* → Run workflow con `confirmar = produccion`.
+Agrega `attach_receipt`, `create_receipt_purchase` y `set_purchase_total`; si faltan, la
+verificación de RPCs de `release.yml` detiene la release.
