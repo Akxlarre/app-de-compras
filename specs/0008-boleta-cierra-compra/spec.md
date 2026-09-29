@@ -17,13 +17,30 @@ Hoy la boleta es un proceso aparte de la compra:
 - **Se guarda la foto** en un bucket privado por familia.
 - **La boleta manda en precio y cantidad**, pero no desmarca nada sin preguntar.
 - Al catálogo solo entra lo que el usuario marca ("guardar en catálogo").
+- **Sin boleta también se cierra con datos reales** (conversación 2026-09-29): feria, almacén, boleta
+  perdida o compra online. Al finalizar se ofrece "Sin boleta": el total pagado (opcional) y los
+  precios de lo marcado, precargados con el último precio. Cada compra dice de dónde sale su total:
+  `receipt`, `manual` o `estimated`.
 
 ## Solución
 ### Flujo
 ```
-Lista → marcar en el súper → Finalizar → "¿Escaneas la boleta?" → conciliación → compra cerrada
+Lista → marcar en el súper → Finalizar → ¿Cómo cierras la compra?
+   ├─ Escanear boleta → conciliación → compra cerrada (total_source = receipt)
+   ├─ Sin boleta      → ¿cuánto pagaste? + precios de lo marcado → cerrada (total_source = manual)
+   └─ Ahora no        → como hoy, con precios estimados              (total_source = estimated)
 ```
-La opción "Ahora no" finaliza como hoy. La boleta se puede agregar después (0009).
+La boleta, o el total a mano, se puede agregar después desde el Historial (0009).
+
+### Sin boleta
+- Un campo **"¿Cuánto pagaste?"**, opcional. Vacío = no se sabe; la compra queda `estimated`.
+- La lista de lo marcado con el **último precio precargado** (`products.last_price`). Solo se editan
+  los que cambiaron.
+- Al confirmar (RPC `shop.close_list_manual`, dentro de la misma transacción que `complete_list`):
+  - fija el `unit_price` de cada ítem marcado con el precio confirmado;
+  - actualiza `products.last_price` con los precios que cambiaron;
+  - guarda `total_paid` y `total_source = 'manual'` en la compra; si no hay total, queda
+    `estimated`.
 
 ### Conciliación (función pura `reconcileReceipt(lines, listItems, catalog, aliases)`)
 Cada línea `product` de la boleta se cruza, en este orden, contra:
@@ -43,7 +60,7 @@ Además:
   desmarcarlo (pasa a pendiente).
 - Las líneas dudosas de `validateReceipt` (0007) se destacan para revisar.
 
-### Al confirmar (RPC transaccional `shop.apply_receipt`)
+### Al confirmar la boleta (RPC transaccional `shop.apply_receipt`)
 - Crea la fila en `receipts` con `list_id`, `total_amount`, `purchased_at`, `store`, `image_url` y
   `status = 'processed'`.
 - Para cada ítem conciliado, fija en `list_items` el `unit_price` y la `quantity` reales.
@@ -52,6 +69,7 @@ Además:
   apuntando al producto.
 - Agrega a la compra los extras "no estaban en la lista", creando el producto solo si el usuario
   marcó "guardar en catálogo".
+- Fija en la compra `total_paid = total de la boleta` y `total_source = 'receipt'`.
 
 ### Base de datos (plataforma-db)
 - `receipts`: agrega `list_id` (FK a `shopping_lists`, UNIQUE: una boleta por compra), `store`,
@@ -62,8 +80,12 @@ Además:
   `(family_id, raw_text)` y RLS por familia.
 - `list_items.product_id` pasa a ser nullable para los extras que no se guardan en el catálogo. Queda
   a evaluar si en vez de eso se usa un `name` libre.
+- `shopping_lists`: agrega `total_paid integer` (null = no se sabe) y `total_source text`
+  (`receipt` | `manual` | `estimated`, default `estimated`). Las compras ya completadas quedan
+  `estimated`.
 - Bucket privado `receipts`, con la ruta `<family_id>/<receipt_id>.jpg` y policies por familia.
-- pgTAP: RLS de las tablas nuevas, `apply_receipt` atómico y aislamiento entre familias.
+- pgTAP: RLS de las tablas nuevas, `apply_receipt` y `close_list_manual` atómicos y aislamiento
+  entre familias.
 
 ## Fuera de alcance
 - Agregar la boleta desde el Historial, la compra no planificada y el gasto real en el Historial:
@@ -77,7 +99,14 @@ Además:
   - la lista tiene prioridad sobre el catálogo;
   - una línea sin coincidencia queda como "no estaba en la lista";
   - los ítems marcados sin línea en la boleta quedan como "¿no lo compraste?".
-- [ ] AC3: Al finalizar se ofrece escanear; "Ahora no" mantiene el comportamiento actual.
+- [ ] AC3: Al finalizar se ofrecen tres caminos: escanear, sin boleta y ahora no. "Ahora no" mantiene
+  el comportamiento actual (`total_source = estimated`).
+- [ ] AC10: Sin boleta:
+  - los precios de lo marcado vienen precargados y se pueden editar;
+  - el total es opcional;
+  - la compra queda con `unit_price` reales y `total_paid`/`total_source = manual`, o `estimated` si
+    no se ingresó total;
+  - `last_price` se actualiza solo con los precios que cambiaron.
 - [ ] AC4: La pantalla de conciliación muestra los tres grupos y las líneas dudosas, y permite
   corregir.
 - [ ] AC5: Al confirmar:
