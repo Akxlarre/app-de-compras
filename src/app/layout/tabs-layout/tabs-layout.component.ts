@@ -1,25 +1,23 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  inject,
-  DestroyRef,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, DestroyRef } from '@angular/core';
 import { IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { cartOutline, cart, personOutline, person, receiptOutline, receipt, listOutline, list } from 'ionicons/icons';
+import {
+  cartOutline,
+  cart,
+  personOutline,
+  person,
+  receiptOutline,
+  receipt,
+  listOutline,
+  list,
+} from 'ionicons/icons';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-tabs-layout',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    IonTabs,
-    IonTabBar,
-    IonTabButton,
-    IonIcon,
-    IonLabel,
-  ],
+  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel],
   template: `
     <ion-tabs>
       <ion-tab-bar slot="bottom" class="main-tab-bar">
@@ -57,18 +55,18 @@ import { Router } from '@angular/router';
       }
 
       ion-tab-bar.main-tab-bar {
-        --background: rgba(39, 39, 42, 0.85); /* Zinc 800 */
+        --background: var(--bg-glass-surface);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        --border: 1px solid rgba(255, 255, 255, 0.05);
-        
+        --border: 1px solid var(--border-subtle);
+
         position: absolute !important;
         bottom: calc(env(safe-area-inset-bottom, 16px) + 16px) !important;
         left: 16px !important;
         right: 16px !important;
         width: auto !important;
         border-radius: var(--radius-full) !important;
-        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4) !important;
+        box-shadow: var(--shadow-lg) !important;
         padding: 4px !important;
         height: 64px !important;
         contain: none !important;
@@ -121,7 +119,7 @@ export class TabsLayoutComponent {
       receiptOutline,
       receipt,
       listOutline,
-      list
+      list,
     });
   }
 }

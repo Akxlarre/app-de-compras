@@ -31,11 +31,25 @@
   spec siguiente.
 
 ## Acceptance Criteria
-- [ ] AC1: Sin lista activa se ofrecen "Repetir última compra" (si hay una compra finalizada) y las
+- [x] AC1: Sin lista activa se ofrecen "Repetir última compra" (si hay una compra finalizada) y las
   plantillas; elegir uno crea la lista activa con esos ítems. Con error al crear, avisa y no deja una
   lista a medias sin avisar.
-- [ ] AC2: `grep` de `rgba(`/`#hex` en `src/app` (fuera de specs) queda vacío, salvo casos
+  - Evidencia: `shopping-list.facade.spec.ts` (`startListFrom`: crea + copia; falla la copia → avisa
+    y la lista queda visible; falla crear → avisa y no copia) y `active-list.page.spec.ts` (atajo sin
+    lista → `startListFrom`; con lista vacía → copia en ella; `hasShortcuts`).
+- [x] AC2: `grep` de `rgba(`/`#hex` en `src/app` (fuera de specs) queda vacío, salvo casos
   justificados en comentario.
-- [ ] AC3: No hay emojis usados como íconos en las plantillas de `src/app`.
-- [ ] AC4: El escáner viejo ya no está en el repo y los índices no lo mencionan.
-- [ ] AC5: `test:ci`, `lint:arch` y `ng build` en verde; índices actualizados.
+  - Evidencia: barra de pestañas, insignia del encabezado, modal de actualización, botón "+",
+    buscador, skeleton y shimmer usan tokens (`--bg-glass-surface`, `--border-subtle`,
+    `--shadow-lg`, `--color-primary-muted`, `--color-primary-text`, `--shimmer-highlight`). El grep
+    solo encuentra `&#039;` (entidad HTML del pipe de markdown, no es un color). El proyecto tiene un
+    solo tema (oscuro) en `:root`; no hizo falta agregar tokens.
+- [x] AC3: No hay emojis usados como íconos en las plantillas de `src/app`.
+  - Evidencia: "Repetir última compra" (`repeat`), plantillas (`bookmark`) y "Tus Esenciales"
+    (`shopping-cart`) con `app-icon`; `repeat` y `bookmark` registrados localmente (sin CDN). Queda
+    el `EMOJI_MAP` de `icon.component.ts`, que convierte emojis en íconos (es lo contrario).
+- [~] AC4: El escáner viejo ya no está en el repo y los índices no lo mencionan.
+  - El guardia de Bash bloquea borrar archivos desde la sesión ("eliminación recursiva de directorio
+    crítico", también con `git rm` de archivos sueltos). Lo borra el dueño con el comando de
+    `docs/PENDIENTES.md`; sin ruta ni importaciones, no afecta la app.
+- [x] AC5: `test:ci` (408), `lint:arch` (0 errores) y `ng build` en verde; índices actualizados.

@@ -34,7 +34,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         position: relative;
         overflow: hidden;
         border-radius: 8px;
-        background: var(--bg-elevated, rgba(255, 255, 255, 0.06));
+        background: var(--bg-elevated);
       }
       .skeleton-text {
         border-radius: 4px;

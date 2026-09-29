@@ -223,7 +223,7 @@
   <!-- Botón flotante Global (Fixed) -->
   @if (facade.data()) {
   <button
-    class="fixed bottom-[calc(env(safe-area-inset-bottom)+100px)] right-5 w-16 h-16 bg-brand text-brand-contrast rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] flex items-center justify-center hover:scale-105 transition-transform z-50"
+    class="fixed bottom-[calc(env(safe-area-inset-bottom)+100px)] right-5 w-16 h-16 bg-brand text-brand-contrast rounded-full shadow-[var(--shadow-lg)] flex items-center justify-center hover:scale-105 transition-transform z-50"
     (click)="isSearchOpen.set(true)"
   >
     <app-icon name="plus" [size]="28" />
