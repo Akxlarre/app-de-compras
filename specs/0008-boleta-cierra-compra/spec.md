@@ -1,6 +1,6 @@
 > id: 0008-boleta-cierra-compra
 > refs: Punto 4 del plan (boletas/OCR). Conversación de diseño 2026-09-28. Depende de 0007.
-> status: in-progress
+> status: done
 > created: 2026-09-28
 
 ## Problema
@@ -119,11 +119,15 @@ Además:
   - los alias quedan guardados;
   - el catálogo no crece con lo que no se marcó "guardar en catálogo".
   - Evidencia: `buildApplyReceipt` (`purchase-close.utils.spec.ts`, 18) + pgTAP `apply_receipt`.
-- [~] AC6: La segunda boleta del mismo comercio concilia sola las líneas que ya tienen alias.
-  - Lógica cubierta ("un alias gana siempre" + alias guardado por `apply_receipt`). Falta verlo con
-    dos boletas reales (junto con AC7).
+- [x] AC6: La segunda boleta del mismo comercio concilia sola las líneas que ya tienen alias.
+  - Evidencia: `purchase-close.utils.spec.ts` "AC6" con la boleta real 01 (Líder): la primera vez
+    el usuario elige Harina para "HNA MONT BLA"; en la segunda compra las 5 líneas confirmadas
+    coinciden por alias sin intervención. Del lado de la BD, pgTAP verifica que `apply_receipt`
+    guarda y reemplaza los alias.
 - [~] AC7: Staging con una boleta real: la compra, el historial y el catálogo quedan consistentes.
-  - Pendiente: requiere las migraciones de plataforma-db #10 aplicadas y una compra real.
+  - Diferido a producción (misma decisión que 0007 AC5, conversación 2026-09-28: "sacar la app y
+    probar con las compras reales"). Migraciones #9/#10 ya aplicadas en staging. Se verifica con la
+    primera compra real; la consulta de AC9 muestra lo que haya que corregir.
 - [x] AC9: Cada boleta guarda su lectura (`ocr_result`), la revisión y las correcciones
   (`ocr_check`); una consulta lista las que no cuadraron para sumarlas al set de 0007:
   ```sql

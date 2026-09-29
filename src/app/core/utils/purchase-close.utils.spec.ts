@@ -6,7 +6,11 @@ import {
   lineAmounts,
   targetFromCandidate,
 } from './purchase-close.utils';
+import { normalizeReceiptText, reconcileReceipt } from './reconcile.utils';
+import { validateReceipt } from './receipt.utils';
+import lider01 from '../../../../supabase/functions/process-receipt/eval/casos/01-lider-matucana.json';
 import type {
+  ReconcileListItem,
   LineDecision,
   OcrReceipt,
   OcrReceiptLine,
@@ -157,6 +161,81 @@ describe('canConfirmReceipt / targetFromCandidate', () => {
       productId: 'p',
       name: 'P',
     });
+  });
+});
+
+describe('AC6: la segunda boleta del mismo comercio concilia sola (boleta real 01 Líder)', () => {
+  const caso = lider01 as unknown as OcrReceipt;
+  const catalog = [
+    { productId: 'p-arroz', name: 'Arroz' },
+    { productId: 'p-atun', name: 'Atún' },
+    { productId: 'p-azucar', name: 'Azúcar' },
+    { productId: 'p-lentejas', name: 'Lentejas' },
+    { productId: 'p-harina', name: 'Harina' },
+  ];
+  const compra = (n: number, ids: string[]) =>
+    ids.map((p) => ({
+      itemId: `${p}-${n}`,
+      productId: p,
+      name: catalog.find((c) => c.productId === p)!.name,
+      quantity: 1,
+    }));
+
+  /** Lo que `apply_receipt` guarda en `product_aliases` (pgTAP lo verifica del lado de la BD). */
+  const aliasesGuardados = (
+    input: ReturnType<typeof buildApplyReceipt>,
+    items: ReconcileListItem[]
+  ) => [
+    ...input.items
+      .filter((i) => i.saveAlias && i.rawText)
+      .map((i) => ({
+        rawText: normalizeReceiptText(i.rawText!),
+        productId: items.find((x) => x.itemId === i.itemId)!.productId,
+      })),
+    ...input.extras
+      .filter((e) => e.productId && e.rawText)
+      .map((e) => ({ rawText: normalizeReceiptText(e.rawText!), productId: e.productId! })),
+  ];
+
+  it('lo confirmado en la primera boleta se reconoce solo en la segunda', () => {
+    // 1ª compra: Harina no estaba en la lista; "HNA MONT BLA" no se parece a nada → el usuario elige.
+    const items1 = compra(1, ['p-arroz', 'p-atun', 'p-azucar', 'p-lentejas']);
+    const v1 = validateReceipt(caso);
+    const r1 = reconcileReceipt(caso.lines, items1, catalog, []);
+    const d1 = initialDecisions(r1, caso, v1);
+    const hna = d1.find((d) => d.rawText === 'HNA MONT BLA')!;
+    expect(hna.target).toEqual({ kind: 'new' });
+    hna.target = { kind: 'product', productId: 'p-harina', name: 'Harina' };
+
+    const matched1 = d1.filter((d) => d.target?.kind === 'item').map((d) => d.rawText);
+    expect(matched1).toEqual(['ARROZ PREG.G', 'LENTEJA 6MM', 'AZUCAR 1KG', 'ATUN LOMITO']);
+
+    const aliases = aliasesGuardados(
+      buildApplyReceipt({
+        listId: 'l1',
+        carryPending: true,
+        receipt: caso,
+        validation: v1,
+        imagePath: null,
+        decisions: d1,
+        missing: [],
+      }),
+      items1
+    );
+
+    // 2ª compra en el mismo comercio, ahora con Harina en la lista (otros ítems, mismos productos).
+    const items2 = compra(2, ['p-arroz', 'p-atun', 'p-azucar', 'p-lentejas', 'p-harina']);
+    const r2 = reconcileReceipt(caso.lines, items2, catalog, aliases);
+    const porAlias = r2.lines.filter((l) => l.via === 'alias');
+
+    expect(porAlias.map((l) => [l.line.raw_text, l.status, l.match?.itemId])).toEqual([
+      ['ARROZ PREG.G', 'matched', 'p-arroz-2'],
+      ['HNA MONT BLA', 'matched', 'p-harina-2'],
+      ['LENTEJA 6MM', 'matched', 'p-lentejas-2'],
+      ['AZUCAR 1KG', 'matched', 'p-azucar-2'],
+      ['ATUN LOMITO', 'matched', 'p-atun-2'],
+    ]);
+    expect(r2.missing).toEqual([]);
   });
 });
 
