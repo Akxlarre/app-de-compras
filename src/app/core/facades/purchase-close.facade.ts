@@ -25,6 +25,24 @@ import {
 export type CloseMode = 'manual' | 'receipt';
 
 /**
+ * A qué compra se aplica el cierre:
+ * - `active`: la lista activa que se está finalizando (0008);
+ * - `completed`: una compra ya finalizada del Historial, sin boleta (0009);
+ * - `new`: una compra no planificada, sin lista: la boleta la crea (0009).
+ */
+export type CloseKind = 'active' | 'completed' | 'new';
+
+/** Compra vacía que representa "sin lista" mientras se concilia la boleta. */
+const NEW_PURCHASE: ActiveShoppingList = {
+  id: '',
+  family_id: '',
+  name: 'Compra sin lista',
+  status: 'completed',
+  created_at: '',
+  list_items: [],
+};
+
+/**
  * Cierre de una compra (spec 0008): sin boleta (precios y total a mano) o con boleta (OCR +
  * conciliación). La lista la entrega la página al empezar; al terminar, la página recarga la lista.
  */
@@ -38,6 +56,7 @@ export class PurchaseCloseFacade {
 
   readonly list = signal<ActiveShoppingList | null>(null);
   readonly mode = signal<CloseMode | null>(null);
+  readonly kind = signal<CloseKind>('active');
   readonly carryPending = signal(true);
   readonly isSaving = signal(false);
   readonly error = signal<string | null>(null);
@@ -49,6 +68,8 @@ export class PurchaseCloseFacade {
   // ── Sin boleta ──
   readonly manualTotal = signal<number | null>(null);
   readonly manualPrices = signal<Record<string, number | null>>({});
+  /** Una compra ya cerrada pide el total (es el motivo de ingresarlo); al finalizar es opcional. */
+  readonly canConfirmManual = computed(() => this.kind() !== 'completed' || this.manualTotal() != null);
   readonly manualSum = computed(() =>
     this.checkedItems().reduce(
       (s, i) => s + (this.manualPrices()[i.id] ?? 0) * (i.quantity || 1),
@@ -74,14 +95,25 @@ export class PurchaseCloseFacade {
     inject(SessionScopeService).register(() => this.reset());
   }
 
-  start(list: ActiveShoppingList, carryPending: boolean, mode: CloseMode): void {
+  start(
+    list: ActiveShoppingList,
+    carryPending: boolean,
+    mode: CloseMode,
+    kind: CloseKind = 'active'
+  ): void {
     this.reset();
     this.list.set(list);
     this.carryPending.set(carryPending);
     this.mode.set(mode);
+    this.kind.set(kind);
     this.manualPrices.set(
       Object.fromEntries(this.checkedItems().map((i) => [i.id, i.product?.last_price ?? null]))
     );
+  }
+
+  /** Compra no planificada: no hay lista, la boleta crea la compra. */
+  startNew(): void {
+    this.start(NEW_PURCHASE, false, 'receipt', 'new');
   }
 
   setManualPrice(itemId: string, price: number | null): void {
@@ -91,13 +123,17 @@ export class PurchaseCloseFacade {
   /** Cierra sin boleta. @returns false si falló (la compra sigue abierta). */
   async confirmManual(): Promise<boolean> {
     const list = this.list();
-    if (!list) return false;
+    if (!list || !this.canConfirmManual()) return false;
     const prices = this.checkedItems()
       .map((i) => ({ itemId: i.id, unitPrice: this.manualPrices()[i.id] }))
       .filter((p): p is { itemId: string; unitPrice: number } => p.unitPrice != null);
 
     return this.save(async () => {
-      await this.lists.closeManual(list.id, this.carryPending(), prices, this.manualTotal());
+      if (this.kind() === 'completed') {
+        await this.lists.setPurchaseTotal(list.id, this.manualTotal()!, prices);
+      } else {
+        await this.lists.closeManual(list.id, this.carryPending(), prices, this.manualTotal());
+      }
     });
   }
 
@@ -139,7 +175,13 @@ export class PurchaseCloseFacade {
       );
       this.receipt.set(receipt);
       this.validation.set(validation);
-      this.decisions.set(initialDecisions(result, receipt, validation));
+      const decisions = initialDecisions(result, receipt, validation);
+      // Sin lista, lo que no se reconoce entra al catálogo (si no, la compra quedaría vacía).
+      this.decisions.set(
+        this.kind() === 'new'
+          ? decisions.map((d) => (d.target?.kind === 'new' ? { ...d, saveToCatalog: true } : d))
+          : decisions
+      );
       this.missing.set(result.missing.map((item) => ({ item, bought: true })));
     } catch (e) {
       console.error('Error OCR:', e);
@@ -157,9 +199,12 @@ export class PurchaseCloseFacade {
 
   /** "¿Es este?": un candidato, o `'new'` ("otro": no estaba en la lista). */
   chooseCandidate(index: number, choice: MatchCandidate | 'new'): void {
-    this.updateDecision(index, {
-      target: choice === 'new' ? { kind: 'new' } : targetFromCandidate(choice),
-    });
+    this.updateDecision(
+      index,
+      choice === 'new'
+        ? { target: { kind: 'new' }, ...(this.kind() === 'new' ? { saveToCatalog: true } : {}) }
+        : { target: targetFromCandidate(choice) }
+    );
   }
 
   setMissingBought(itemId: string, bought: boolean): void {
@@ -181,23 +226,26 @@ export class PurchaseCloseFacade {
       } catch (e) {
         console.error('No se pudo guardar la foto de la boleta:', e);
       }
-      await this.receipts.applyReceipt(
-        buildApplyReceipt({
-          listId: list.id,
-          carryPending: this.carryPending(),
-          receipt,
-          validation,
-          imagePath,
-          decisions: this.decisions(),
-          missing: this.missing(),
-        })
-      );
+      const input = buildApplyReceipt({
+        listId: list.id,
+        carryPending: this.carryPending(),
+        receipt,
+        validation,
+        imagePath,
+        decisions: this.decisions(),
+        missing: this.missing(),
+      });
+      const kind = this.kind();
+      if (kind === 'completed') await this.receipts.attachReceipt(input);
+      else if (kind === 'new') await this.receipts.createReceiptPurchase(input);
+      else await this.receipts.applyReceipt(input);
     });
   }
 
   reset(): void {
     this.list.set(null);
     this.mode.set(null);
+    this.kind.set('active');
     this.carryPending.set(true);
     this.isSaving.set(false);
     this.error.set(null);
@@ -212,10 +260,17 @@ export class PurchaseCloseFacade {
   }
 
   private async save(op: () => Promise<void>): Promise<boolean> {
+    const kind = this.kind();
     this.isSaving.set(true);
     try {
       await op();
-      this.toast.success('Compra finalizada', 'Quedó guardada en tu historial.');
+      if (kind === 'completed') {
+        this.toast.success('Boleta agregada', 'El gasto de esa compra ya es el real.');
+      } else if (kind === 'new') {
+        this.toast.success('Compra registrada', 'Quedó guardada en tu historial.');
+      } else {
+        this.toast.success('Compra finalizada', 'Quedó guardada en tu historial.');
+      }
       return true;
     } catch (e) {
       console.error(e);

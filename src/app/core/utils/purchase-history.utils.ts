@@ -1,13 +1,20 @@
-import type { ActiveShoppingList } from '@core/models/shopping-list.model';
+import type { ActiveShoppingList, ListReceipt } from '@core/models/shopping-list.model';
 import type {
   MonthlySpending,
   PurchaseSummary,
   PurchasedItem,
 } from '@core/models/purchase-history.model';
 
+/** La boleta de la compra (PostgREST la devuelve como objeto o como arreglo de uno). */
+function receiptOf(list: ActiveShoppingList): ListReceipt | null {
+  const r = list.receipts;
+  return (Array.isArray(r) ? r[0] : r) ?? null;
+}
+
 /**
  * Resume una lista finalizada: solo lo marcado cuenta como comprado
  * (subtotal = cantidad × precio pagado; sin precio conocido suma 0).
+ * `total` es lo pagado de verdad (boleta o a mano) si se sabe; si no, la suma estimada.
  */
 export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
   const items: PurchasedItem[] = (list.list_items ?? [])
@@ -23,24 +30,41 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
       };
     });
 
+  const estimatedTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+  const receipt = receiptOf(list);
+  const paid = list.total_paid == null ? null : Number(list.total_paid);
+
   return {
     id: list.id,
     name: list.name,
     completedAt: list.completed_at ?? list.created_at,
     itemCount: items.length,
-    total: items.reduce((sum, item) => sum + item.subtotal, 0),
+    total: paid ?? estimatedTotal,
+    estimatedTotal,
+    totalSource: paid == null ? 'estimated' : list.total_source ?? 'estimated',
+    hasReceipt: receipt !== null,
+    receiptImagePath: receipt?.image_url ?? null,
+    store: receipt?.store ?? null,
     items,
+    source: list,
   };
 }
 
-/** Gasto de las compras finalizadas en el mes de `now` (hora local). */
+/**
+ * Gasto de las compras finalizadas en el mes de `now` (hora local), con cuántas son estimadas
+ * (sin boleta ni total ingresado).
+ */
 export function spendingInMonth(
-  purchases: Pick<PurchaseSummary, 'completedAt' | 'total'>[],
+  purchases: Pick<PurchaseSummary, 'completedAt' | 'total' | 'totalSource'>[],
   now: Date = new Date()
 ): MonthlySpending {
   const inMonth = purchases.filter((p) => {
     const d = new Date(p.completedAt);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   });
-  return { total: inMonth.reduce((sum, p) => sum + p.total, 0), count: inMonth.length };
+  return {
+    total: inMonth.reduce((sum, p) => sum + p.total, 0),
+    count: inMonth.length,
+    estimatedCount: inMonth.filter((p) => p.totalSource === 'estimated').length,
+  };
 }

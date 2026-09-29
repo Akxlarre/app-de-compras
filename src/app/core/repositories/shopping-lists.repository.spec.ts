@@ -136,13 +136,30 @@ describe('ShoppingListsRepository', () => {
     mock.shop.from.mockReturnValue(q);
 
     expect(await repo.findCompleted('fam-1', 20)).toEqual([{ id: 'l0' }]);
-    expect(q.select).toHaveBeenCalledWith(
-      '*, list_items(*, product:products(id, name, category, last_price))'
-    );
+    // Trae también la boleta de cada compra (spec 0009): total real, comercio y foto.
+    expect(q.select).toHaveBeenCalledWith(`${WITH_ITEMS}, receipts(id, image_url, store)`);
     expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
     expect(q.eq).toHaveBeenCalledWith('status', 'completed');
     expect(q.order).toHaveBeenCalledWith('completed_at', { ascending: false, nullsFirst: false });
     expect(q.limit).toHaveBeenCalledWith(20);
+  });
+
+  it('setPurchaseTotal ingresa el total y los precios de una compra ya cerrada', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: null, error: null });
+
+    await repo.setPurchaseTotal('l1', 5000, [{ itemId: 'i1', unitPrice: 700 }]);
+
+    expect(mock.shop.rpc).toHaveBeenCalledWith('set_purchase_total', {
+      p_list_id: 'l1',
+      p_total: 5000,
+      p_prices: [{ item_id: 'i1', unit_price: 700 }],
+    });
+  });
+
+  it('setPurchaseTotal lanza el error de Supabase', async () => {
+    const error = { message: 'has_receipt' };
+    mock.shop.rpc.mockResolvedValue({ data: null, error });
+    await expect(repo.setPurchaseTotal('l1', 1, [])).rejects.toBe(error);
   });
 
   it('findCompleted devuelve [] si no hay datos', async () => {

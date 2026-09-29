@@ -76,33 +76,80 @@ export class ReceiptsRepository {
     const { data, error } = await this.db.rpc('apply_receipt', {
       p_list_id: input.listId,
       p_carry_pending: input.carryPending,
-      p_receipt: {
-        store: input.store,
-        purchased_at: input.purchasedAt,
-        total: input.total,
-        image_path: input.imagePath,
-        ocr_result: input.ocrResult,
-        ocr_check: input.ocrCheck,
-      },
-      p_items: [
-        ...input.items.map((i) => ({
-          item_id: i.itemId,
-          unit_price: i.unitPrice,
-          quantity: i.quantity,
-          raw_text: i.rawText,
-          save_alias: i.saveAlias,
-        })),
-        ...input.uncheckItemIds.map((id) => ({ item_id: id, checked: false })),
-      ],
-      p_extras: input.extras.map((e) => ({
-        product_id: e.productId,
-        raw_text: e.rawText,
-        name: e.name,
-        unit_price: e.unitPrice,
-        quantity: e.quantity,
-      })),
+      p_receipt: receiptPayload(input),
+      p_items: itemsPayload(input),
+      p_extras: extrasPayload(input),
     });
     if (error) throw error;
     return data as string;
   }
+
+  /**
+   * Agrega la boleta a una compra ya finalizada y sin boleta (RPC `attach_receipt`; Historial →
+   * "Agregar boleta"). Lo mismo que `applyReceipt`, sin mover pendientes.
+   */
+  async attachReceipt(input: ApplyReceiptInput): Promise<string> {
+    const { data, error } = await this.db.rpc('attach_receipt', {
+      p_list_id: input.listId,
+      p_receipt: receiptPayload(input),
+      p_items: itemsPayload(input),
+      p_extras: extrasPayload(input),
+    });
+    if (error) throw error;
+    return data as string;
+  }
+
+  /**
+   * Compra no planificada: la boleta crea una compra finalizada, sin lista (RPC
+   * `create_receipt_purchase`). Las líneas van como `extras` (productos conocidos o nuevos).
+   */
+  async createReceiptPurchase(input: ApplyReceiptInput, name = 'Compra sin lista'): Promise<string> {
+    const { data, error } = await this.db.rpc('create_receipt_purchase', {
+      p_receipt: receiptPayload(input),
+      p_extras: extrasPayload(input),
+      p_name: name,
+    });
+    if (error) throw error;
+    return data as string;
+  }
+
+  /** URL firmada (1 hora) de la foto de una boleta; el bucket es privado y solo abre a la familia. */
+  async getSignedUrl(path: string): Promise<string> {
+    const { data, error } = await this.supabase.client.storage
+      .from(BUCKET)
+      .createSignedUrl(path, SIGNED_URL_SECONDS);
+    if (error) throw error;
+    return data.signedUrl;
+  }
 }
+
+const SIGNED_URL_SECONDS = 3600;
+
+const receiptPayload = (input: ApplyReceiptInput) => ({
+  store: input.store,
+  purchased_at: input.purchasedAt,
+  total: input.total,
+  image_path: input.imagePath,
+  ocr_result: input.ocrResult,
+  ocr_check: input.ocrCheck,
+});
+
+const itemsPayload = (input: ApplyReceiptInput) => [
+  ...input.items.map((i) => ({
+    item_id: i.itemId,
+    unit_price: i.unitPrice,
+    quantity: i.quantity,
+    raw_text: i.rawText,
+    save_alias: i.saveAlias,
+  })),
+  ...input.uncheckItemIds.map((id) => ({ item_id: id, checked: false })),
+];
+
+const extrasPayload = (input: ApplyReceiptInput) =>
+  input.extras.map((e) => ({
+    product_id: e.productId,
+    raw_text: e.rawText,
+    name: e.name,
+    unit_price: e.unitPrice,
+    quantity: e.quantity,
+  }));
