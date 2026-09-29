@@ -63,6 +63,43 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   }
 
   /**
+   * Sin lista activa: crea la lista y copia en ella los ítems de otra (la última compra o una
+   * plantilla) en un paso (spec 0010). Si falla la copia, la lista queda creada (vacía) y se avisa.
+   * @returns false si algo falló.
+   */
+  async startListFrom(sourceListId: string): Promise<boolean> {
+    let listId: string;
+    try {
+      const familyId = await this.family.getOrCreateFamilyId();
+      listId = (
+        await this.lists.create({ name: 'Compra de la Semana', familyId, status: 'active' })
+      ).id;
+    } catch (e) {
+      this.notifyError(e);
+      return false;
+    }
+
+    let ok = true;
+    try {
+      const source = await this.items.findByList(sourceListId);
+      if (source.length > 0) {
+        await this.items.addMany(
+          source.map((item) => ({
+            list_id: listId,
+            product_id: item.product_id,
+            quantity: item.quantity,
+          }))
+        );
+      }
+    } catch (e) {
+      this.notifyError(e);
+      ok = false;
+    }
+    await this.refreshSilently();
+    return ok;
+  }
+
+  /**
    * Añade un producto a la lista (si ya está, suma la cantidad).
    */
   async addItem(listId: string, productId: string, quantity: number = 1): Promise<void> {

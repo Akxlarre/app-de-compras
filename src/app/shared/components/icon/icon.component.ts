@@ -178,6 +178,8 @@ const PROVIDED_ICONS = new Set([
   'car',
   'circle',
   'shopping-cart',
+  'repeat',
+  'bookmark',
   'mouse-pointer-click',
   'flask-conical',
   'gauge',
@@ -218,25 +220,25 @@ const SVG_CACHE = new Map<string, string>();
   imports: [LucideAngularModule],
   template: `
     @if (isLocal()) {
-      <lucide-icon
-        [name]="resolvedName()"
-        [size]="size()"
-        [strokeWidth]="2"
-        [absoluteStrokeWidth]="true"
-        [color]="color()"
-        [attr.aria-hidden]="ariaHidden() ? 'true' : null"
-        [attr.aria-label]="!ariaHidden() ? ariaLabel() : null"
-      />
+    <lucide-icon
+      [name]="resolvedName()"
+      [size]="size()"
+      [strokeWidth]="2"
+      [absoluteStrokeWidth]="true"
+      [color]="color()"
+      [attr.aria-hidden]="ariaHidden() ? 'true' : null"
+      [attr.aria-label]="!ariaHidden() ? ariaLabel() : null"
+    />
     } @else {
-      <span
-        [style.width.px]="size()"
-        [style.height.px]="size()"
-        [style.color]="color()"
-        [innerHTML]="safeSvgContent()"
-        [attr.aria-hidden]="ariaHidden() ? 'true' : null"
-        [attr.aria-label]="!ariaHidden() ? ariaLabel() : null"
-        class="dynamic-svg-container"
-      ></span>
+    <span
+      [style.width.px]="size()"
+      [style.height.px]="size()"
+      [style.color]="color()"
+      [innerHTML]="safeSvgContent()"
+      [attr.aria-hidden]="ariaHidden() ? 'true' : null"
+      [attr.aria-label]="!ariaHidden() ? ariaLabel() : null"
+      class="dynamic-svg-container"
+    ></span>
     }
   `,
   styles: [
@@ -337,7 +339,7 @@ export class IconComponent {
 
     try {
       const response = await fetch(
-        `https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/${iconName}.svg`,
+        `https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/${iconName}.svg`
       );
       if (response.ok) {
         const svgContent = await response.text();
@@ -347,7 +349,7 @@ export class IconComponent {
         this.dynamicSvg.set(svgContent);
       } else {
         console.warn(
-          `[IconComponent] Icon "${iconName}" not found on CDN. Falling back to circle-help.`,
+          `[IconComponent] Icon "${iconName}" not found on CDN. Falling back to circle-help.`
         );
         this.useFallback();
       }

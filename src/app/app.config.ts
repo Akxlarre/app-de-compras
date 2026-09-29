@@ -24,6 +24,8 @@ import {
   BarChart2,
   CheckCircle,
   ShoppingCart,
+  Repeat,
+  Bookmark,
   Zap,
   Target,
   Bot,
@@ -154,6 +156,9 @@ export const appConfig: ApplicationConfig = {
         BarChart2,
         CheckCircle,
         ShoppingCart,
+        // Atajos de Mi Lista (spec 0010): locales, sin depender del CDN.
+        Repeat,
+        Bookmark,
         Zap,
         Target,
         Bot,
