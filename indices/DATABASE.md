@@ -34,7 +34,7 @@ Storage: bucket privado **`receipts`**, ruta `<family_id>/<uuid>.<ext>`; policie
 
 | Función | Qué hace |
 |---|---|
-| `get_or_create_family() → uuid` | Devuelve la familia del usuario o crea "Mi Familia" con él como `owner`. |
+| `get_or_create_family() → uuid` | Devuelve la familia del usuario o crea "Familia de <nombre>" (display_name o parte local del email; `default_family_name`) con él como `owner`. Migración `20261001010000_shop_family_default_name` (fix-047, Q40), que además renombró las "Mi Familia" existentes. |
 | `join_family(p_family_id uuid) → uuid` | Une al usuario como `member`; quita sus membresías previas. Falla si la familia no tiene miembros (`invalid_family_code`) o ya es miembro (`already_member`). |
 | `preview_family(p_code text) → (name, member_count)` | Familia de un código (acepta minúsculas/guiones) para confirmar antes de unirse. Vacío si no existe. |
 | `join_family_by_code(p_code text) → uuid` | Como `join_family`, por código. Errores `invalid_family_code` (P0002), `already_member` (23505). |

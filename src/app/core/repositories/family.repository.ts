@@ -37,7 +37,7 @@ export class FamilyRepository {
     return this.supabase.client.schema('shop');
   }
 
-  /** Id de la familia del usuario; si no tiene, la crea ("Mi Familia", rol owner). */
+  /** Id de la familia del usuario; si no tiene, la crea ("Familia de <nombre>", rol owner). */
   async getOrCreateFamilyId(): Promise<string> {
     const { data, error } = await this.db.rpc('get_or_create_family');
     if (error) throw error;
