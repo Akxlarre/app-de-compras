@@ -22,6 +22,6 @@
 | `NotificationsService` | — | `src/app/core/services/ui/notifications.service.ts` |
 | `SearchPanelFacadeService` | `SearchPanelFacadeService` | `src/app/core/services/ui/search-panel.service.ts` |
 | `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `MessageService` | `src/app/core/services/ui/theme.service.ts` |
-| `ToastService` | `MessageService` | `src/app/core/services/ui/toast.service.ts` |
+| `ToastService` | `MessageService`, `ToastController` | `src/app/core/services/ui/toast.service.ts` |
 
 <!-- AUTO-GENERATED:END -->

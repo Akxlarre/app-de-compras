@@ -82,32 +82,60 @@ Quedan los hallazgos de UI del recorrido de QA que no son de datos (esos se reso
   recorrer en QA).
 
 ## Acceptance Criteria
-- [ ] AC1: A 375×667, en Perfil, Catálogo, Historial y Mi Lista el último elemento se puede tocar
+- [x] AC1: A 375×667, en Perfil, Catálogo, Historial y Mi Lista el último elemento se puede tocar
   por encima de la barra (Q1, Q10); el `+` flotante no tapa el `+` de cantidad del último producto
   (Q8); en el cierre de compra no hay barra de pestañas y "Cerrar compra" es visible (Q29, Q34).
-- [ ] AC2: Marcar y desmarcar un producto hace **un** movimiento corto al nuevo lugar, sin salto
+- [x] AC2: Marcar y desmarcar un producto hace **un** movimiento corto al nuevo lugar, sin salto
   atrás (medido por frame como en Q3); con reduced motion no se anima; al desmarcar vuelve a su
   lugar original (Q19).
-- [ ] AC3: En el buscador, un producto que ya está en la lista muestra "En la lista · N" sin
+- [x] AC3: En el buscador, un producto que ya está en la lista muestra "En la lista · N" sin
   stepper; `+` suma 1; nada del buscador borra ítems de la lista (Q4, Q11).
-- [ ] AC4: "Crear y añadir" deja el buscador abierto con el campo vacío y enfocado; el producto
+- [x] AC4: "Crear y añadir" deja el buscador abierto con el campo vacío y enfocado; el producto
   nuevo aparece en "Tus esenciales"; al abrir se ve un skeleton y no "Aún no tienes productos"
   mientras cargan (Q9, Q17, Q39).
-- [ ] AC5: Login más rápido y sin corte brusco: tiempo desde "Ingresar" a Mi Lista con datos medido
+- [x] AC5: Login más rápido y sin corte brusco: tiempo desde "Ingresar" a Mi Lista con datos medido
   antes y después, con la causa documentada (Q5).
-- [ ] AC6: Mi Lista: "Crear Lista" es el botón principal; sin backticks ni atajos inexistentes;
+- [x] AC6: Mi Lista: "Crear Lista" es el botón principal; sin backticks ni atajos inexistentes;
   las acciones secundarias no parten el título; precios con separador de miles (Q12, Q13, Q15,
   Q31).
-- [ ] AC7: Borrar un producto de la lista muestra "Quitaste X" con "Deshacer", que lo devuelve con
+- [x] AC7: Borrar un producto de la lista muestra "Quitaste X" con "Deshacer", que lo devuelve con
   su cantidad (Q27).
-- [ ] AC8: Plantillas: se pueden renombrar y borrar (con confirmación) y agregar a una lista en
+- [x] AC8: Plantillas: se pueden renombrar y borrar (con confirmación) y agregar a una lista en
   curso; guardar sin nombre avisa, con nombre confirma, y el campo toma el foco (Q28, Q30).
-- [ ] AC9: El título queda alineado con "SHOPPING"; en Historial y en el cierre la pestaña "Mi
+- [x] AC9: El título queda alineado con "SHOPPING"; en Historial y en el cierre la pestaña "Mi
   Lista" aparece activa (Q16, Q18).
-- [ ] AC10: Cierre sin boleta: no repite la pregunta de pendientes; muestra la diferencia entre
+- [x] AC10: Cierre sin boleta: no repite la pregunta de pendientes; muestra la diferencia entre
   total y suma; total con formato `$1.290` (Q29, Q32).
-- [ ] AC11: `+` flotante, precio del Catálogo y `×` de quitar miembro con nombre accesible; Boletas
+- [x] AC11: `+` flotante, precio del Catálogo y `×` de quitar miembro con nombre accesible; Boletas
   sin lista muestra "Compra sin lista" una vez; sin "Preferencias"; avatares distinguibles; ícono
   de boleta visible (Q20, Q21, Q22, Q33, Q41, Q42).
-- [ ] AC12: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; índices actualizados;
+- [x] AC12: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; índices actualizados;
   verificado en staging con test3/test4 y capturas a 375×667 de cada pantalla tocada.
+
+## Verificación (staging, 2026-09-30, Playwright a 375×667 con test3/test4)
+- AC1: último elemento vs. barra (y=579): Perfil "Cerrar sesión" 635 → 531, Catálogo 528,
+  Historial 414; el último `+` de cantidad (≈441) queda sobre el `+` flotante (507–571); en
+  `/app/close` la barra no se muestra y "Cerrar compra" termina en y=614.
+- AC2: posición por frame al marcar: 339 → 1180 en ~300 ms, 0 retrocesos (antes: aparecía abajo,
+  saltaba arriba y volvía en 700 ms). Orden por `created_at` con `sortListItems` (tests).
+- AC3: buscador sin steppers; "En la lista · 1" → "+" → "En la lista · 2".
+- AC4: "Crear y añadir" deja el buscador abierto, campo vacío y con foco; el nuevo producto
+  primero en "Tus esenciales"; con la respuesta demorada 2,5 s se ve el skeleton, no el vacío.
+- AC5: causa medida: `fetchData` esperaba `family_members` (nombre de la familia) antes de mostrar
+  la lista, y la entrada era un corte seco. Navegación → datos ~0,7 s (antes ~1,4 s); tira de
+  cuadros: lista visible a ~1,7 s del toque (antes ~2,9 s); View Transition de ~650 ms.
+- AC6: acciones "Guardar plantilla · Agregar plantilla · Vaciar lista" en una fila (17 px de alto,
+  sin partirse); precios "$1.290"; "Crear Lista" como botón principal sin atajos; texto sin backticks.
+- AC7: deslizar → "Quitaste Aceite · Deshacer" → vuelve a la lista; la pista desaparece.
+- AC8: guardar sin nombre avisa y la alerta queda abierta (foco en el campo); con nombre, toast
+  "Plantilla guardada" (11 ítems en la BD); "Agregar plantilla" suma cantidades (Aceite 2 → 4);
+  renombrar y borrar desde "⋯" (0 plantillas en la BD tras borrar).
+- AC9: título "Mi Lista" alineado con "SHOPPING" (la clase `page-main-title` heredaba padding de
+  `[class^="page-"]`); Historial y cierre marcan "Mi Lista".
+- AC10: "Sin boleta" abre el cierre sin segunda pregunta y con "Pasar pendientes" marcado; total
+  "20.000", precio "15.990", "Pagaste $4.010 más que la suma…".
+- AC11: Boletas sin lista muestra "Compra sin lista" 1 vez; Perfil sin "Preferencias"; avatares
+  T3 / T4 con tonos distintos; ícono de boleta registrado; nombres accesibles en el precio del
+  Catálogo (el `+` flotante y la `×` de quitar miembro ya los tenían).
+- AC12: 557 tests, `lint:arch` 0 errores (5 advertencias previas de complejidad), `ng build` OK;
+  índices COMPONENTS, SERVICES, USAGE-MAP y REPOSITORIES actualizados.
