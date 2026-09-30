@@ -69,26 +69,37 @@ viejo. La base de datos no protege nada:
 - Supabase local y e2e automáticos de estos flujos.
 
 ## Acceptance Criteria
-- [ ] AC1: Doble toque en `+` de un producto, o dos miembros agregándolo a la vez, dejan **una**
+- [x] AC1: Doble toque en `+` de un producto, o dos miembros agregándolo a la vez, dejan **una**
   fila con la cantidad sumada. Verificable en staging con dos cuentas y en tests del facade/repo.
-- [ ] AC2: Dos miembros tocan `+` de cantidad a la vez sobre el mismo ítem en 1 → queda en 3.
-- [ ] AC3: La BD rechaza una segunda lista activa en la misma familia; doble toque en "Crear Lista"
+- [x] AC2: Dos miembros tocan `+` de cantidad a la vez sobre el mismo ítem en 1 → queda en 3.
+- [x] AC3: La BD rechaza una segunda lista activa en la misma familia; doble toque en "Crear Lista"
   deja una sola lista y ningún error visible.
-- [ ] AC4: Los datos existentes no rompen la migración: duplicados de `list_items` y listas activas
+- [x] AC4: Los datos existentes no rompen la migración: duplicados de `list_items` y listas activas
   sobrantes se juntan (probado en staging, que hoy tiene duplicados de la cuenta `test1`).
 - [x] AC5: Una mutación que afecta 0 filas lanza error; la UI revierte el cambio y avisa. Test por
   cada repository de lista.
-- [ ] AC6: Un miembro quitado que intenta marcar ve el aviso "Ya no eres parte de «X»" y su pantalla
+- [x] AC6: Un miembro quitado que intenta marcar ve el aviso "Ya no eres parte de «X»" y su pantalla
   pasa a su propia familia sin recargar a mano. Nada queda marcado en la lista de la familia.
-- [ ] AC7: Sin red, marcar y cambiar la cantidad se ven al instante, aparece el aviso de "sin
+- [x] AC7: Sin red, marcar y cambiar la cantidad se ven al instante, aparece el aviso de "sin
   conexión" y, al volver la red, los cambios llegan a la BD y el otro miembro los ve.
-- [ ] AC8: La cola sobrevive a cerrar y reabrir la app sin red.
-- [ ] AC9: Un cambio de la cola rechazado al sincronizar (ítem borrado por otro miembro) se descarta
+- [x] AC8: La cola sobrevive a cerrar y reabrir la app sin red.
+- [x] AC9: Un cambio de la cola rechazado al sincronizar (ítem borrado por otro miembro) se descarta
   y se avisa una vez; los demás se aplican.
 - [x] AC10: Sin red, agregar, borrar, finalizar y crear lista están deshabilitados con explicación.
-- [ ] AC11: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; índices (DATABASE,
+- [x] AC11: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; índices (DATABASE,
   REPOSITORIES, FACADES) actualizados; PR de plataforma-db aplicado en staging.
 
-> **Estado (2026-09-30):** código y tests listos para AC1–AC10 (BD: pgTAP + carrera real en
-> Postgres local; app: tests de repos, facade y página). AC1–AC4 y AC6–AC9 quedan abiertos hasta
-> probarlos en staging, que requiere aplicar plataforma-db#13. AC11: todo en verde salvo ese paso.
+> **Verificado en staging (2026-09-30)** con `test3` y `test4` (familia compartida), por la API
+> (carreras reales) y con Playwright sobre la app servida contra staging:
+> - AC1: dos cuentas + doble toque agregando a la vez → 1 fila, cantidad 3; doble toque en el `+`
+>   del buscador → 1 fila, cantidad 2. AC2: dos `+1` simultáneos sobre 1 → 3.
+> - AC3: dos `start_active_list` a la vez → misma lista (`created` true/false); doble toque en
+>   "Crear Lista" → 1 lista, sin errores. AC4: la migración se aplicó (log del deploy) y los índices
+>   rechazan una 2ª lista activa (23505) y juntan un INSERT repetido.
+> - AC6: test3 quita a test4; test4 marca → "Ya no eres parte de «Casa QA»" (1 vez), pasa a su
+>   familia sin lista; nada quedó marcado en la lista de test3.
+> - AC7–AC9: sin red se marca y se cambia cantidad al instante con aviso; reabrir sin red muestra la
+>   lista con la cola; al volver, test4 ve los cambios; el cambio sobre un ítem que test4 borró se
+>   descarta con un solo aviso "1 cambio no se pudo guardar".
+> - Bugs encontrados y corregidos en el camino: abrir la app sin red mandaba al login (AuthFacade
+>   esperaba el perfil) y el ícono `wifi-off` se bajaba del CDN (sin red salía "?").
