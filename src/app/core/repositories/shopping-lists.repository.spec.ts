@@ -172,6 +172,40 @@ describe('ShoppingListsRepository', () => {
     await expect(repo.renamePurchase('l1', '')).rejects.toEqual(new MutationError('invalid_name'));
   });
 
+  describe('plantillas (spec 0013, Q28)', () => {
+    it('renameTemplate actualiza solo una plantilla y pide la fila afectada', async () => {
+      const q = queryMock({ data: [{ id: 't1' }] });
+      mock.shop.from.mockReturnValue(q);
+
+      await repo.renameTemplate('t1', 'Asado');
+
+      expect(mock.shop.from).toHaveBeenCalledWith('shopping_lists');
+      expect(q.update).toHaveBeenCalledWith({ name: 'Asado' });
+      expect(q.eq).toHaveBeenCalledWith('id', 't1');
+      expect(q.eq).toHaveBeenCalledWith('status', 'template');
+      expect(q.select).toHaveBeenCalledWith('id');
+    });
+
+    it('deleteTemplate borra solo una plantilla (nunca una compra ni la activa)', async () => {
+      const q = queryMock({ data: [{ id: 't1' }] });
+      mock.shop.from.mockReturnValue(q);
+
+      await repo.deleteTemplate('t1');
+
+      expect(q.delete).toHaveBeenCalled();
+      expect(q.eq).toHaveBeenCalledWith('id', 't1');
+      expect(q.eq).toHaveBeenCalledWith('status', 'template');
+    });
+
+    it.each([
+      ['renameTemplate', (r: ShoppingListsRepository) => r.renameTemplate('t1', 'X')],
+      ['deleteTemplate', (r: ShoppingListsRepository) => r.deleteTemplate('t1')],
+    ])('%s que no afecta filas lanza not_found', async (_, act) => {
+      mock.shop.from.mockReturnValue(queryMock({ data: [] }));
+      await expect(act(repo)).rejects.toEqual(new MutationError('not_found'));
+    });
+  });
+
   it('complete traduce nothing_checked', async () => {
     mock.shop.rpc.mockResolvedValue({
       data: null,

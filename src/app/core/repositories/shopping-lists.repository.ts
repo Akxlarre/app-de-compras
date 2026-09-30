@@ -6,7 +6,13 @@ import type {
   ShoppingListStatus,
 } from '@core/models/shopping-list.model';
 import type { ManualPrice } from '@core/models/receipt.model';
-import { toMutationError } from '@core/utils/mutation-error.utils';
+import { MutationError, toMutationError } from '@core/utils/mutation-error.utils';
+
+/** UPDATE/DELETE que afecta 0 filas: así se ve un RLS que lo bloquea o un id que ya no está. */
+function assertAffected(data: unknown, error: unknown): void {
+  if (error) throw toMutationError(error);
+  if (!Array.isArray(data) || data.length === 0) throw new MutationError('not_found');
+}
 
 /** Lista con ítems y el producto embebido de cada ítem. */
 const WITH_ITEMS = '*, list_items(*, product:products(id, name, category, last_price))';
@@ -91,6 +97,28 @@ export class ShoppingListsRepository {
   async renamePurchase(listId: string, name: string): Promise<void> {
     const { error } = await this.db.rpc('rename_purchase', { p_list_id: listId, p_name: name });
     if (error) throw toMutationError(error);
+  }
+
+  /** Renombra una plantilla (solo `status = template`; 0 filas → `not_found`) (spec 0013). */
+  async renameTemplate(templateId: string, name: string): Promise<void> {
+    const { data, error } = await this.db
+      .from('shopping_lists')
+      .update({ name })
+      .eq('id', templateId)
+      .eq('status', 'template')
+      .select('id');
+    assertAffected(data, error);
+  }
+
+  /** Borra una plantilla con sus ítems (cascada). Nunca toca compras ni la lista activa. */
+  async deleteTemplate(templateId: string): Promise<void> {
+    const { data, error } = await this.db
+      .from('shopping_lists')
+      .delete()
+      .eq('id', templateId)
+      .eq('status', 'template')
+      .select('id');
+    assertAffected(data, error);
   }
 
   /** Crea una lista no activa (plantilla). La activa se crea con `startActive`. */

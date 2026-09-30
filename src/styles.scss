@@ -100,3 +100,16 @@ body.modal-open {
   height: 100% !important;
   pointer-events: auto !important;
 }
+
+/* Toast con acción ("Quitaste X · Deshacer", ToastService.action — spec 0013 Q27).
+   Es un ion-toast (overlay global): se viste con los tokens del tema. */
+ion-toast.action-toast {
+  --background: var(--bg-elevated);
+  --color: var(--text-primary);
+  --button-color: var(--ds-brand);
+  --border-radius: var(--radius-lg);
+  --box-shadow: var(--shadow-lg);
+  --border-color: var(--border-subtle);
+  --border-style: solid;
+  --border-width: 1px;
+}
