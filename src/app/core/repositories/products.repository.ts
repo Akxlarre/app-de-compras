@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type { Product } from '@core/models/product.model';
+import type { RestockStat } from '@core/models/restock.model';
+import { MutationError, toMutationError } from '@core/utils/mutation-error.utils';
 
 export interface NewProduct {
   name: string;
@@ -66,5 +68,23 @@ export class ProductsRepository {
       .update({ last_price: price, updated_at: new Date().toISOString() })
       .eq('id', productId);
     if (error) throw error;
+  }
+
+  /** Compras por producto: cuántas, cada cuánto (mediana) y la última (RPC, spec 0014). */
+  async findRestockStats(): Promise<RestockStat[]> {
+    const { data, error } = await this.db.rpc('restock_stats');
+    if (error) throw toMutationError(error);
+    return (data as RestockStat[] | null) ?? [];
+  }
+
+  /** "Todavía tengo": no sugerir el producto hasta `until` (para toda la familia). */
+  async snoozeRestock(productId: string, until: string): Promise<void> {
+    const { data, error } = await this.db
+      .from('products')
+      .update({ restock_snoozed_until: until })
+      .eq('id', productId)
+      .select('id');
+    if (error) throw toMutationError(error);
+    if (!Array.isArray(data) || data.length === 0) throw new MutationError('not_found');
   }
 }

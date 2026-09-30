@@ -161,6 +161,15 @@
           </div>
         </div>
 
+        <!-- Te puede faltar: lo que toca reponer según el historial (spec 0014) -->
+        <app-restock-strip
+          [suggestions]="suggestions()"
+          [disabled]="!facade.isOnline()"
+          (add)="addSuggested($event)"
+          (addAll)="addAllSuggested($event)"
+          (snooze)="snoozeSuggestion($event)"
+        />
+
         <!-- Lista de Productos -->
         @if (list.list_items.length === 0) {
         <div class="py-8 flex flex-col items-center justify-center text-center px-4">

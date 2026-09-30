@@ -554,6 +554,24 @@ describe('ShoppingListFacade', () => {
       expect(loadSpy).toHaveBeenCalled();
     });
 
+    it('addProducts agrega varios a la lista activa de una vez (spec 0014)', async () => {
+      facade['_data'].set(list([]));
+
+      expect(await facade.addProducts(['p1', 'p2'])).toBe(true);
+
+      expect(items['addMany']).toHaveBeenCalledWith('list-1', [
+        { product_id: 'p1', quantity: 1 },
+        { product_id: 'p2', quantity: 1 },
+      ]);
+    });
+
+    it('addProducts sin lista o sin productos no hace nada', async () => {
+      expect(await facade.addProducts(['p1'])).toBe(false);
+      facade['_data'].set(list([]));
+      expect(await facade.addProducts([])).toBe(false);
+      expect(items['addMany']).not.toHaveBeenCalled();
+    });
+
     describe('plantillas (spec 0013, Q28/Q30)', () => {
       beforeEach(() => {
         lists['renameTemplate'] = vi.fn().mockResolvedValue(undefined);

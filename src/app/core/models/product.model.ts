@@ -7,6 +7,8 @@ export interface Product {
   estimated_duration_days?: number;
   /** Última compra finalizada que lo incluyó (RPC `complete_list`). */
   last_purchased_at?: string | null;
+  /** "Todavía tengo": no sugerir reponer hasta esta fecha (spec 0014). */
+  restock_snoozed_until?: string | null;
   created_at: string;
   updated_at: string;
 }
