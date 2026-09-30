@@ -2,9 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "app-de-entrenamiento",
+      "name": "app-de-compras",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start:raw"],
+      "port": 4200
+    },
+    {
+      "name": "app-de-compras-staging",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:staging"],
       "port": 4200
     }
   ]
