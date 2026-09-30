@@ -46,17 +46,33 @@ Las sugerencias de reposición existen pero casi nadie las ve y aciertan poco:
 - Sugerir productos que nunca se compraron.
 
 ## Acceptance Criteria
-- [ ] AC1: `restock_stats()` devuelve, para mis productos, compras (días distintos), mediana de
+- [x] AC1: `restock_stats()` devuelve, para mis productos, compras (días distintos), mediana de
   intervalo (null con <2) y última compra; otra familia no ve los míos (pgTAP).
-- [ ] AC2: `restock_snoozed_until` existe y un miembro puede fijarlo en productos de su familia,
+- [x] AC2: `restock_snoozed_until` existe y un miembro puede fijarlo en productos de su familia,
   no en los de otra (pgTAP).
-- [ ] AC3: `restockSuggestions` usa la mediana con 2+ compras, 7 días (o la duración estimada) con
+- [x] AC3: `restockSuggestions` usa la mediana con 2+ compras, 7 días (o la duración estimada) con
   una sola; excluye pospuestos, los que ya están en la lista y los nunca comprados; ordena por
   atraso (tests).
-- [ ] AC4: Mi Lista muestra "Te puede faltar" con lo que toca reponer (con "hace N días"); `+`
+- [x] AC4: Mi Lista muestra "Te puede faltar" con lo que toca reponer (con "hace N días"); `+`
   agrega el producto y desaparece de la franja; "Agregar todas" agrega las visibles.
-- [ ] AC5: "Todavía tengo" la saca de la franja para **los dos** miembros (test3 y test4) y vuelve
+- [x] AC5: "Todavía tengo" la saca de la franja para **los dos** miembros (test3 y test4) y vuelve
   cuando pasa otro intervalo; si falla, vuelve a aparecer con aviso.
-- [ ] AC6: Catálogo sin banner de "Generar lista"; nada queda usando `generateSmartList`.
-- [ ] AC7: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; pgTAP en CI de plataforma-db;
+- [x] AC6: Catálogo sin banner de "Generar lista"; nada queda usando `generateSmartList`.
+- [x] AC7: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; pgTAP en CI de plataforma-db;
   índices (DATABASE, REPOSITORIES, FACADES) actualizados; verificado en staging con test3/test4.
+
+## Verificación (staging, 2026-09-30)
+Migración `20260930030000_shop_restock` desplegada al mergear plataforma-db#15 (pgTAP 11/11 en su
+CI). Historial sembrado en la familia de test3: Arroz hace 32/22/12 días, Aceite 42/12, Fideos 8,
+Queso 21/14/7.
+- AC1: `restock_stats()` en staging → Arroz 3 compras mediana 10, Aceite 2 mediana 30, Fideos 1
+  (mediana null), Queso 3 mediana 7; otra familia sin filas (pgTAP).
+- AC2: la app fija `restock_snoozed_until` (Fideos → +7 días); otra familia 0 filas (pgTAP).
+- AC3: tests de `restockSuggestions` (mediana, 7 días, pospuestos, en lista, nunca comprados, orden).
+- AC4: test3 ve "Te puede faltar": Arroz "Hace 12 días · sueles comprarlo cada ~10", Fideos "Hace 8
+  días", Queso "Hace 7 días · … cada ~7" (Aceite no: 12 < 30). `+` Queso → en la lista y fuera de
+  la franja. test4 "Agregar todas" → Arroz y Fideos a la lista; la franja desaparece.
+- AC5: "Todavía tengo" en Fideos (test3) → fuera de la franja y test4 tampoco lo ve; con el PATCH
+  forzado a 500 vuelve a aparecer con "No se pudo guardar". Vuelve cuando vence (test de util).
+- AC6: Catálogo sin "Es momento de reponer" ni "Generar lista"; sin `generateSmartList`.
+- AC7: 574 tests, `lint:arch` 0 errores, `ng build` OK; índices actualizados.
