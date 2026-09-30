@@ -29,8 +29,9 @@ Ninguno de specs activas (spec 0006-familia muestra el nombre que devuelve la BD
 ## Test de regresión
 - pgTAP `supabase/tests/shop_family.test.sql` (plataforma-db): la familia nace como "Familia de
   Ana", `preview_family` lo muestra, y con `display_name` usa ese nombre.
-- Staging: una cuenta nueva ve "Familia de <nombre>" en Perfil y el diálogo de unirse lo muestra;
-  la familia de test4 (que era "Mi Familia") quedó renombrada.
+- Staging: una cuenta nueva ve "Familia de <nombre>" en Perfil y el diálogo de unirse lo muestra.
+- Postgres local: una familia existente "Mi Familia" pasa a "Familia de <dueño>" y una renombrada a
+  mano no cambia.
 
 ## Verificación (staging, 2026-10-01)
 plataforma-db#16 mergeado y desplegado (run 36793197756). pgTAP `shop_family` 23/23 en CI.
