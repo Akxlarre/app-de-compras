@@ -33,6 +33,7 @@
 | `features/not-found` | ❌ | ❌ | ❌ | ❌ |
 | `features/profile/family-section` | ✅ | ❌ | ✅ | ❌ |
 | `features/shopping/active-list` | ❌ | ❌ | ❌ | ❌ |
+| `features/shopping/active-list` | ❌ | ❌ | ❌ | ❌ |
 | `features/shopping/product-search` | ❌ | ❌ | ❌ | ✅ |
 
 
