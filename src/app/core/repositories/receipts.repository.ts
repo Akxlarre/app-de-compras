@@ -103,7 +103,10 @@ export class ReceiptsRepository {
    * Compra no planificada: la boleta crea una compra finalizada, sin lista (RPC
    * `create_receipt_purchase`). Las líneas van como `extras` (productos conocidos o nuevos).
    */
-  async createReceiptPurchase(input: ApplyReceiptInput, name = 'Compra sin lista'): Promise<string> {
+  async createReceiptPurchase(
+    input: ApplyReceiptInput,
+    name = 'Compra sin lista'
+  ): Promise<string> {
     const { data, error } = await this.db.rpc('create_receipt_purchase', {
       p_receipt: receiptPayload(input),
       p_extras: extrasPayload(input),
@@ -111,6 +114,12 @@ export class ReceiptsRepository {
     });
     if (error) throw error;
     return data as string;
+  }
+
+  /** Borra la foto de una boleta del bucket (al borrar la compra, spec 0012). */
+  async removeImage(path: string): Promise<void> {
+    const { error } = await this.supabase.client.storage.from(BUCKET).remove([path]);
+    if (error) throw error;
   }
 
   /** URL firmada (1 hora) de la foto de una boleta; el bucket es privado y solo abre a la familia. */

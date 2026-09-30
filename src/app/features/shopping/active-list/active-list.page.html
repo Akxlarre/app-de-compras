@@ -91,19 +91,35 @@
             <button
               class="px-5 py-2 bg-brand text-brand-contrast rounded-full text-sm font-bold shadow-md shadow-brand/20 transition-transform active:scale-95 disabled:opacity-40 disabled:shadow-none"
               data-llm-action="finalizar-compra"
-              [disabled]="!facade.isOnline()"
+              [disabled]="!facade.isOnline() || !facade.hasChecked()"
               (click)="completeList(list.id)"
             >
               Finalizar
             </button>
+            @if (!facade.hasChecked()) {
+            <span
+              class="text-[11px] text-text-muted text-right max-w-[9rem]"
+              data-testid="finish-hint"
+              >Marca lo que compraste para finalizar</span
+            >
+            }
             <button
               class="text-xs text-text-muted font-medium hover:text-text-primary active:scale-95 transition-all flex items-center gap-1 disabled:opacity-40"
               data-llm-action="guardar-plantilla"
               [disabled]="!facade.isOnline()"
               (click)="saveTemplate()"
             >
-              <app-icon name="bookmark" [size]="12" />
+              <app-icon name="bookmark" [size]="12" [attr.aria-label]="'Plantilla'" />
               Guardar Plantilla
+            </button>
+            <button
+              class="text-xs text-text-muted font-medium hover:text-text-primary active:scale-95 transition-all flex items-center gap-1 disabled:opacity-40"
+              data-llm-action="vaciar-lista"
+              [disabled]="!facade.isOnline()"
+              (click)="clearList()"
+            >
+              <app-icon name="trash-2" [size]="12" [attr.aria-label]="'Vaciar'" />
+              Vaciar lista
             </button>
           </div>
           }

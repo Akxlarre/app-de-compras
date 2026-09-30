@@ -5,6 +5,7 @@ import { FamilyRepository } from '../repositories/family.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
 import { SessionScopeService } from '../services/auth/session-scope.service';
+import { ToastService } from '../services/ui/toast.service';
 
 const NOW = new Date(2026, 8, 25, 12, 0);
 
@@ -21,11 +22,13 @@ const completed = (id: string, completedAt: Date, items: any[]) => ({
 describe('PurchaseHistoryFacade', () => {
   let facade: PurchaseHistoryFacade;
   let family: { getOrCreateFamilyId: ReturnType<typeof vi.fn> };
-  let lists: { findCompleted: ReturnType<typeof vi.fn> };
-  let receipts: { getSignedUrl: ReturnType<typeof vi.fn> };
+  let lists: Record<string, ReturnType<typeof vi.fn>>;
+  let receipts: Record<string, ReturnType<typeof vi.fn>>;
+  let toast: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(() => {
-    receipts = { getSignedUrl: vi.fn() };
+    receipts = { getSignedUrl: vi.fn(), removeImage: vi.fn().mockResolvedValue(undefined) };
+    toast = { error: vi.fn(), warning: vi.fn(), success: vi.fn() };
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
 
@@ -41,6 +44,8 @@ describe('PurchaseHistoryFacade', () => {
             { id: '2', is_checked: true, quantity: 1, unit_price: 4000, product: { name: 'Café' } },
           ]),
         ]),
+      deletePurchase: vi.fn().mockResolvedValue(null),
+      renamePurchase: vi.fn().mockResolvedValue(undefined),
     };
 
     TestBed.configureTestingModule({
@@ -49,6 +54,7 @@ describe('PurchaseHistoryFacade', () => {
         { provide: FamilyRepository, useValue: family },
         { provide: ShoppingListsRepository, useValue: lists },
         { provide: ReceiptsRepository, useValue: receipts },
+        { provide: ToastService, useValue: toast },
       ],
     });
     facade = TestBed.inject(PurchaseHistoryFacade);
@@ -116,6 +122,88 @@ describe('PurchaseHistoryFacade', () => {
 
     expect(facade.error()).toContain('conexión');
     expect(facade.data()).toBeNull();
+  });
+
+  describe('nombre, borrar y renombrar (spec 0012)', () => {
+    beforeEach(async () => {
+      lists.findCompleted.mockResolvedValue([
+        {
+          ...completed('a', new Date(2026, 8, 20), [
+            {
+              id: '1',
+              is_checked: true,
+              quantity: 2,
+              unit_price: 1000,
+              product: { id: 'p1', name: 'Pan' },
+            },
+          ]),
+          name: 'Lista de compras',
+          receipts: { id: 'r1', image_url: 'fam/r1.jpg', store: null },
+        },
+        {
+          ...completed('b', new Date(2026, 8, 21), [
+            {
+              id: '2',
+              is_checked: true,
+              quantity: 1,
+              unit_price: 500,
+              product: { id: 'p2', name: 'Sal' },
+            },
+          ]),
+          name: 'Asado',
+        },
+      ]);
+      await facade.initialize();
+    });
+
+    it('el título de una compra con nombre automático es su fecha; uno propio se respeta', () => {
+      expect(facade.data()?.map((p) => p.title)).toEqual(['Compra del dom 20 sep', 'Asado']);
+    });
+
+    it('deletePurchase la saca al instante (y del mes) y borra la foto de la boleta', async () => {
+      lists.deletePurchase.mockResolvedValue('fam/r1.jpg');
+
+      expect(await facade.deletePurchase('a')).toBe(true);
+
+      expect(lists.deletePurchase).toHaveBeenCalledWith('a');
+      expect(facade.data()?.map((p) => p.id)).toEqual(['b']);
+      expect(facade.thisMonth()).toEqual({ total: 500, count: 1, estimatedCount: 1 });
+      expect(receipts.removeImage).toHaveBeenCalledWith('fam/r1.jpg');
+    });
+
+    it('deletePurchase: si la BD falla, la compra vuelve y se avisa', async () => {
+      lists.deletePurchase.mockRejectedValue(new Error('boom'));
+
+      expect(await facade.deletePurchase('a')).toBe(false);
+
+      expect(facade.data()?.map((p) => p.id)).toEqual(['a', 'b']);
+      expect(toast.error).toHaveBeenCalled();
+      expect(receipts.removeImage).not.toHaveBeenCalled();
+    });
+
+    it('deletePurchase: si falla borrar la foto, la compra igual queda borrada', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      lists.deletePurchase.mockResolvedValue('fam/r1.jpg');
+      receipts.removeImage.mockRejectedValue(new Error('storage'));
+
+      expect(await facade.deletePurchase('a')).toBe(true);
+      expect(facade.data()?.map((p) => p.id)).toEqual(['b']);
+    });
+
+    it('renamePurchase cambia el nombre y el título', async () => {
+      expect(await facade.renamePurchase('a', '  Once  ')).toBe(true);
+
+      expect(lists.renamePurchase).toHaveBeenCalledWith('a', 'Once');
+      expect(facade.data()?.[0]).toMatchObject({ name: 'Once', title: 'Once' });
+    });
+
+    it('renamePurchase rechaza vacío o más de 60 caracteres sin llamar a la BD', async () => {
+      expect(await facade.renamePurchase('a', '   ')).toBe(false);
+      expect(await facade.renamePurchase('a', 'x'.repeat(61))).toBe(false);
+
+      expect(lists.renamePurchase).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('cierre de sesión: vacía el historial', async () => {

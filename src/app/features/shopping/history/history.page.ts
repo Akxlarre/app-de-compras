@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { NavController } from '@ionic/angular';
+import { AlertController, NavController } from '@ionic/angular';
 import { PurchaseHistoryFacade } from '@core/facades/purchase-history.facade';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 import type { PurchaseSummary } from '@core/models/purchase-history.model';
@@ -38,6 +38,7 @@ export class HistoryPage implements OnInit {
   private readonly nav = inject(NavController);
   private readonly close = inject(PurchaseCloseFacade);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly alerts = inject(AlertController);
 
   /** Compra con el detalle abierto. */
   readonly openId = signal<string | null>(null);
@@ -101,6 +102,66 @@ export class HistoryPage implements OnInit {
     const url = await this.facade.receiptUrl(p.receiptImagePath);
     this.loadingPhoto.set(false);
     this.receiptPhoto.set({ id: p.id, url });
+  }
+
+  /** Borrar compra (spec 0012): confirma, borra (con boleta y foto) y cierra el detalle. */
+  async deletePurchase(p: PurchaseSummary): Promise<void> {
+    const confirmed = await this.ask<boolean>({
+      header: '¿Borrar esta compra?',
+      message: 'Se borra también su boleta y deja de contar en el gasto del mes.',
+      buttons: [{ text: 'Borrar', role: 'destructive', value: () => true }],
+    });
+    if (!confirmed) return;
+    if (await this.facade.deletePurchase(p.id)) this.openId.set(null);
+  }
+
+  /** Renombrar compra (spec 0012): el título actual como punto de partida. */
+  async renamePurchase(p: PurchaseSummary): Promise<void> {
+    const name = await this.ask<string>({
+      header: 'Renombrar compra',
+      inputs: [{ name: 'name', type: 'text', value: p.title, attributes: { maxlength: 60 } }],
+      buttons: [
+        {
+          text: 'Guardar',
+          cssClass: 'alert-confirm-btn',
+          value: (data?: { name?: string }) => data?.name ?? '',
+        },
+      ],
+    });
+    if (name !== null) await this.facade.renamePurchase(p.id, name);
+  }
+
+  /** Alerta con botones que resuelven un valor, más "Cancelar" (resuelve null). */
+  private ask<T>(opts: {
+    header: string;
+    message?: string;
+    inputs?: { name: string; type: 'text'; value: string; attributes?: object }[];
+    buttons: { text: string; role?: string; cssClass?: string; value: (data?: any) => T }[];
+  }): Promise<T | null> {
+    return new Promise<T | null>(async (resolve) => {
+      const alert = await this.alerts.create({
+        header: opts.header,
+        message: opts.message,
+        inputs: opts.inputs ?? [], // ion-alert no abre con `inputs: undefined`
+        cssClass: 'premium-alert',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'alert-cancel-btn',
+            handler: () => resolve(null),
+          },
+          ...opts.buttons.map((b) => ({
+            text: b.text,
+            role: b.role ?? 'confirm',
+            cssClass: b.cssClass,
+            handler: (data?: unknown) => resolve(b.value(data)),
+          })),
+        ],
+      });
+      alert.onDidDismiss().then(() => resolve(null));
+      await alert.present();
+    });
   }
 
   back(): void {

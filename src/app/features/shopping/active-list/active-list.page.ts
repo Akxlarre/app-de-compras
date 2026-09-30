@@ -15,7 +15,11 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CheckboxModule } from 'primeng/checkbox';
-import { ShoppingListFacade, type PopulatedListItem } from '@core/facades/shopping-list.facade';
+import {
+  DEFAULT_LIST_NAME,
+  ShoppingListFacade,
+  type PopulatedListItem,
+} from '@core/facades/shopping-list.facade';
 import { FamilyFacade } from '@core/facades/family.facade';
 import { PurchaseCloseFacade, type CloseMode } from '@core/facades/purchase-close.facade';
 
@@ -180,7 +184,17 @@ export class ActiveListPage implements OnInit {
   }
 
   async createNewList() {
-    await this.facade.createList('Compra de la Semana');
+    await this.facade.createList(DEFAULT_LIST_NAME);
+  }
+
+  /** "Vaciar lista" (spec 0012): pide confirmación y borra todos los ítems, sin crear una compra. */
+  async clearList() {
+    const confirmed = await this.choose<boolean>(
+      '¿Vaciar la lista?',
+      'Se quitan todos los productos. No queda nada en el Historial.',
+      [{ text: 'Vaciar', value: true, role: 'destructive' }]
+    );
+    if (confirmed) await this.facade.clearList();
   }
 
   toggleItem(itemId: string, currentStatus: boolean) {

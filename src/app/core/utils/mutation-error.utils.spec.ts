@@ -8,6 +8,9 @@ describe('toMutationError', () => {
     [{ code: 'P0002', message: 'list_not_found' }, 'not_found'],
     [{ code: 'P0002', message: 'item_not_found' }, 'not_found'],
     [{ code: '22023', message: 'list_not_active' }, 'list_not_active'],
+    [{ code: 'P0001', message: 'nothing_checked' }, 'nothing_checked'],
+    [{ code: '22023', message: 'list_not_completed' }, 'list_not_completed'],
+    [{ code: '22023', message: 'invalid_name' }, 'invalid_name'],
     [{ code: '', message: 'TypeError: Failed to fetch' }, 'offline'],
     [{ code: '', message: 'FetchError: Load failed' }, 'offline'],
   ])('%o → %s', (error, code) => {
@@ -18,7 +21,7 @@ describe('toMutationError', () => {
 
   it('un TypeError de fetch lanzado (no devuelto) también es offline', () => {
     expect((toMutationError(new TypeError('Failed to fetch')) as MutationError).code).toBe(
-      'offline',
+      'offline'
     );
   });
 

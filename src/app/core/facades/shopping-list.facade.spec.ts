@@ -395,9 +395,9 @@ describe('ShoppingListFacade', () => {
 
   describe('listas y plantillas', () => {
     it('createList crea (o reutiliza) la lista activa con start_active_list', async () => {
-      await facade.createList('Compra de la Semana');
+      await facade.createList('Lista de compras');
 
-      expect(lists['startActive']).toHaveBeenCalledWith('Compra de la Semana');
+      expect(lists['startActive']).toHaveBeenCalledWith('Lista de compras');
       expect(lists['create']).not.toHaveBeenCalled();
     });
 
@@ -407,7 +407,7 @@ describe('ShoppingListFacade', () => {
       expect(facade.error()).toBe('NO_ACTIVE_LIST');
 
       lists['findLatestActive'].mockResolvedValue(list());
-      await facade.createList('Compra de la Semana');
+      await facade.createList('Lista de compras');
 
       expect(facade.error()).toBeNull();
       expect(facade.data()?.id).toBe('list-1');
@@ -416,7 +416,7 @@ describe('ShoppingListFacade', () => {
     it('createList: si falla, avisa con toast', async () => {
       lists['startActive'].mockRejectedValue(new Error('rls'));
 
-      await facade.createList('Compra de la Semana');
+      await facade.createList('Lista de compras');
 
       expect(toast['error']).toHaveBeenCalled();
     });
@@ -505,7 +505,7 @@ describe('ShoppingListFacade', () => {
 
       expect(await facade.startListFrom('ultima')).toBe(true);
 
-      expect(lists['startActive']).toHaveBeenCalledWith('Compra de la Semana');
+      expect(lists['startActive']).toHaveBeenCalledWith('Lista de compras');
       expect(items['findByList']).toHaveBeenCalledWith('ultima');
       expect(items['addMany']).toHaveBeenCalledWith('nueva', [{ product_id: 'p1', quantity: 2 }]);
       expect(facade.error()).toBeNull();
@@ -545,6 +545,65 @@ describe('ShoppingListFacade', () => {
     it('cloneListItems no inserta si la lista origen está vacía', async () => {
       await facade.cloneListItems('src', 'dst');
       expect(items['addMany']).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('modelo de compra (spec 0012)', () => {
+    beforeEach(async () => {
+      lists['findLatestActive'].mockResolvedValue(
+        list([
+          { id: 'item-1', is_checked: false, quantity: 1, product: { id: 'p1' } },
+          { id: 'item-2', is_checked: false, quantity: 2, product: { id: 'p2' } },
+        ])
+      );
+      await facade.initialize();
+      items['clearList'] = vi.fn().mockResolvedValue(undefined);
+    });
+
+    it('hasChecked sigue lo marcado', async () => {
+      expect(facade.hasChecked()).toBe(false);
+      await facade.toggleItemCheck('item-1', false);
+      expect(facade.hasChecked()).toBe(true);
+    });
+
+    it('clearList vacía la lista al instante y en la BD', async () => {
+      expect(await facade.clearList()).toBe(true);
+
+      expect(items['clearList']).toHaveBeenCalledWith('list-1');
+      expect(facade.data()?.list_items).toEqual([]);
+    });
+
+    it('clearList: si falla, vuelve la lista y avisa', async () => {
+      items['clearList'].mockRejectedValue(new Error('boom'));
+
+      expect(await facade.clearList()).toBe(false);
+
+      expect(facade.data()?.list_items).toHaveLength(2);
+      expect(toast['error']).toHaveBeenCalled();
+    });
+
+    it('clearList no se hace sin red', async () => {
+      online.set(false);
+      expect(await facade.clearList()).toBe(false);
+      expect(items['clearList']).not.toHaveBeenCalled();
+    });
+
+    it('completeList con nothing_checked (otro miembro desmarcó) avisa que hay que marcar', async () => {
+      lists['complete'].mockRejectedValue(new MutationError('nothing_checked'));
+
+      expect(await facade.completeList('list-1', true)).toBe(false);
+
+      expect(toast['warning']).toHaveBeenCalledWith(
+        'Marca lo que compraste para finalizar',
+        expect.any(String)
+      );
+      expect(facade.data()?.id).toBe('list-1');
+    });
+
+    it('la lista nueva se llama "Lista de compras"', async () => {
+      lists['findLatestActive'].mockResolvedValue(null);
+      await facade.startListFrom('src');
+      expect(lists['startActive']).toHaveBeenCalledWith('Lista de compras');
     });
   });
 

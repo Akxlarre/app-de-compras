@@ -81,7 +81,7 @@ export class ProductsFacade {
 
   /**
    * Agrega los productos recomendados a la lista activa (solo los que no están). Si no hay lista
-   * activa crea "Compra Inteligente": nunca deja dos listas activas (la pantalla muestra solo una).
+   * activa la crea: nunca deja dos listas activas (la pantalla muestra solo una).
    * La pantalla de lista la toma al entrar (SWR + Realtime), sin acoplar facades.
    * @returns false si falló (la página avisa).
    */
@@ -101,7 +101,7 @@ export class ProductsFacade {
         );
       } else {
         // Si otro miembro la creó recién, start_active_list devuelve esa (spec 0011).
-        listId = (await this.lists.startActive('Compra Inteligente')).id;
+        listId = (await this.lists.startActive('Lista de compras')).id;
       }
 
       const toAdd = recommended.filter((p) => !alreadyInList.has(p.id));

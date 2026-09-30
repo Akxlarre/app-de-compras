@@ -14,6 +14,8 @@ export interface PurchasedItem {
 export interface PurchaseSummary {
   id: string;
   name: string;
+  /** Lo que se muestra: la fecha si el nombre es automático, si no el nombre (spec 0012). */
+  title: string;
   completedAt: string;
   itemCount: number;
   /** Lo que se gastó: el total pagado (boleta o a mano) si existe; si no, la suma estimada. */

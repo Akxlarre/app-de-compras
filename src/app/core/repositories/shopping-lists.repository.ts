@@ -76,6 +76,23 @@ export class ShoppingListsRepository {
     return data as { id: string; created: boolean };
   }
 
+  /**
+   * Borra una compra cerrada (RPC `delete_purchase`): ítems y boleta en cascada; la BD recalcula
+   * la última compra de sus productos (spec 0012).
+   * @returns ruta de la foto de la boleta en el bucket, para borrarla; null si no tenía.
+   */
+  async deletePurchase(listId: string): Promise<string | null> {
+    const { data, error } = await this.db.rpc('delete_purchase', { p_list_id: listId });
+    if (error) throw toMutationError(error);
+    return (data as string | null) ?? null;
+  }
+
+  /** Nombre propio de una compra cerrada (RPC `rename_purchase`, 1 a 60 caracteres). */
+  async renamePurchase(listId: string, name: string): Promise<void> {
+    const { error } = await this.db.rpc('rename_purchase', { p_list_id: listId, p_name: name });
+    if (error) throw toMutationError(error);
+  }
+
   /** Crea una lista no activa (plantilla). La activa se crea con `startActive`. */
   async create(input: NewShoppingList): Promise<ShoppingList> {
     const { data, error } = await this.db

@@ -83,6 +83,17 @@ describe('ListItemsRepository', () => {
     expect(q.select).toHaveBeenCalledWith('id');
   });
 
+  it('clearList borra todos los ítems de la lista; una lista ya vacía no es error (spec 0012)', async () => {
+    const q = queryMock({ data: [] });
+    mock.shop.from.mockReturnValue(q);
+
+    await expect(repo.clearList('l1')).resolves.toBeUndefined();
+
+    expect(mock.shop.from).toHaveBeenCalledWith('list_items');
+    expect(q.delete).toHaveBeenCalled();
+    expect(q.eq).toHaveBeenCalledWith('list_id', 'l1');
+  });
+
   it('remove borra por id', async () => {
     const q = queryMock({ data: [{ id: 'i1' }] });
     mock.shop.from.mockReturnValue(q);

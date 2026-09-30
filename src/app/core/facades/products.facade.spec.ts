@@ -144,7 +144,7 @@ describe('ProductsFacade', () => {
 
       await facade.generateSmartList();
 
-      expect(lists.startActive).toHaveBeenCalledWith('Compra Inteligente');
+      expect(lists.startActive).toHaveBeenCalledWith('Lista de compras');
       expect(items.addMany).toHaveBeenCalledWith('list-1', [
         { product_id: 'a', quantity: 1 },
         { product_id: 'c', quantity: 1 },
