@@ -4,6 +4,7 @@ import { NavController } from '@ionic/angular';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import type { LineDecision, MatchCandidate } from '@core/models/receipt.model';
+import { formatAmount, totalDifference } from '@core/utils/price.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -75,6 +76,29 @@ export class PurchaseClosePage implements OnInit {
   toAmount(value: string): number | null {
     const digits = value.replace(/[^\d]/g, '');
     return digits ? Number(digits) : null;
+  }
+
+  /** Montos con separador de miles mientras se escriben; el `$` va fijo a la izquierda (Q32). */
+  readonly formatAmount = formatAmount;
+  readonly abs = Math.abs;
+
+  /** Total pagado − suma de precios, si ambos existen y no calzan (Q32). */
+  readonly difference = computed(() =>
+    totalDifference(this.close.manualTotal(), this.close.manualSum())
+  );
+
+  onTotalInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const amount = this.toAmount(input.value);
+    this.close.manualTotal.set(amount);
+    input.value = formatAmount(amount);
+  }
+
+  onPriceInput(itemId: string, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const amount = this.toAmount(input.value);
+    this.close.setManualPrice(itemId, amount);
+    input.value = formatAmount(amount);
   }
 
   lineName(d: LineDecision): string {

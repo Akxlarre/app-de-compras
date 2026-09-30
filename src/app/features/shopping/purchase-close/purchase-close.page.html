@@ -14,7 +14,10 @@
     } @else {
     <div class="flex flex-col gap-5 mt-2">
       <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold text-text-primary">{{ close.list()!.name }}</h2>
+        <!-- Sin lista el encabezado ya dice "Compra sin lista" (Q22) -->
+        <h2 class="text-xl font-bold text-text-primary">
+          @if (close.kind() !== 'new') { {{ close.list()!.name }} }
+        </h2>
         <button
           class="text-sm text-text-muted font-medium active:scale-95 transition-all"
           (click)="cancel()"
@@ -41,15 +44,22 @@
       @if (close.mode() === 'manual') {
       <div class="flex flex-col gap-2">
         <label for="total" class="text-sm font-bold text-text-primary">¿Cuánto pagaste?</label>
-        <input
-          id="total"
-          inputmode="numeric"
-          class="w-full bg-surface border border-border-default rounded-xl px-4 py-3 text-lg text-text-primary"
-          [placeholder]="close.kind() === 'completed' ? 'Total de la compra' : 'Opcional'"
-          data-llm-description="total pagado en la compra, en pesos; vacío si no se sabe"
-          [value]="close.manualTotal() ?? ''"
-          (input)="close.manualTotal.set(toAmount($any($event.target).value))"
-        />
+        <div class="relative">
+          <span
+            class="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-text-muted pointer-events-none"
+            aria-hidden="true"
+            >$</span
+          >
+          <input
+            id="total"
+            inputmode="numeric"
+            class="w-full bg-surface border border-border-default rounded-xl pl-8 pr-4 py-3 text-lg text-text-primary"
+            [placeholder]="close.kind() === 'completed' ? 'Total de la compra' : 'Opcional'"
+            data-llm-description="total pagado en la compra, en pesos; vacío si no se sabe"
+            [value]="formatAmount(close.manualTotal())"
+            (input)="onTotalInput($event)"
+          />
+        </div>
         <p class="text-xs text-text-muted">
           @if (close.kind() === 'completed') { Con el total, el gasto de esa compra deja de ser
           estimado. } @else { Si no lo sabes, déjalo vacío: la compra queda con el total estimado. }
@@ -68,20 +78,32 @@
             <span class="text-text-muted text-sm">× {{ item.quantity }}</span>
             }
           </span>
-          <input
-            inputmode="numeric"
-            class="w-28 bg-base border border-border-default rounded-lg px-3 py-2 text-right text-text-primary"
-            placeholder="$"
-            [attr.aria-label]="'Precio de ' + item.product?.name"
-            [value]="close.manualPrices()[item.id] ?? ''"
-            (input)="close.setManualPrice(item.id, toAmount($any($event.target).value))"
-          />
+          <div class="relative w-28">
+            <span
+              class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              aria-hidden="true"
+              >$</span
+            >
+            <input
+              inputmode="numeric"
+              class="w-full bg-base border border-border-default rounded-lg pl-6 pr-3 py-2 text-right text-text-primary"
+              [attr.aria-label]="'Precio de ' + item.product?.name"
+              [value]="formatAmount(close.manualPrices()[item.id] ?? null)"
+              (input)="onPriceInput(item.id, $event)"
+            />
+          </div>
         </div>
         }
         <p class="text-sm text-text-muted text-right">
           Suma:
           <span class="font-bold text-brand">${{ close.manualSum() | number : '1.0-0' }}</span>
         </p>
+        @if (difference(); as diff) {
+        <p class="text-xs text-text-muted text-right" data-testid="total-difference">
+          Pagaste ${{ abs(diff) | number : '1.0-0' }} {{ diff > 0 ? 'más' : 'menos' }} que la suma
+          (descuentos, bolsas o productos sin precio).
+        </p>
+        }
       </div>
 
       <button

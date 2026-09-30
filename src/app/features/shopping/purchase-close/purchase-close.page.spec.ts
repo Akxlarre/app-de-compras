@@ -42,6 +42,9 @@ describe('PurchaseClosePage', () => {
       confirmReceipt: vi.fn().mockResolvedValue(true),
       updateDecision: vi.fn(),
       canConfirm: computed(() => true),
+      manualTotal: signal<number | null>(null),
+      manualSum: signal(0),
+      setManualPrice: vi.fn(),
     };
     lists = {
       data: signal<any>(null),
@@ -59,6 +62,35 @@ describe('PurchaseClosePage', () => {
       ],
     });
     page = TestBed.inject(PurchaseClosePage);
+  });
+
+  describe('montos del cierre sin boleta (spec 0013, Q32)', () => {
+    const typed = (value: string) => ({ target: { value } } as unknown as Event);
+
+    it('el total se guarda como número y se reescribe con separador de miles', () => {
+      const ev = typed('$12990');
+      page.onTotalInput(ev);
+
+      expect(close.manualTotal()).toBe(12990);
+      expect((ev.target as HTMLInputElement).value).toBe('12.990');
+    });
+
+    it('el precio de un producto también', () => {
+      const ev = typed('1290');
+      page.onPriceInput('i1', ev);
+
+      expect(close.setManualPrice).toHaveBeenCalledWith('i1', 1290);
+      expect((ev.target as HTMLInputElement).value).toBe('1.290');
+    });
+
+    it('muestra la diferencia entre el total y la suma solo cuando no calzan', () => {
+      close.manualSum.set(12500);
+      expect(page.difference()).toBeNull();
+      close.manualTotal.set(15000);
+      expect(page.difference()).toBe(2500);
+      close.manualTotal.set(12500);
+      expect(page.difference()).toBeNull();
+    });
   });
 
   it('desde la pestaña Boletas (sin cierre en curso) empieza con la compra activa', async () => {
