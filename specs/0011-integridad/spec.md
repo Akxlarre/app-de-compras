@@ -74,7 +74,7 @@ viejo. La base de datos no protege nada:
 - [ ] AC2: Dos miembros tocan `+` de cantidad a la vez sobre el mismo ítem en 1 → queda en 3.
 - [ ] AC3: La BD rechaza una segunda lista activa en la misma familia; doble toque en "Crear Lista"
   deja una sola lista y ningún error visible.
-- [x] AC4: Los datos existentes no rompen la migración: duplicados de `list_items` y listas activas
+- [ ] AC4: Los datos existentes no rompen la migración: duplicados de `list_items` y listas activas
   sobrantes se juntan (probado en staging, que hoy tiene duplicados de la cuenta `test1`).
 - [x] AC5: Una mutación que afecta 0 filas lanza error; la UI revierte el cambio y avisa. Test por
   cada repository de lista.
