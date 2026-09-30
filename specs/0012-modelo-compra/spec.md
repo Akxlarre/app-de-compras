@@ -53,19 +53,35 @@
 - Casos de UI de la 0013 (barra, FAB, animación, buscador) y sugerencias (0014).
 
 ## Acceptance Criteria
-- [ ] AC1: Con 0 marcados, Finalizar está deshabilitado con explicación; la BD también rechaza
+- [x] AC1: Con 0 marcados, Finalizar está deshabilitado con explicación; la BD también rechaza
   cerrar (`complete_list`, `close_list_manual`, `apply_receipt`) con `nothing_checked`.
-- [ ] AC2: "Vaciar lista" con confirmación deja la lista activa sin ítems; no crea nada en el
+- [x] AC2: "Vaciar lista" con confirmación deja la lista activa sin ítems; no crea nada en el
   Historial.
-- [ ] AC3: La migración borra las compras cerradas vacías sin boleta; ya no aparecen en el
+- [x] AC3: La migración borra las compras cerradas vacías sin boleta; ya no aparecen en el
   Historial, en el gasto del mes ni en "Repetir última compra".
-- [ ] AC4: Las compras del Historial se ven como "Compra del <día> <fecha>" salvo que se hayan
+- [x] AC4: Las compras del Historial se ven como "Compra del <día> <fecha>" salvo que se hayan
   renombrado; dos del mismo día se distinguen por hora si hace falta.
-- [ ] AC5: Renombrar una compra desde el detalle del Historial cambia su nombre (lo ve el otro
+- [x] AC5: Renombrar una compra desde el detalle del Historial cambia su nombre (lo ve el otro
   miembro); nombre vacío o de más de 60 caracteres se rechaza con aviso.
-- [ ] AC6: Borrar una compra (con confirmación) la saca del Historial y del gasto del mes, borra su
+- [x] AC6: Borrar una compra (con confirmación) la saca del Historial y del gasto del mes, borra su
   boleta y foto, y recalcula la "última compra" de sus productos.
-- [ ] AC7: Otra familia no puede borrar ni renombrar mis compras (pgTAP), y no se puede borrar la
+- [x] AC7: Otra familia no puede borrar ni renombrar mis compras (pgTAP), y no se puede borrar la
   lista activa ni una plantilla con `delete_purchase`.
-- [ ] AC8: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; pgTAP en CI de plataforma-db;
+- [x] AC8: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; pgTAP en CI de plataforma-db;
   índices (DATABASE, REPOSITORIES, FACADES) actualizados; verificado en staging con test3/test4.
+
+## Verificación (staging, 2026-09-30)
+Migración `20260930020000_shop_purchase_model` desplegada (plataforma-db#14, run 36780672073).
+- AC1: con 0 marcados `complete_list`, `close_list_manual` y `apply_receipt` → `nothing_checked`
+  (API, test3); en la app Finalizar deshabilitado con "Marca lo que compraste para finalizar".
+- AC2: "Vaciar lista" + confirmación → 0 ítems, 0 compras nuevas en el Historial.
+- AC3: 0 compras cerradas sin ítems ni boleta en la familia de test3.
+- AC4: "Compra del mié 30 sep", y "· 21:43" / "· 21:44" con dos del mismo día.
+- AC5: vacío y 61 caracteres → `invalid_name` (toast "Nombre no válido"); "Super QA" lo ve test4
+  tras unirse a la familia.
+- AC6: borrar una compra con boleta y foto desde la app → sin lista, sin boleta, foto 400 en el
+  bucket, gasto del mes baja ($8.642 → $4.321) y `last_purchased_at` vuelve a la compra anterior.
+  Encontrado y corregido aquí: la confirmación no abría (`ion-alert` con `inputs: undefined`).
+- AC7: test4 (otra familia) → `list_not_found` al renombrar y borrar; lista activa →
+  `list_not_completed`.
+- AC8: 496 tests, `lint:arch` 0 errores, build OK; pgTAP en CI de plataforma-db.

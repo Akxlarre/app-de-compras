@@ -71,6 +71,8 @@ describe('HistoryPage', () => {
       expect(alertOpts().header).toBe('¿Borrar esta compra?');
       expect(alertOpts().message).toMatch(/boleta/);
       expect(alertOpts().message).toMatch(/gasto del mes/);
+      // ion-alert se cae con `inputs: undefined` (no abre la confirmación).
+      expect(alertOpts().inputs).toEqual([]);
       (alertOpts().buttons as any[]).find((b) => b.text === 'Borrar').handler();
       await done;
 

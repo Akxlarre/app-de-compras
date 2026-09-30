@@ -142,7 +142,7 @@ export class HistoryPage implements OnInit {
       const alert = await this.alerts.create({
         header: opts.header,
         message: opts.message,
-        inputs: opts.inputs,
+        inputs: opts.inputs ?? [], // ion-alert no abre con `inputs: undefined`
         cssClass: 'premium-alert',
         buttons: [
           {
