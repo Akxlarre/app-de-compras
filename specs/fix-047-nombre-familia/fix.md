@@ -1,6 +1,7 @@
 > id: fix-047-nombre-familia
 > refs: `docs/QA-EXPLORACION.md` Q40; conversación 2026-10-01 ("q40").
-> status: in_progress
+> status: done
+> closed: 2026-10-01
 > created: 2026-10-01
 
 ## Síntoma
@@ -30,3 +31,12 @@ Ninguno de specs activas (spec 0006-familia muestra el nombre que devuelve la BD
   Ana", `preview_family` lo muestra, y con `display_name` usa ese nombre.
 - Staging: una cuenta nueva ve "Familia de <nombre>" en Perfil y el diálogo de unirse lo muestra;
   la familia de test4 (que era "Mi Familia") quedó renombrada.
+
+## Verificación (staging, 2026-10-01)
+plataforma-db#16 mergeado y desplegado (run 36793197756). pgTAP `shop_family` 23/23 en CI.
+- Cuenta nueva `test5` creada desde la app: Perfil muestra "Familia de Test5"; en la BD
+  `families.name = 'Familia de Test5'`.
+- test3 escribe el código de test5: `preview_family` → "Familia de Test5" y el diálogo dice
+  "¿Unirte a «Familia de Test5»? Tiene 1 miembro. Dejarás «Casa QA»…".
+- Renombre de familias existentes: probado en Postgres local ("Mi Familia" → "Familia de Beto";
+  "Los Rojas" sin cambios).
