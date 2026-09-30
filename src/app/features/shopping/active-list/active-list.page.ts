@@ -25,6 +25,7 @@ import { PurchaseCloseFacade, type CloseMode } from '@core/facades/purchase-clos
 
 type CloseMethod = CloseMode | 'later';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { sortListItems } from '@core/utils/shopping-list.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
@@ -89,16 +90,8 @@ export class ActiveListPage implements OnInit {
 
   public isSearchOpen = signal(false);
 
-  // Lista ordenada (pendientes arriba, listos abajo)
-  public sortedListItems = computed(() => {
-    const list = this.facade.data();
-    if (!list || !list.list_items) return [];
-
-    return [...list.list_items].sort((a, b) => {
-      if (a.is_checked === b.is_checked) return 0;
-      return a.is_checked ? 1 : -1;
-    });
-  });
+  // Pendientes arriba, marcados abajo; cada grupo en orden de alta (Q19).
+  public sortedListItems = computed(() => sortListItems(this.facade.data()?.list_items ?? []));
 
   // KPIs
   public listSummary = computed(() => {
@@ -197,20 +190,17 @@ export class ActiveListPage implements OnInit {
     if (confirmed) await this.facade.clearList();
   }
 
+  /** Marca/desmarca con un solo movimiento corto a su nuevo lugar (Q3). */
   toggleItem(itemId: string, currentStatus: boolean) {
-    if (this.listElementRef?.nativeElement) {
-      this.gsap.animateBentoLayoutChange(
-        this.listElementRef.nativeElement,
-        () => {
-          this.facade.toggleItemCheck(itemId, currentStatus);
-          this.cdr.detectChanges(); // Forzar render síncrono para calcular la nueva posición (FLIP)
-        },
-        undefined,
-        { duration: 0.7, ease: 'expo.out' } // Fluid and elegant list reordering
-      );
-    } else {
+    const list = this.listElementRef?.nativeElement as HTMLElement | undefined;
+    if (!list) {
       this.facade.toggleItemCheck(itemId, currentStatus);
+      return;
     }
+    this.gsap.animateListReorder(list, () => {
+      this.facade.toggleItemCheck(itemId, currentStatus);
+      this.cdr.detectChanges(); // render síncrono: la animación mide la posición nueva al tiro
+    });
   }
 
   updateQuantity(itemId: string, currentQty: number, change: number, event: Event) {
