@@ -205,6 +205,11 @@ import { FamilySectionComponent } from './family-section/family-section.componen
         padding: 2rem 1rem;
       }
 
+      /* "Cerrar sesión" por encima de la barra flotante (spec 0013, Q1). */
+      .profile-content {
+        --padding-bottom: calc(var(--chrome-bottom) + var(--space-6));
+      }
+
       .logout-btn {
         width: 100%;
         padding: 0.9rem;

@@ -10,3 +10,4 @@ export * from './purchase-close.utils';
 export * from './mutation-error.utils';
 export * from './offline-queue.utils';
 export * from './purchase-name.utils';
+export * from './tab-chrome.utils';

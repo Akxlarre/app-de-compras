@@ -28,7 +28,7 @@ import { ToastService } from '@core/services/ui/toast.service';
     <div class="h-full flex flex-col bg-base">
       <app-header title="Catálogo Inteligente" />
 
-      <main class="flex-1 overflow-y-auto p-4 md:p-6">
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-chrome">
         <div class="bento-grid">
           <!-- Banner Inteligente -->
           @if (!facade.isLoading() && facade.recommendedProducts().length > 0) {
