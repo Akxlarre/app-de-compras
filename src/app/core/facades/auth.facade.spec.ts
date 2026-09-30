@@ -59,10 +59,19 @@ describe('AuthFacade', () => {
 
   it('SIGNED_IN carga el perfil vía ProfilesRepository', async () => {
     authCallbacks[0]('SIGNED_IN', { user: { id: 'u1', email: 'ana@casa.cl' } });
-    await vi.waitFor(() => expect(facade.currentUser()).not.toBeNull());
+    await vi.waitFor(() => expect(facade.currentUser()?.role).toBe('alumno'));
 
     expect(profiles.findById).toHaveBeenCalledWith('u1');
     expect(facade.currentUser()).toMatchObject({ id: 'u1', name: 'ana', role: 'alumno' });
+  });
+
+  it('con sesión entra de inmediato, sin esperar el perfil (sin red tarda más que whenReady)', () => {
+    profiles.findById.mockReturnValue(new Promise(() => {})); // nunca responde
+
+    authCallbacks[0]('INITIAL_SESSION', { user: { id: 'u1', email: 'ana@casa.cl' } });
+
+    expect(facade.isAuthenticated()).toBe(true);
+    expect(facade.currentUser()).toMatchObject({ id: 'u1', name: 'ana', role: 'unknown' });
   });
 
   it('si el perfil falla igual deja entrar con rol unknown', async () => {
@@ -73,6 +82,55 @@ describe('AuthFacade', () => {
     await vi.waitFor(() => expect(facade.currentUser()).not.toBeNull());
 
     expect(facade.currentUser()?.role).toBe('unknown');
+  });
+
+  describe('abrir la app sin red (spec 0011, AC8)', () => {
+    const networkError = { name: 'AuthRetryableFetchError', message: 'Failed to fetch', status: 0 };
+
+    function boot(): AuthFacade {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AuthFacade,
+          { provide: SupabaseService, useValue: mockSupabase },
+          { provide: ProfilesRepository, useValue: profiles },
+          { provide: Router, useValue: mockRouter },
+          { provide: NavController, useValue: mockNav },
+        ],
+      });
+      return TestBed.inject(AuthFacade);
+    }
+
+    it('si validar la sesión falla por red, entra con la sesión guardada', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockSupabase.getUser.mockResolvedValue({ data: { user: null }, error: networkError });
+      mockSupabase.getSession = vi
+        .fn()
+        .mockResolvedValue({ data: { session: { user: { id: 'u1', email: 'ana@casa.cl' } } } });
+      profiles.findById.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      const offline = boot();
+      await offline.whenReady;
+
+      expect(offline.isAuthenticated()).toBe(true);
+      expect(offline.currentUser()?.id).toBe('u1');
+    });
+
+    it('si el servidor rechaza la sesión (no es red), no entra', async () => {
+      mockSupabase.getUser.mockResolvedValue({
+        data: { user: null },
+        error: { name: 'AuthApiError', message: 'invalid JWT', status: 401 },
+      });
+      mockSupabase.getSession = vi
+        .fn()
+        .mockResolvedValue({ data: { session: { user: { id: 'u1' } } } });
+
+      const rejected = boot();
+      await rejected.whenReady;
+
+      expect(mockSupabase.getSession).not.toHaveBeenCalled();
+      expect(rejected.isAuthenticated()).toBe(false);
+    });
   });
 
   it('should handle logout', async () => {

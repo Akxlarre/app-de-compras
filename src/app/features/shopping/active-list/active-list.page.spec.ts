@@ -39,6 +39,10 @@ describe('ActiveListPage', () => {
       cloneListItems: vi.fn(),
       lastCompletedList: signal(null),
       templates: signal([]),
+      updateItemQuantity: vi.fn(),
+      isOnline: signal(true),
+      pendingChanges: signal(0),
+      familyChanged: signal(0),
     };
     familyFacade = {
       currentFamily: signal(null),
@@ -192,6 +196,33 @@ describe('ActiveListPage', () => {
       expect(b.role).toBe('cancel');
       expect(mockFacade.completeList).not.toHaveBeenCalled();
       expect(closeFacade.start).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('integridad (spec 0011)', () => {
+    const click = { stopPropagation: vi.fn() } as unknown as Event;
+
+    it('los botones de cantidad mandan el incremento, no el total', () => {
+      component.updateQuantity('i1', 3, 1, click);
+      component.updateQuantity('i1', 3, -1, click);
+
+      expect(mockFacade.updateItemQuantity).toHaveBeenNthCalledWith(1, 'i1', 1);
+      expect(mockFacade.updateItemQuantity).toHaveBeenNthCalledWith(2, 'i1', -1);
+    });
+
+    it('no baja de 1', () => {
+      component.updateQuantity('i1', 1, -1, click);
+      expect(mockFacade.updateItemQuantity).not.toHaveBeenCalled();
+    });
+
+    it('si me pasan a otra familia, recarga los datos de la familia', () => {
+      TestBed.tick();
+      expect(familyFacade.loadMyFamily).not.toHaveBeenCalled();
+
+      mockFacade.familyChanged.set(1);
+      TestBed.tick();
+
+      expect(familyFacade.loadMyFamily).toHaveBeenCalledTimes(1);
     });
   });
 

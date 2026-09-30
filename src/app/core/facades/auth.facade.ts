@@ -7,6 +7,16 @@ import { ProfilesRepository, type ProfileRow } from '@core/repositories/profiles
 import { mapAuthError } from '@core/utils/auth-errors.utils';
 import { SessionScopeService } from '@core/services/auth/session-scope.service';
 
+/** El error de GoTrue es por falta de red (no un rechazo de la sesión). */
+function isNetworkAuthError(error: { name?: string; status?: number } | null | undefined): boolean {
+  if (!error) return false;
+  return (
+    error.name === 'AuthRetryableFetchError' ||
+    error.status === 0 ||
+    (typeof navigator !== 'undefined' && navigator.onLine === false)
+  );
+}
+
 /**
  * AuthFacade - Facade de autenticación con Supabase.
  *
@@ -57,9 +67,17 @@ export class AuthFacade {
 
     this.supabase
       .getUser()
-      .then(async ({ data: { user } }: any) => {
-        if (user) await this.loadUserFromSession(user);
+      .then(async ({ data: { user }, error }: any) => {
+        if (user) {
+          await this.loadUserFromSession(user);
+        } else if (isNetworkAuthError(error)) {
+          // Sin red no se puede validar con el servidor: se usa la sesión guardada en el
+          // dispositivo, para abrir la lista y la cola sin conexión (spec 0011, AC8).
+          const { data } = await this.supabase.getSession();
+          if (data.session?.user) await this.loadUserFromSession(data.session.user);
+        }
       })
+      .catch((e: unknown) => console.error('Error resolviendo la sesión:', e))
       .finally(() => resolveReady());
   }
 
@@ -73,17 +91,32 @@ export class AuthFacade {
     if (previous?.id === authUser.id) return;
     if (previous) this.sessionScope.clear(); // otra cuenta sin pasar por logout()
 
+    const name =
+      (authUser.user_metadata?.['display_name'] as string) ??
+      (authUser.email ? authUser.email.split('@')[0] : 'Usuario');
+
+    // Con sesión ya se entra; el perfil (rol) se completa después. Sin red, pedir el perfil
+    // tarda más que el timeout de `whenReady` y el guard mandaba al login (spec 0011, AC8).
+    this._currentUser.set({
+      id: authUser.id,
+      dbId: undefined as any,
+      name,
+      email: authUser.email ?? '',
+      role: 'unknown' as any,
+      initials: getInitialsFromDisplayName(name),
+      firstLogin: false,
+      branchId: undefined,
+      isActive: true,
+    });
+
     let dbUser: ProfileRow | null = null;
     try {
       dbUser = await this.profiles.findById(authUser.id);
     } catch (error) {
       // Sin perfil igual dejamos entrar: el rol queda 'unknown'.
       console.error('Error fetching user profile:', error);
+      return;
     }
-
-    const name =
-      (authUser.user_metadata?.['display_name'] as string) ??
-      (authUser.email ? authUser.email.split('@')[0] : 'Usuario');
 
     let roleName = 'unknown';
     // Simplified role mapping for now
@@ -91,18 +124,10 @@ export class AuthFacade {
     else if (dbUser?.role_id === 2) roleName = 'instructor';
     else if (dbUser?.role_id === 3) roleName = 'admin';
 
-    const user: User = {
-      id: authUser.id,
-      dbId: dbUser?.id as any,
-      name,
-      email: authUser.email ?? '',
-      role: roleName as any, // Mantenemos el cast final a UserRole
-      initials: getInitialsFromDisplayName(name),
-      firstLogin: false,
-      branchId: undefined,
-      isActive: true,
-    };
-    this._currentUser.set(user);
+    // Solo si sigue siendo la misma sesión (pudo cerrar sesión o cambiar de cuenta mientras tanto).
+    this._currentUser.update((u) =>
+      u?.id === authUser.id ? { ...u, dbId: dbUser?.id as any, role: roleName as any } : u
+    );
   }
 
   async login(email: string, password: string): Promise<{ error: Error | null }> {

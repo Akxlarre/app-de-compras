@@ -311,19 +311,14 @@ export class ProductSearchComponent {
       await this.shoppingFacade.deleteItem(itemId);
       return;
     }
-    await this.shoppingFacade.updateItemQuantity(itemId, newQty);
+    await this.shoppingFacade.updateItemQuantity(itemId, change);
   }
 
   async selectProduct(product: Product) {
     const list = this.shoppingFacade.data();
     if (list) {
-      const existing = this.getCartItem(product.id);
-      if (existing) {
-        await this.shoppingFacade.updateItemQuantity(existing.id, existing.quantity + 1);
-      } else {
-        await this.shoppingFacade.addItem(list.id, product.id);
-      }
-      // Ya no cerramos el modal, para permitir agregar más productos a la vez
+      // Si ya está, la BD suma 1 (spec 0011). El modal queda abierto para seguir agregando.
+      await this.shoppingFacade.addItem(list.id, product.id);
     }
   }
 

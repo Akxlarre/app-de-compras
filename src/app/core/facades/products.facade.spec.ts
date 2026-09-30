@@ -14,7 +14,7 @@ describe('ProductsFacade', () => {
   let facade: ProductsFacade;
   let family: { getOrCreateFamilyId: ReturnType<typeof vi.fn> };
   let catalog: { findByFamily: ReturnType<typeof vi.fn>; updatePrice: ReturnType<typeof vi.fn> };
-  let lists: { create: ReturnType<typeof vi.fn>; findLatestActive: ReturnType<typeof vi.fn> };
+  let lists: { startActive: ReturnType<typeof vi.fn>; findLatestActive: ReturnType<typeof vi.fn> };
   let items: { addMany: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe('ProductsFacade', () => {
     family = { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') };
     catalog = { findByFamily: vi.fn(), updatePrice: vi.fn().mockResolvedValue(undefined) };
     lists = {
-      create: vi.fn().mockResolvedValue({ id: 'list-1' }),
+      startActive: vi.fn().mockResolvedValue({ id: 'list-1', created: true }),
       findLatestActive: vi.fn().mockResolvedValue(null),
     };
     items = { addMany: vi.fn().mockResolvedValue(undefined) };
@@ -123,7 +123,7 @@ describe('ProductsFacade', () => {
 
       await facade.generateSmartList();
 
-      expect(lists.create).not.toHaveBeenCalled();
+      expect(lists.startActive).not.toHaveBeenCalled();
     });
 
     it('con una lista activa, agrega solo los recomendados que faltan y no crea otra lista', async () => {
@@ -135,25 +135,19 @@ describe('ProductsFacade', () => {
 
       await facade.generateSmartList();
 
-      expect(lists.create).not.toHaveBeenCalled();
-      expect(items.addMany).toHaveBeenCalledWith([
-        { list_id: 'activa', product_id: 'c', quantity: 1 },
-      ]);
+      expect(lists.startActive).not.toHaveBeenCalled();
+      expect(items.addMany).toHaveBeenCalledWith('activa', [{ product_id: 'c', quantity: 1 }]);
     });
 
-    it('sin lista activa, crea "Compra Inteligente" con los recomendados en un solo insert', async () => {
+    it('sin lista activa, crea "Compra Inteligente" (o toma la que otro creó) con los recomendados', async () => {
       facade.products.set([due('a'), fresh('b'), due('c')]);
 
       await facade.generateSmartList();
 
-      expect(lists.create).toHaveBeenCalledWith({
-        name: 'Compra Inteligente',
-        familyId: 'fam-1',
-        status: 'active',
-      });
-      expect(items.addMany).toHaveBeenCalledWith([
-        { list_id: 'list-1', product_id: 'a', quantity: 1 },
-        { list_id: 'list-1', product_id: 'c', quantity: 1 },
+      expect(lists.startActive).toHaveBeenCalledWith('Compra Inteligente');
+      expect(items.addMany).toHaveBeenCalledWith('list-1', [
+        { product_id: 'a', quantity: 1 },
+        { product_id: 'c', quantity: 1 },
       ]);
     });
   });

@@ -7,3 +7,5 @@ export * from './family.utils';
 export * from './receipt.utils';
 export * from './reconcile.utils';
 export * from './purchase-close.utils';
+export * from './mutation-error.utils';
+export * from './offline-queue.utils';

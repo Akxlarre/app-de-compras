@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ShoppingListsRepository } from './shopping-lists.repository';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { MutationError } from '@core/utils/mutation-error.utils';
 import { queryMock, supabaseServiceMock } from '../../../testing/supabase-query.mock';
 
 const WITH_ITEMS = '*, list_items(*, product:products(id, name, category, last_price))';
@@ -125,10 +126,30 @@ describe('ShoppingListsRepository', () => {
     await expect(repo.closeManual('l1', true, [], -1)).rejects.toBe(error);
   });
 
-  it('complete lanza el error de Supabase', async () => {
-    const error = { message: 'list_not_active' };
-    mock.shop.rpc.mockResolvedValue({ data: null, error });
-    await expect(repo.complete('l1', true)).rejects.toBe(error);
+  it('complete traduce list_not_active a MutationError', async () => {
+    mock.shop.rpc.mockResolvedValue({
+      data: null,
+      error: { code: '22023', message: 'list_not_active' },
+    });
+    await expect(repo.complete('l1', true)).rejects.toEqual(new MutationError('list_not_active'));
+  });
+
+  it('startActive usa start_active_list y dice si la creó', async () => {
+    const q = queryMock({ data: { id: 'l1', created: false } });
+    mock.shop.rpc.mockReturnValue(q);
+
+    expect(await repo.startActive('Compra de la Semana')).toEqual({ id: 'l1', created: false });
+    expect(mock.shop.rpc).toHaveBeenCalledWith('start_active_list', {
+      p_name: 'Compra de la Semana',
+    });
+    expect(q.single).toHaveBeenCalled();
+  });
+
+  it('startActive sin red lanza offline', async () => {
+    mock.shop.rpc.mockReturnValue(
+      queryMock({ error: { code: '', message: 'TypeError: Failed to fetch' } })
+    );
+    await expect(repo.startActive('x')).rejects.toEqual(new MutationError('offline'));
   });
 
   it('findCompleted trae las compras finalizadas de la familia, más recientes primero', async () => {

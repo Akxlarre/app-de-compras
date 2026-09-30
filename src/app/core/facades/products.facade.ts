@@ -100,18 +100,14 @@ export class ProductsFacade {
           active.list_items.flatMap((i) => (i.product?.id ? [i.product.id] : []))
         );
       } else {
-        const familyId = await this.family.getOrCreateFamilyId();
-        const list = await this.lists.create({
-          name: 'Compra Inteligente',
-          familyId,
-          status: 'active',
-        });
-        listId = list.id;
+        // Si otro miembro la creó recién, start_active_list devuelve esa (spec 0011).
+        listId = (await this.lists.startActive('Compra Inteligente')).id;
       }
 
       const toAdd = recommended.filter((p) => !alreadyInList.has(p.id));
       await this.items.addMany(
-        toAdd.map((p) => ({ list_id: listId, product_id: p.id, quantity: 1 }))
+        listId,
+        toAdd.map((p) => ({ product_id: p.id, quantity: 1 }))
       );
       return true;
     } catch (e) {

@@ -6,6 +6,7 @@ import type {
   ShoppingListStatus,
 } from '@core/models/shopping-list.model';
 import type { ManualPrice } from '@core/models/receipt.model';
+import { toMutationError } from '@core/utils/mutation-error.utils';
 
 /** Lista con ítems y el producto embebido de cada ítem. */
 const WITH_ITEMS = '*, list_items(*, product:products(id, name, category, last_price))';
@@ -16,7 +17,10 @@ export interface NewShoppingList {
   status: ShoppingListStatus;
 }
 
-/** Acceso tipado a `shop.shopping_lists`. Lanza el error de Supabase. */
+/**
+ * Acceso tipado a `shop.shopping_lists`. Lanza `MutationError` (`not_found`, `list_not_active`,
+ * `offline`) o el error de Supabase.
+ */
 @Injectable({ providedIn: 'root' })
 export class ShoppingListsRepository {
   private readonly supabase = inject(SupabaseService);
@@ -34,7 +38,7 @@ export class ShoppingListsRepository {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (error) throw error;
+    if (error) throw toMutationError(error);
     return (data as ActiveShoppingList | null) ?? null;
   }
 
@@ -47,7 +51,7 @@ export class ShoppingListsRepository {
       .order('completed_at', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
-    if (error) throw error;
+    if (error) throw toMutationError(error);
     return (data as ActiveShoppingList | null) ?? null;
   }
 
@@ -58,17 +62,28 @@ export class ShoppingListsRepository {
       .eq('family_id', familyId)
       .eq('status', 'template')
       .order('created_at', { ascending: false });
-    if (error) throw error;
+    if (error) throw toMutationError(error);
     return (data as ActiveShoppingList[] | null) ?? [];
   }
 
+  /**
+   * La lista activa de mi familia (RPC `start_active_list`): la crea si no hay; si ya hay una
+   * (doble toque, otro miembro), la devuelve con `created = false`. La BD admite una sola activa.
+   */
+  async startActive(name: string): Promise<{ id: string; created: boolean }> {
+    const { data, error } = await this.db.rpc('start_active_list', { p_name: name }).single();
+    if (error) throw toMutationError(error);
+    return data as { id: string; created: boolean };
+  }
+
+  /** Crea una lista no activa (plantilla). La activa se crea con `startActive`. */
   async create(input: NewShoppingList): Promise<ShoppingList> {
     const { data, error } = await this.db
       .from('shopping_lists')
       .insert({ name: input.name, family_id: input.familyId, status: input.status })
       .select()
       .single();
-    if (error) throw error;
+    if (error) throw toMutationError(error);
     return data as ShoppingList;
   }
 
@@ -81,7 +96,7 @@ export class ShoppingListsRepository {
       .eq('status', 'completed')
       .order('completed_at', { ascending: false, nullsFirst: false })
       .limit(limit);
-    if (error) throw error;
+    if (error) throw toMutationError(error);
     return (data as ActiveShoppingList[] | null) ?? [];
   }
 
@@ -95,7 +110,7 @@ export class ShoppingListsRepository {
       p_list_id: listId,
       p_carry_pending: carryPending,
     });
-    if (error) throw error;
+    if (error) throw toMutationError(error);
     return (data as string | null) ?? null;
   }
 
@@ -109,7 +124,7 @@ export class ShoppingListsRepository {
       p_total: total,
       p_prices: prices.map((p) => ({ item_id: p.itemId, unit_price: p.unitPrice })),
     });
-    if (error) throw error;
+    if (error) throw toMutationError(error);
   }
 
   /**
@@ -128,7 +143,7 @@ export class ShoppingListsRepository {
       p_prices: prices.map((p) => ({ item_id: p.itemId, unit_price: p.unitPrice })),
       p_total: total,
     });
-    if (error) throw error;
+    if (error) throw toMutationError(error);
     return (data as string | null) ?? null;
   }
 }

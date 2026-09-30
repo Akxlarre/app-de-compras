@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ListItemsRepository } from './list-items.repository';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { MutationError } from '@core/utils/mutation-error.utils';
 import { queryMock, supabaseServiceMock } from '../../../testing/supabase-query.mock';
 
 describe('ListItemsRepository', () => {
@@ -16,26 +17,40 @@ describe('ListItemsRepository', () => {
     repo = TestBed.inject(ListItemsRepository);
   });
 
-  it('add inserta el ítem', async () => {
-    const q = queryMock();
-    mock.shop.from.mockReturnValue(q);
+  const codeOf = async (p: Promise<unknown>) => {
+    const e = await p.then(
+      () => null,
+      (err) => err
+    );
+    expect(e).toBeInstanceOf(MutationError);
+    return (e as MutationError).code;
+  };
 
-    await repo.add('l1', 'p1', 2);
+  it('add usa la RPC add_list_item (suma si ya está) y devuelve la fila', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: { id: 'i1', quantity: 3 }, error: null });
 
-    expect(mock.shop.from).toHaveBeenCalledWith('list_items');
-    expect(q.insert).toHaveBeenCalledWith({ list_id: 'l1', product_id: 'p1', quantity: 2 });
+    expect(await repo.add('l1', 'p1', 2)).toEqual({ id: 'i1', quantity: 3 });
+    expect(mock.shop.rpc).toHaveBeenCalledWith('add_list_item', {
+      p_list_id: 'l1',
+      p_product_id: 'p1',
+      p_quantity: 2,
+    });
   });
 
-  it('addMany inserta en lote y no consulta si la lista está vacía', async () => {
-    const q = queryMock();
-    mock.shop.from.mockReturnValue(q);
-    const items = [{ list_id: 'l1', product_id: 'p1', quantity: 1 }];
+  it('addMany usa add_list_items, omite productos borrados y no llama si no hay nada', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: null, error: null });
 
-    await repo.addMany([]);
-    expect(mock.shop.from).not.toHaveBeenCalled();
+    await repo.addMany('l1', [{ product_id: null, quantity: 1 }]);
+    expect(mock.shop.rpc).not.toHaveBeenCalled();
 
-    await repo.addMany(items);
-    expect(q.insert).toHaveBeenCalledWith(items);
+    await repo.addMany('l1', [
+      { product_id: 'p1', quantity: 2 },
+      { product_id: null, quantity: 1 },
+    ]);
+    expect(mock.shop.rpc).toHaveBeenCalledWith('add_list_items', {
+      p_list_id: 'l1',
+      p_items: [{ product_id: 'p1', quantity: 2 }],
+    });
   });
 
   it('findByList devuelve product_id y quantity', async () => {
@@ -47,21 +62,29 @@ describe('ListItemsRepository', () => {
     expect(q.eq).toHaveBeenCalledWith('list_id', 'l1');
   });
 
-  it.each([
-    ['updateQuantity', (r: ListItemsRepository) => r.updateQuantity('i1', 4), { quantity: 4 }],
-    ['setChecked', (r: ListItemsRepository) => r.setChecked('i1', true), { is_checked: true }],
-  ])('%s actualiza por id', async (_, act, patch) => {
-    const q = queryMock();
+  it('changeQuantity manda el incremento y devuelve la cantidad final', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: '4.00', error: null });
+
+    expect(await repo.changeQuantity('i1', 1)).toBe(4);
+    expect(mock.shop.rpc).toHaveBeenCalledWith('change_item_quantity', {
+      p_item_id: 'i1',
+      p_delta: 1,
+    });
+  });
+
+  it('setChecked actualiza por id y pide la fila afectada', async () => {
+    const q = queryMock({ data: [{ id: 'i1' }] });
     mock.shop.from.mockReturnValue(q);
 
-    await act(repo);
+    await repo.setChecked('i1', true);
 
-    expect(q.update).toHaveBeenCalledWith(patch);
+    expect(q.update).toHaveBeenCalledWith({ is_checked: true });
     expect(q.eq).toHaveBeenCalledWith('id', 'i1');
+    expect(q.select).toHaveBeenCalledWith('id');
   });
 
   it('remove borra por id', async () => {
-    const q = queryMock();
+    const q = queryMock({ data: [{ id: 'i1' }] });
     mock.shop.from.mockReturnValue(q);
 
     await repo.remove('i1');
@@ -70,8 +93,44 @@ describe('ListItemsRepository', () => {
     expect(q.eq).toHaveBeenCalledWith('id', 'i1');
   });
 
-  it('lanza el error de Supabase', async () => {
-    const error = { message: 'rls' };
+  // AC5: RLS bloquea sin error; 0 filas afectadas es un error.
+  it.each([
+    ['setChecked', (r: ListItemsRepository) => r.setChecked('i1', true)],
+    ['remove', (r: ListItemsRepository) => r.remove('i1')],
+  ])('%s que no afecta filas lanza not_found', async (_, act) => {
+    mock.shop.from.mockReturnValue(queryMock({ data: [] }));
+    expect(await codeOf(act(repo))).toBe('not_found');
+  });
+
+  it.each([
+    ['add', (r: ListItemsRepository) => r.add('l1', 'p1', 1), 'list_not_found', 'not_found'],
+    ['add', (r: ListItemsRepository) => r.add('l1', 'p1', 1), 'list_not_active', 'list_not_active'],
+    [
+      'changeQuantity',
+      (r: ListItemsRepository) => r.changeQuantity('i1', 1),
+      'item_not_found',
+      'not_found',
+    ],
+    [
+      'addMany',
+      (r: ListItemsRepository) => r.addMany('l1', [{ product_id: 'p', quantity: 1 }]),
+      'list_not_active',
+      'list_not_active',
+    ],
+  ])('%s traduce %s de la RPC', async (_, act, message, code) => {
+    mock.shop.rpc.mockResolvedValue({ data: null, error: { code: 'P0002', message } });
+    expect(await codeOf(act(repo))).toBe(code);
+  });
+
+  it('un fallo de red es offline', async () => {
+    mock.shop.from.mockReturnValue(
+      queryMock({ error: { code: '', message: 'TypeError: Failed to fetch' } })
+    );
+    expect(await codeOf(repo.setChecked('i1', true))).toBe('offline');
+  });
+
+  it('los demás errores de Supabase pasan tal cual', async () => {
+    const error = { code: '42501', message: 'rls' };
     mock.shop.from.mockReturnValue(queryMock({ error }));
     await expect(repo.remove('i1')).rejects.toBe(error);
   });
