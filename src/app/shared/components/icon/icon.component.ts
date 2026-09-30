@@ -70,6 +70,7 @@ const PROVIDED_ICONS = new Set([
   'plus-circle',
   'printer',
   'refresh-cw',
+  'wifi-off',
   'rotate-ccw',
   'rotate-cw',
   'save',
