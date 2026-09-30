@@ -46,6 +46,10 @@ function writeFlag(key: string): void {
 }
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { sortListItems } from '@core/utils/shopping-list.utils';
+import { restockSuggestions, snoozeUntil } from '@core/utils/restock.utils';
+import { RestockFacade } from '@core/facades/restock.facade';
+import type { RestockSuggestion } from '@core/models/restock.model';
+import { RestockStripComponent } from './restock-strip.component';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
@@ -79,6 +83,7 @@ import {
     IconComponent,
     ProductSearchComponent,
     ListShortcutsComponent,
+    RestockStripComponent,
     ConfirmDialogModule,
     IonList,
     IonItemSliding,
@@ -98,6 +103,7 @@ export class ActiveListPage implements OnInit {
   private alertController = inject(AlertController);
   private gsap = inject(GsapAnimationsService);
   private cdr = inject(ChangeDetectorRef);
+  private restock = inject(RestockFacade);
 
   @ViewChild('ionList', { read: ElementRef }) listElementRef?: ElementRef;
 
@@ -136,9 +142,44 @@ export class ActiveListPage implements OnInit {
     };
   });
 
+  /** "Te puede faltar": lo que toca reponer y no está en la lista (spec 0014). */
+  readonly suggestions = computed(() => {
+    const data = this.restock.data();
+    const list = this.facade.data();
+    if (!data || !list) return [];
+    const inList = new Set(
+      list.list_items.flatMap((i) => {
+        const id = i.product?.id ?? i.product_id;
+        return id ? [id] : [];
+      })
+    );
+    return restockSuggestions(data.products, data.stats, inList);
+  });
+
+  addSuggested(productId: string) {
+    const list = this.facade.data();
+    if (list) void this.facade.addItem(list.id, productId);
+  }
+
+  addAllSuggested(productIds: string[]) {
+    void this.facade.addProducts(productIds);
+  }
+
+  /** "Todavía tengo": se pospone un intervalo para toda la familia. */
+  snoozeSuggestion(s: RestockSuggestion) {
+    void this.restock.snooze(s.product.id, snoozeUntil(s.intervalDays));
+  }
+
+  /** Ionic conserva la página entre pestañas: al volver (p. ej. tras cerrar una compra) se
+   * refrescan las sugerencias sin skeleton. */
+  ionViewWillEnter() {
+    void this.restock.initialize();
+  }
+
   ngOnInit() {
     this.facade.initialize();
     this.facade.loadTemplates();
+    void this.restock.initialize();
     // Nombres de los miembros para "quién marcó" (composición en la página: facades aislados).
     if (!this.family.currentFamily()) this.family.loadMyFamily();
     this.destroyRef.onDestroy(() => this.facade.dispose());

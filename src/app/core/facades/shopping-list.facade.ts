@@ -186,6 +186,26 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   }
 
   /**
+   * Agrega varios productos (1 de cada uno) a la lista activa: "Agregar todas" de las
+   * sugerencias (spec 0014). Lo que ya está suma. @returns false si no se pudo.
+   */
+  async addProducts(productIds: string[]): Promise<boolean> {
+    const list = this._data();
+    if (!list || productIds.length === 0 || !this.requireOnline()) return false;
+    try {
+      await this.items.addMany(
+        list.id,
+        productIds.map((product_id) => ({ product_id, quantity: 1 }))
+      );
+      await this.refreshSilently();
+      return true;
+    } catch (e) {
+      await this.handleMutationError(e);
+      return false;
+    }
+  }
+
+  /**
    * Suma `delta` a la cantidad (mínimo 1). La BD suma sobre su valor, así dos miembros tocando
    * `+` a la vez no se pisan. Sin red se guarda en la cola.
    */
@@ -357,10 +377,8 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
 
     const productId = removed?.product?.id ?? removed?.product_id;
     if (!list || !removed || !productId) return;
-    void this.toast.action(
-      `Quitaste ${removed.product?.name ?? 'el producto'}`,
-      'Deshacer',
-      () => this.restoreItem(list.id, productId, removed.quantity || 1, removed.is_checked)
+    void this.toast.action(`Quitaste ${removed.product?.name ?? 'el producto'}`, 'Deshacer', () =>
+      this.restoreItem(list.id, productId, removed.quantity || 1, removed.is_checked)
     );
   }
 

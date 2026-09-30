@@ -7,12 +7,14 @@ import { ChangeDetectorRef, signal } from '@angular/core';
 import { AlertController, NavController } from '@ionic/angular';
 import { FamilyFacade } from '@core/facades/family.facade';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
+import { RestockFacade } from '@core/facades/restock.facade';
 
 describe('ActiveListPage', () => {
   let component: ActiveListPage;
   let mockFacade: any;
   let alertController: { create: ReturnType<typeof vi.fn> };
   let familyFacade: any;
+  let restock: any;
   let closeFacade: { start: ReturnType<typeof vi.fn> };
   let nav: { navigateForward: ReturnType<typeof vi.fn> };
 
@@ -49,8 +51,15 @@ describe('ActiveListPage', () => {
       clearList: vi.fn().mockResolvedValue(true),
       createList: vi.fn(),
       saveAsTemplate: vi.fn().mockResolvedValue(true),
+      addItem: vi.fn().mockResolvedValue(undefined),
+      addProducts: vi.fn().mockResolvedValue(true),
       renameTemplate: vi.fn().mockResolvedValue(true),
       deleteTemplate: vi.fn().mockResolvedValue(true),
+    };
+    restock = {
+      data: signal(null),
+      initialize: vi.fn().mockResolvedValue(undefined),
+      snooze: vi.fn().mockResolvedValue(true),
     };
     familyFacade = {
       currentFamily: signal(null),
@@ -72,6 +81,7 @@ describe('ActiveListPage', () => {
         { provide: ConfirmationService, useValue: { confirm: vi.fn() } },
         { provide: AlertController, useValue: alertController },
         { provide: PurchaseCloseFacade, useValue: closeFacade },
+        { provide: RestockFacade, useValue: restock },
         { provide: NavController, useValue: nav },
         // La página se instancia como provider (sin render), así que no hay CDR de vista.
         { provide: ChangeDetectorRef, useValue: { detectChanges: vi.fn() } },
@@ -329,6 +339,47 @@ describe('ActiveListPage', () => {
       expect(mockFacade.deleteItem).toHaveBeenCalledWith('i1');
       expect(component.swipeHintSeen()).toBe(true);
       expect(localStorage.getItem('shop.hint.swipe-delete.v1')).toBe('1');
+    });
+  });
+
+  describe('te puede faltar (spec 0014)', () => {
+    const old = new Date(Date.now() - 20 * 86_400_000).toISOString();
+    beforeEach(() => {
+      restock.data.set({
+        products: [
+          { id: 'p1', name: 'Leche', last_purchased_at: old },
+          { id: 'p2', name: 'Pan', last_purchased_at: old },
+        ],
+        stats: [],
+      });
+      mockFacade.data.set({ id: 'list-1', list_items: [{ id: 'i1', product: { id: 'p2' } }] });
+    });
+
+    it('sugiere lo que toca reponer y no está en la lista', () => {
+      expect(component.suggestions().map((s) => s.product.id)).toEqual(['p1']);
+    });
+
+    it('al entrar carga las sugerencias', () => {
+      component.ngOnInit();
+      expect(restock.initialize).toHaveBeenCalled();
+    });
+
+    it('+ agrega a la lista; "Agregar todas" agrega varias', () => {
+      component.addSuggested('p1');
+      expect(mockFacade.addItem).toHaveBeenCalledWith('list-1', 'p1');
+
+      component.addAllSuggested(['p1', 'p3']);
+      expect(mockFacade.addProducts).toHaveBeenCalledWith(['p1', 'p3']);
+    });
+
+    it('"Todavía tengo" pospone un intervalo', () => {
+      const s = component.suggestions()[0];
+      component.snoozeSuggestion(s);
+
+      const [id, until] = restock.snooze.mock.calls[0];
+      expect(id).toBe('p1');
+      const days = (new Date(until).getTime() - Date.now()) / 86_400_000;
+      expect(Math.round(days)).toBe(s.intervalDays);
     });
   });
 

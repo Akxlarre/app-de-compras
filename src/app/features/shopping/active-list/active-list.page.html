@@ -81,7 +81,7 @@
         <div class="flex flex-col gap-3">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <h2 class="text-2xl font-bold text-text-primary truncate">{{ list.name }}</h2>
+              <h2 class="text-2xl font-bold text-text-primary break-words">{{ list.name }}</h2>
               <p class="text-sm text-text-muted mt-1">
                 Est. Costo:
                 <span class="text-brand font-semibold"
@@ -160,6 +160,15 @@
             >
           </div>
         </div>
+
+        <!-- Te puede faltar: lo que toca reponer según el historial (spec 0014) -->
+        <app-restock-strip
+          [suggestions]="suggestions()"
+          [disabled]="!facade.isOnline()"
+          (add)="addSuggested($event)"
+          (addAll)="addAllSuggested($event)"
+          (snooze)="snoozeSuggestion($event)"
+        />
 
         <!-- Lista de Productos -->
         @if (list.list_items.length === 0) {

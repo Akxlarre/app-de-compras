@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ProductsRepository } from './products.repository';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { MutationError } from '@core/utils/mutation-error.utils';
 import { queryMock, supabaseServiceMock } from '../../../testing/supabase-query.mock';
 
 describe('ProductsRepository', () => {
@@ -82,6 +83,34 @@ describe('ProductsRepository', () => {
 
     expect(q.update).toHaveBeenCalledWith({ last_price: 1990, updated_at: expect.any(String) });
     expect(q.eq).toHaveBeenCalledWith('id', 'p1');
+  });
+
+  describe('reposición (spec 0014)', () => {
+    it('findRestockStats usa la RPC restock_stats', async () => {
+      const rows = [
+        { product_id: 'p1', purchase_count: 3, median_interval_days: 10, last_purchased_at: 'x' },
+      ];
+      mock.shop.rpc.mockResolvedValue({ data: rows, error: null });
+
+      expect(await repo.findRestockStats()).toEqual(rows);
+      expect(mock.shop.rpc).toHaveBeenCalledWith('restock_stats');
+    });
+
+    it('snoozeRestock fija la fecha y pide la fila afectada', async () => {
+      const q = queryMock({ data: [{ id: 'p1' }] });
+      mock.shop.from.mockReturnValue(q);
+
+      await repo.snoozeRestock('p1', '2026-10-10T00:00:00.000Z');
+
+      expect(q.update).toHaveBeenCalledWith({ restock_snoozed_until: '2026-10-10T00:00:00.000Z' });
+      expect(q.eq).toHaveBeenCalledWith('id', 'p1');
+      expect(q.select).toHaveBeenCalledWith('id');
+    });
+
+    it('snoozeRestock que no afecta filas (otra familia, ya no existe) lanza not_found', async () => {
+      mock.shop.from.mockReturnValue(queryMock({ data: [] }));
+      await expect(repo.snoozeRestock('p1', 'x')).rejects.toEqual(new MutationError('not_found'));
+    });
   });
 
   it('lanza el error de Supabase', async () => {

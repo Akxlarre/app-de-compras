@@ -20,7 +20,7 @@ Los repositories de compras usan `client.schema('shop')` (guardia: `architecture
 |---|---|---|
 | `families` | `id`, `name`, `invite_code` (8 caracteres sin 0/O/1/I, único) | SELECT/UPDATE si soy miembro. **Sin INSERT directo** → `get_or_create_family()`. |
 | `family_members` | PK (`family_id`, `user_id` → `public.profiles`), `role` owner/member | SELECT si soy miembro. **Sin INSERT directo** → RPCs. |
-| `products` | `family_id`, `name`, `category`, `last_price`, `estimated_duration_days`, `last_purchased_at` | ALL si es de mi familia. |
+| `products` | `family_id`, `name`, `category`, `last_price`, `estimated_duration_days`, `last_purchased_at`, `restock_snoozed_until` ("Todavía tengo": no sugerir hasta esa fecha, para toda la familia; spec 0014) | ALL si es de mi familia. |
 | `shopping_lists` | `family_id`, `name`, `status` active/completed/archived/template, `completed_at`, `total_paid` (int, null = no se sabe), `total_source` receipt/manual/estimated (default estimated). **Una sola `active` por familia** (índice único parcial `shopping_lists_one_active_per_family`). | ALL si es de mi familia. |
 | `list_items` | `list_id`, `product_id`, `quantity`, `is_checked`, `checked_at`, `checked_by`, `unit_price`. **Único `(list_id, product_id)`**; trigger `list_items_merge_duplicate`: un INSERT de un producto que ya está suma a la fila existente. | ALL si la lista es de mi familia. Realtime (`supabase_realtime`) por `list_id`. Trigger `list_items_track_check`: marcar fija `checked_at`/`checked_by = auth.uid()`, desmarcar los limpia (no se escriben desde el cliente). |
 | `receipts` | `family_id`, `list_id` (único: una boleta por compra), `image_url` (ruta en el bucket `receipts`), `total_amount`, `store`, `purchased_at`, `ocr_result` (lectura con `_model`), `ocr_check` (revisión + correcciones del usuario), `status` | ALL si es de mi familia. Se crea con `apply_receipt`. |
@@ -51,6 +51,7 @@ Storage: bucket privado **`receipts`**, ruta `<family_id>/<uuid>.<ext>`; policie
 | `start_active_list(p_name) → (id, created)` | La lista activa de mi familia ("Lista de compras" por defecto); la crea si no hay. Si ya hay, la devuelve con `created = false`. |
 | `delete_purchase(p_list_id) → text` | Borra una compra `completed` (ítems y boleta en cascada), recalcula `products.last_purchased_at` y devuelve la ruta de la foto (o null). Errores `list_not_found`, `list_not_completed`. Migración `20260930020000_shop_purchase_model` (spec 0012). |
 | `rename_purchase(p_list_id, p_name)` | Nombre propio de una compra `completed` (1 a 60 caracteres). Errores `invalid_name`, `list_not_found`, `list_not_completed`. |
+| `restock_stats() → (product_id, purchase_count, median_interval_days, last_purchased_at)` | Por producto de mis familias: días distintos en que se compró (compras `completed`, ítem marcado), mediana de días entre compras (null con <2) y última compra. SECURITY INVOKER. Migración `20260930030000_shop_restock` (spec 0014). |
 | `set_purchase_total(p_list_id, p_total, p_prices)` | "Ingresar total" de una compra cerrada sin boleta: `total_paid`, `total_source = manual` y precios confirmados. Errores `invalid_total`, `list_not_completed`, `has_receipt`. Migración `20260929030000_shop_receipts_history`. |
 
 ## `public` (común)

@@ -4,10 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ProductsFacade } from '@core/facades/products.facade';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
-import { Router } from '@angular/router';
 import { parsePrice } from '@core/utils/price.utils';
 import { formatDaysAgo } from '@core/utils/date.utils';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -20,7 +18,6 @@ import { ToastService } from '@core/services/ui/toast.service';
     FormsModule,
     AppHeaderComponent,
     IconComponent,
-    PressFeedbackDirective,
     SkeletonBlockComponent,
     EmptyStateComponent,
   ],
@@ -30,42 +27,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 
       <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-chrome">
         <div class="bento-grid">
-          <!-- Banner Inteligente -->
-          @if (!facade.isLoading() && facade.recommendedProducts().length > 0) {
-          <div
-            class="bento-wide card flex flex-col gap-3 border-brand/30 bg-brand/5 relative overflow-hidden"
-          >
-            <div class="absolute -right-4 -top-4 opacity-10">
-              <app-icon name="sparkles" [size]="120" class="text-brand" />
-            </div>
-
-            <div class="z-10 flex gap-4 items-center">
-              <div
-                class="w-12 h-12 rounded-full bg-brand/20 flex items-center justify-center shrink-0"
-              >
-                <app-icon name="sparkles" [size]="24" class="text-brand" />
-              </div>
-              <div>
-                <h3 class="font-bold text-primary">Es momento de reponer</h3>
-                <p class="text-sm text-muted">
-                  @if (facade.recommendedProducts().length === 1) { 1 producto que sueles comprar ya
-                  debería estar por acabarse. } @else {
-                  {{ facade.recommendedProducts().length }} productos que sueles comprar ya deberían
-                  estar por acabarse. }
-                </p>
-              </div>
-            </div>
-
-            <button
-              class="btn-primary w-full mt-2 z-10"
-              [appPressFeedback]="'press'"
-              (click)="generateSmartList()"
-            >
-              Generar lista con {{ facade.recommendedProducts().length }} productos
-            </button>
-          </div>
-          }
-
+          <!-- Las sugerencias de reposición viven en Mi Lista ("Te puede faltar", spec 0014). -->
           <!-- Lista de Productos -->
           <div class="bento-wide card-accent flex flex-col gap-4">
             <h2 class="text-lg font-bold text-primary">Todos tus productos</h2>
@@ -142,7 +104,6 @@ import { ToastService } from '@core/services/ui/toast.service';
 })
 export class ProductsPage implements OnInit {
   public facade = inject(ProductsFacade);
-  private router = inject(Router);
   private toast = inject(ToastService);
 
   public savedId = signal<string | null>(null);
@@ -178,13 +139,5 @@ export class ProductsPage implements OnInit {
 
   lastPurchaseLabel(days: number | null): string {
     return days === null ? 'Sin compras aún' : `Comprado ${formatDaysAgo(days)}`;
-  }
-
-  async generateSmartList() {
-    if (!(await this.facade.generateSmartList())) {
-      this.toast.error('No se pudo armar la lista', 'Intenta de nuevo.');
-      return;
-    }
-    this.router.navigate(['/app/active']);
   }
 }

@@ -3,8 +3,6 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ProductsFacade } from './products.facade';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
-import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
-import { ListItemsRepository } from '../repositories/list-items.repository';
 import { SessionScopeService } from '../services/auth/session-scope.service';
 
 const NOW = new Date('2026-09-25T12:00:00Z');
@@ -14,8 +12,6 @@ describe('ProductsFacade', () => {
   let facade: ProductsFacade;
   let family: { getOrCreateFamilyId: ReturnType<typeof vi.fn> };
   let catalog: { findByFamily: ReturnType<typeof vi.fn>; updatePrice: ReturnType<typeof vi.fn> };
-  let lists: { startActive: ReturnType<typeof vi.fn>; findLatestActive: ReturnType<typeof vi.fn> };
-  let items: { addMany: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -24,19 +20,12 @@ describe('ProductsFacade', () => {
 
     family = { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') };
     catalog = { findByFamily: vi.fn(), updatePrice: vi.fn().mockResolvedValue(undefined) };
-    lists = {
-      startActive: vi.fn().mockResolvedValue({ id: 'list-1', created: true }),
-      findLatestActive: vi.fn().mockResolvedValue(null),
-    };
-    items = { addMany: vi.fn().mockResolvedValue(undefined) };
 
     TestBed.configureTestingModule({
       providers: [
         ProductsFacade,
         { provide: FamilyRepository, useValue: family },
         { provide: ProductsRepository, useValue: catalog },
-        { provide: ShoppingListsRepository, useValue: lists },
-        { provide: ListItemsRepository, useValue: items },
       ],
     });
     facade = TestBed.inject(ProductsFacade);
@@ -58,19 +47,6 @@ describe('ProductsFacade', () => {
       const byId = Object.fromEntries(facade.products().map((p) => [p.id, p.daysSincePurchase]));
       expect(byId).toEqual({ a: 10, b: 2, c: null });
       expect(facade.isLoading()).toBe(false);
-    });
-
-    it('recomienda reponer según la duración estimada; nunca comprado no se recomienda', async () => {
-      catalog.findByFamily.mockResolvedValue([
-        { id: 'a', name: 'Arroz', last_purchased_at: daysAgo(10) },
-        { id: 'b', name: 'Pan', last_purchased_at: daysAgo(3), estimated_duration_days: 2 },
-        { id: 'c', name: 'Aceite', last_purchased_at: daysAgo(10), estimated_duration_days: 45 },
-        { id: 'd', name: 'Sal', last_purchased_at: null },
-      ]);
-
-      await facade.loadProducts();
-
-      expect(facade.recommendedProducts().map((p) => p.id)).toEqual(['a', 'b']);
     });
 
     it('setea error si falla la carga', async () => {
@@ -110,45 +86,6 @@ describe('ProductsFacade', () => {
       expect(await facade.updatePrice('a', 1990)).toBe(false);
 
       expect(facade.products()[0].last_price).toBe(1290);
-    });
-  });
-
-  describe('generateSmartList', () => {
-    // Recomendado = comprado hace ≥ 7 días (sin duración estimada).
-    const due = (id: string) => ({ id, last_purchased_at: daysAgo(9) } as any);
-    const fresh = (id: string) => ({ id, last_purchased_at: daysAgo(1) } as any);
-
-    it('no crea lista si no hay recomendados', async () => {
-      facade.products.set([fresh('b')]);
-
-      await facade.generateSmartList();
-
-      expect(lists.startActive).not.toHaveBeenCalled();
-    });
-
-    it('con una lista activa, agrega solo los recomendados que faltan y no crea otra lista', async () => {
-      lists.findLatestActive.mockResolvedValue({
-        id: 'activa',
-        list_items: [{ id: 'i1', product: { id: 'a' } }],
-      });
-      facade.products.set([due('a'), due('c')]);
-
-      await facade.generateSmartList();
-
-      expect(lists.startActive).not.toHaveBeenCalled();
-      expect(items.addMany).toHaveBeenCalledWith('activa', [{ product_id: 'c', quantity: 1 }]);
-    });
-
-    it('sin lista activa, crea "Compra Inteligente" (o toma la que otro creó) con los recomendados', async () => {
-      facade.products.set([due('a'), fresh('b'), due('c')]);
-
-      await facade.generateSmartList();
-
-      expect(lists.startActive).toHaveBeenCalledWith('Lista de compras');
-      expect(items.addMany).toHaveBeenCalledWith('list-1', [
-        { product_id: 'a', quantity: 1 },
-        { product_id: 'c', quantity: 1 },
-      ]);
     });
   });
 
