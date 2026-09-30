@@ -114,7 +114,9 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       throw new Error('NO_ACTIVE_LIST');
     }
 
-    await this.rememberFamily(list.family_id);
+    // El nombre de la familia solo sirve para un aviso futuro: no se espera, la lista se muestra
+    // ya (spec 0013, Q5: esa consulta sumaba ~0,5 s a cada entrada).
+    void this.rememberFamily(list.family_id);
     this.watchList(list.id);
     return applyQueue(list, this.queue);
   }
@@ -259,27 +261,64 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   }
 
   /**
-   * Guarda la lista actual como plantilla reutilizable.
+   * Guarda la lista actual como plantilla reutilizable. Sin nombre avisa; al guardar confirma
+   * (spec 0013, Q30). @returns false si no se guardó.
    */
-  async saveAsTemplate(listId: string, templateName: string): Promise<void> {
-    if (!this.requireOnline()) return;
+  async saveAsTemplate(listId: string, templateName: string): Promise<boolean> {
+    const name = this.validTemplateName(templateName);
+    if (!name || !this.requireOnline()) return false;
     try {
       const familyId = await this.family.getOrCreateFamilyId();
-      const template = await this.lists.create({
-        name: templateName,
-        familyId,
-        status: 'template',
-      });
+      const template = await this.lists.create({ name, familyId, status: 'template' });
       await this.cloneListItems(listId, template.id);
       await this.loadTemplates();
+      this.toast.success('Plantilla guardada', `«${name}» queda en tus atajos.`);
+      return true;
     } catch (e) {
       await this.handleMutationError(e);
+      return false;
     }
   }
 
-  /**
-   * Elimina un ítem de la lista (swipe-to-delete).
-   */
+  /** Renombra una plantilla (optimista, con rollback) (spec 0013, Q28). */
+  async renameTemplate(templateId: string, newName: string): Promise<boolean> {
+    const name = this.validTemplateName(newName);
+    if (!name || !this.requireOnline()) return false;
+    const prev = this.templates();
+    this.templates.update((ts) => ts.map((t) => (t.id === templateId ? { ...t, name } : t)));
+    try {
+      await this.lists.renameTemplate(templateId, name);
+      return true;
+    } catch (e) {
+      this.templates.set(prev);
+      await this.handleMutationError(e);
+      return false;
+    }
+  }
+
+  /** Borra una plantilla (optimista, con rollback) (spec 0013, Q28). */
+  async deleteTemplate(templateId: string): Promise<boolean> {
+    if (!this.requireOnline()) return false;
+    const prev = this.templates();
+    this.templates.update((ts) => ts.filter((t) => t.id !== templateId));
+    try {
+      await this.lists.deleteTemplate(templateId);
+      return true;
+    } catch (e) {
+      this.templates.set(prev);
+      await this.handleMutationError(e);
+      return false;
+    }
+  }
+
+  /** Nombre de plantilla recortado (1 a 40 caracteres); si no sirve avisa y devuelve null. */
+  private validTemplateName(raw: string): string | null {
+    const name = (raw ?? '').trim();
+    if (name.length >= 1 && name.length <= 40) return name;
+    this.toast.warning('Ponle un nombre a la plantilla', 'De 1 a 40 caracteres, ej. «Asado».');
+    return null;
+  }
+
   /**
    * "Vaciar lista" (spec 0012): borra todos los ítems de la lista activa sin crear una compra.
    * @returns false si no se pudo (sin red o error; la lista vuelve a como estaba).
@@ -299,10 +338,13 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     }
   }
 
+  /** Quita un ítem (deslizar) y ofrece "Deshacer" (spec 0013, Q27). */
   async deleteItem(itemId: string): Promise<void> {
     if (!this.requireOnline()) return;
-    this._data.update((list) =>
-      list ? { ...list, list_items: list.list_items.filter((i) => i.id !== itemId) } : list
+    const list = this._data();
+    const removed = list?.list_items.find((i) => i.id === itemId);
+    this._data.update((l) =>
+      l ? { ...l, list_items: l.list_items.filter((i) => i.id !== itemId) } : l
     ); // optimistic
 
     try {
@@ -310,6 +352,31 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     } catch (e) {
       await this.handleMutationError(e);
       await this.refreshSilently(); // rollback con el estado del servidor
+      return;
+    }
+
+    const productId = removed?.product?.id ?? removed?.product_id;
+    if (!list || !removed || !productId) return;
+    void this.toast.action(
+      `Quitaste ${removed.product?.name ?? 'el producto'}`,
+      'Deshacer',
+      () => this.restoreItem(list.id, productId, removed.quantity || 1, removed.is_checked)
+    );
+  }
+
+  /** Deshacer: lo vuelve a agregar con su cantidad (y marcado si lo estaba). */
+  private async restoreItem(
+    listId: string,
+    productId: string,
+    quantity: number,
+    checked: boolean
+  ): Promise<void> {
+    try {
+      const row = await this.items.add(listId, productId, quantity);
+      if (checked) await this.items.setChecked(row.id, true);
+      await this.refreshSilently();
+    } catch (e) {
+      await this.handleMutationError(e);
     }
   }
 

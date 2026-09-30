@@ -58,9 +58,12 @@
       <ul class="flex flex-col" data-testid="family-members">
         @for (member of facade.members(); track member.userId) {
         <li class="flex items-center gap-3 py-2">
+          <!-- Iniciales + tono por persona: "test3" y "test4" ya no se ven iguales (Q42) -->
           <span
-            class="w-8 h-8 rounded-full bg-brand/15 text-brand font-bold text-sm flex items-center justify-center shrink-0"
-            >{{ member.name.charAt(0).toUpperCase() }}</span
+            class="member-avatar w-8 h-8 rounded-full font-bold text-xs flex items-center justify-center shrink-0"
+            [style.color]="tone(member.userId)"
+            aria-hidden="true"
+            >{{ initials(member.name) }}</span
           >
           <span class="flex-1 min-w-0 truncate text-text-primary">{{ member.name }}</span>
           @if (member.isMe) {

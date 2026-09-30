@@ -20,11 +20,32 @@ import {
   ShoppingListFacade,
   type PopulatedListItem,
 } from '@core/facades/shopping-list.facade';
+import type { ActiveShoppingList } from '@core/models/shopping-list.model';
 import { FamilyFacade } from '@core/facades/family.facade';
 import { PurchaseCloseFacade, type CloseMode } from '@core/facades/purchase-close.facade';
 
 type CloseMethod = CloseMode | 'later';
+
+const SWIPE_HINT_KEY = 'shop.hint.swipe-delete.v1';
+
+/** Preferencias de UI por dispositivo; sin almacenamiento (modo privado) se comporta como "no visto". */
+function readFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string): void {
+  try {
+    localStorage.setItem(key, '1');
+  } catch {
+    // Sin almacenamiento: la pista vuelve a aparecer la próxima vez.
+  }
+}
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { sortListItems } from '@core/utils/shopping-list.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
@@ -89,16 +110,8 @@ export class ActiveListPage implements OnInit {
 
   public isSearchOpen = signal(false);
 
-  // Lista ordenada (pendientes arriba, listos abajo)
-  public sortedListItems = computed(() => {
-    const list = this.facade.data();
-    if (!list || !list.list_items) return [];
-
-    return [...list.list_items].sort((a, b) => {
-      if (a.is_checked === b.is_checked) return 0;
-      return a.is_checked ? 1 : -1;
-    });
-  });
+  // Pendientes arriba, marcados abajo; cada grupo en orden de alta (Q19).
+  public sortedListItems = computed(() => sortListItems(this.facade.data()?.list_items ?? []));
 
   // KPIs
   public listSummary = computed(() => {
@@ -152,19 +165,61 @@ export class ActiveListPage implements OnInit {
     else await this.facade.startListFrom(sourceListId);
   }
 
+  /** Guardar plantilla: el campo toma el foco; sin nombre avisa y la alerta queda abierta (Q30). */
   async saveTemplate() {
     const list = this.facade.data();
     if (!list) return;
+    await this.askName('Guardar plantilla', 'Dale un nombre (ej. Asado, Mensual).', '', (name) =>
+      this.facade.saveAsTemplate(list.id, name)
+    );
+  }
+
+  /** "⋯" de una plantilla: renombrar o borrar (Q28). */
+  async manageTemplate(template: ActiveShoppingList) {
+    const action = await this.choose<'rename' | 'delete'>(`«${template.name}»`, '', [
+      { text: 'Renombrar', value: 'rename' },
+      { text: 'Borrar', value: 'delete', role: 'destructive' },
+    ]);
+    if (action === 'rename') {
+      await this.askName('Renombrar plantilla', '', template.name, (name) =>
+        this.facade.renameTemplate(template.id, name)
+      );
+    } else if (action === 'delete') {
+      const ok = await this.choose<boolean>(
+        '¿Borrar la plantilla?',
+        `«${template.name}» deja de aparecer en tus atajos. Tus listas y compras no cambian.`,
+        [{ text: 'Borrar', value: true, role: 'destructive' }]
+      );
+      if (ok) await this.facade.deleteTemplate(template.id);
+    }
+  }
+
+  /** Suma los productos de una plantilla a la lista en curso (Q28). */
+  async addTemplateToList() {
+    const list = this.facade.data();
+    if (!list) return;
+    const templateId = await this.choose<string>(
+      'Agregar plantilla',
+      'Sus productos se suman a esta lista.',
+      this.facade.templates().map((t) => ({ text: t.name, value: t.id }))
+    );
+    if (templateId) await this.facade.cloneListItems(templateId, list.id);
+  }
+
+  /**
+   * Alerta con un campo de nombre que toma el foco. `save` devuelve false si el nombre no sirve:
+   * la alerta queda abierta para corregirlo.
+   */
+  private async askName(
+    header: string,
+    message: string,
+    value: string,
+    save: (name: string) => Promise<boolean>
+  ): Promise<void> {
     const alert = await this.alertController.create({
-      header: 'Guardar Plantilla',
-      message: 'Dale un nombre a esta plantilla (ej. Asado, Mensual)',
-      inputs: [
-        {
-          name: 'templateName',
-          type: 'text',
-          placeholder: 'Nombre de la plantilla',
-        },
-      ],
+      header,
+      message: message || undefined,
+      inputs: [{ name: 'name', type: 'text', value, attributes: { maxlength: 40 } }],
       cssClass: 'premium-alert',
       buttons: [
         { text: 'Cancelar', role: 'cancel', cssClass: 'alert-cancel-btn' },
@@ -172,16 +227,20 @@ export class ActiveListPage implements OnInit {
           text: 'Guardar',
           role: 'confirm',
           cssClass: 'alert-confirm-btn',
-          handler: async (data) => {
-            if (data.templateName) {
-              await this.facade.saveAsTemplate(list.id, data.templateName);
-            }
+          handler: (data?: { name?: string }) => {
+            const name = (data?.name ?? '').trim();
+            void save(name);
+            return name.length > 0; // vacío: el facade avisa y la alerta sigue abierta
           },
         },
       ],
     });
     await alert.present();
+    alert.querySelector<HTMLInputElement>('input')?.focus();
   }
+
+  /** Pista "Desliza para quitar" hasta que la persona quite un producto una vez (Q27). */
+  readonly swipeHintSeen = signal(readFlag(SWIPE_HINT_KEY));
 
   async createNewList() {
     await this.facade.createList(DEFAULT_LIST_NAME);
@@ -197,20 +256,17 @@ export class ActiveListPage implements OnInit {
     if (confirmed) await this.facade.clearList();
   }
 
+  /** Marca/desmarca con un solo movimiento corto a su nuevo lugar (Q3). */
   toggleItem(itemId: string, currentStatus: boolean) {
-    if (this.listElementRef?.nativeElement) {
-      this.gsap.animateBentoLayoutChange(
-        this.listElementRef.nativeElement,
-        () => {
-          this.facade.toggleItemCheck(itemId, currentStatus);
-          this.cdr.detectChanges(); // Forzar render síncrono para calcular la nueva posición (FLIP)
-        },
-        undefined,
-        { duration: 0.7, ease: 'expo.out' } // Fluid and elegant list reordering
-      );
-    } else {
+    const list = this.listElementRef?.nativeElement as HTMLElement | undefined;
+    if (!list) {
       this.facade.toggleItemCheck(itemId, currentStatus);
+      return;
     }
+    this.gsap.animateListReorder(list, () => {
+      this.facade.toggleItemCheck(itemId, currentStatus);
+      this.cdr.detectChanges(); // render síncrono: la animación mide la posición nueva al tiro
+    });
   }
 
   updateQuantity(itemId: string, currentQty: number, change: number, event: Event) {
@@ -221,6 +277,10 @@ export class ActiveListPage implements OnInit {
 
   deleteItem(itemId: string) {
     this.facade.deleteItem(itemId);
+    if (!this.swipeHintSeen()) {
+      this.swipeHintSeen.set(true);
+      writeFlag(SWIPE_HINT_KEY);
+    }
   }
 
   /**
@@ -243,8 +303,10 @@ export class ActiveListPage implements OnInit {
     if (!method) return;
 
     const pending = this.listSummary().pending;
-    let carryPending = false;
-    if (pending > 0) {
+    // Con boleta o sin boleta la pantalla de cierre ya tiene "Pasar pendientes" (marcado): no se
+    // pregunta dos veces (spec 0013, Q29). "Ahora no" cierra aquí mismo, así que pregunta.
+    let carryPending = true;
+    if (method === 'later' && pending > 0) {
       const carry = await this.choose<boolean>(
         'Quedan pendientes',
         pending === 1

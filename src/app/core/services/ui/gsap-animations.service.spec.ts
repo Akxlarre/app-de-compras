@@ -100,4 +100,110 @@ describe('GsapAnimationsService', () => {
       expect(() => service.animateTierEnter(root)).not.toThrow();
     });
   });
+
+  /** Lista con dos filas cuya posición vertical se controla (jsdom no calcula layout). */
+  function montarLista(): {
+    list: HTMLElement;
+    a: HTMLElement;
+    b: HTMLElement;
+    tops: Map<HTMLElement, number>;
+  } {
+    const list = document.createElement('div');
+    const a = document.createElement('div');
+    const b = document.createElement('div');
+    list.append(a, b);
+    document.body.appendChild(list);
+    const tops = new Map<HTMLElement, number>([
+      [a, 0],
+      [b, 80],
+    ]);
+    for (const el of [a, b]) {
+      el.getBoundingClientRect = () =>
+        ({ top: tops.get(el)!, left: 0, width: 300, height: 80 } as DOMRect);
+    }
+    return { list, a, b, tops };
+  }
+
+  describe('runViewTransition (spec 0013, Q5)', () => {
+    type Doc = Document & { startViewTransition?: unknown };
+    afterEach(() => {
+      delete (document as Doc).startViewTransition;
+      document.documentElement.className = '';
+    });
+
+    it('sin View Transitions en el navegador, solo aplica el cambio', async () => {
+      const update = vi.fn().mockResolvedValue(true);
+
+      await crearServicio(false).runViewTransition('vt-login-enter', update);
+
+      expect(update).toHaveBeenCalledTimes(1);
+    });
+
+    it('con movimiento reducido no hay transición', async () => {
+      const start = vi.fn();
+      (document as Doc).startViewTransition = start;
+      const update = vi.fn().mockResolvedValue(true);
+
+      await crearServicio(true).runViewTransition('vt-login-enter', update);
+
+      expect(start).not.toHaveBeenCalled();
+      expect(update).toHaveBeenCalledTimes(1);
+    });
+
+    it('envuelve el cambio en una transición y marca el documento mientras dura', async () => {
+      let finish!: () => void;
+      const finished = new Promise<void>((r) => (finish = r));
+      (document as Doc).startViewTransition = vi.fn((cb: () => Promise<unknown>) => {
+        void cb();
+        return { finished };
+      });
+      const update = vi.fn().mockResolvedValue(true);
+
+      await crearServicio(false).runViewTransition('vt-login-enter', update);
+
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(document.documentElement.classList.contains('vt-login-enter')).toBe(true);
+      finish();
+      await finished;
+      await Promise.resolve();
+      expect(document.documentElement.classList.contains('vt-login-enter')).toBe(false);
+    });
+  });
+
+  describe('animateListReorder (spec 0013, Q3)', () => {
+    it('invierte la posición en el mismo tick del cambio: no se pinta un frame en el lugar nuevo', () => {
+      const service = crearServicio(false);
+      const { list, a, tops } = montarLista();
+      const change = vi.fn(() => {
+        tops.set(a, 80); // a baja al final (marcado)
+      });
+
+      service.animateListReorder(list, change);
+
+      expect(change).toHaveBeenCalledTimes(1);
+      // Sin esperar requestAnimationFrame: a ya está desplazado a su posición vieja (−80px).
+      expect(a.style.transform).toContain('-80px');
+    });
+
+    it('con movimiento reducido solo aplica el cambio', () => {
+      const service = crearServicio(true);
+      const { list, a, tops } = montarLista();
+      const change = vi.fn(() => tops.set(a, 80));
+
+      service.animateListReorder(list, change);
+
+      expect(change).toHaveBeenCalledTimes(1);
+      expect(a.style.transform).toBe('');
+    });
+
+    it('lista vacía: solo aplica el cambio', () => {
+      const service = crearServicio(false);
+      const list = document.createElement('div');
+      const change = vi.fn();
+
+      service.animateListReorder(list, change);
+
+      expect(change).toHaveBeenCalledTimes(1);
+    });
+  });
 });

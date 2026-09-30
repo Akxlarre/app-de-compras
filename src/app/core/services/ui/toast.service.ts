@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { MessageService } from 'primeng/api';
+import { ToastController } from '@ionic/angular';
 
 /**
  * ToastService — Capa 1 del sistema de notificaciones.
@@ -13,6 +14,7 @@ import { MessageService } from 'primeng/api';
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   private readonly msg = inject(MessageService);
+  private readonly ionToast = inject(ToastController);
 
   success(summary: string, detail?: string): void {
     this.msg.add({ severity: 'success', summary, detail, life: 3000 });
@@ -28,5 +30,20 @@ export class ToastService {
 
   info(summary: string, detail?: string): void {
     this.msg.add({ severity: 'info', summary, detail, life: 3000 });
+  }
+
+  /**
+   * Aviso con un botón de acción ("Quitaste Leche · Deshacer", spec 0013 Q27).
+   * Usa el toast de Ionic, que trae botones; se ubica arriba como los demás.
+   */
+  async action(summary: string, actionLabel: string, onAction: () => void): Promise<void> {
+    const toast = await this.ionToast.create({
+      message: summary,
+      duration: 5000,
+      position: 'top',
+      cssClass: 'action-toast',
+      buttons: [{ text: actionLabel, role: 'undo', handler: () => onAction() }],
+    });
+    await toast.present();
   }
 }

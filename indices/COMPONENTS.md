@@ -10,7 +10,7 @@
 | `app-update-modal` | `visible`, `updateInfo`, `isDownloading`, `downloadProgress`, `error` | `startUpdate`, `dismiss` | `src/app/shared/components/app-update-modal/app-update-modal.component.ts` |
 | `app-confirm-modal` | — | — | `src/app/shared/components/confirm-modal/confirm-modal.component.ts` |
 | `app-drawer` | `isOpen`, `title`, `icon`, `hasFooter`, `noPadding` | `closed` | `src/app/shared/components/drawer/drawer.component.ts` |
-| `app-empty-state` | `message`, `subtitle`, `icon`, `actionLabel`, `actionIcon` | `action` | `src/app/shared/components/empty-state/empty-state.component.ts` |
+| `app-empty-state` | `message`, `subtitle`, `icon`, `actionLabel`, `actionIcon`, `actionVariant` | `action` | `src/app/shared/components/empty-state/empty-state.component.ts` |
 | `app-error-state` | `title`, `message`, `retryLabel` | `retry` | `src/app/shared/components/error-state/error-state.component.ts` |
 | `app-icon` | `name`, `size`, `color`, `ariaHidden`, `ariaLabel` | — | `src/app/shared/components/icon/icon.component.ts` |
 | `app-kpi-card` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `accent`, `icon`, `size`, `color` | — | `src/app/shared/components/kpi-card/kpi-card.component.ts` |

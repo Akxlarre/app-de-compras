@@ -28,7 +28,7 @@ import { ToastService } from '@core/services/ui/toast.service';
     <div class="h-full flex flex-col bg-base">
       <app-header title="Catálogo Inteligente" />
 
-      <main class="flex-1 overflow-y-auto p-4 md:p-6">
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-chrome">
         <div class="bento-grid">
           <!-- Banner Inteligente -->
           @if (!facade.isLoading() && facade.recommendedProducts().length > 0) {
@@ -105,10 +105,13 @@ import { ToastService } from '@core/services/ui/toast.service';
                   <div class="relative w-24">
                     <span
                       class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-medium"
+                      aria-hidden="true"
                       >$</span
                     >
                     <input
                       type="number"
+                      [attr.aria-label]="'Precio de ' + product.name"
+                      data-llm-description="último precio del producto en pesos"
                       class="w-full bg-base border border-border-subtle rounded-lg py-1.5 pl-6 pr-2 text-sm font-bold focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand text-primary transition-all duration-300"
                       [class.border-brand]="savedId() === product.id"
                       [class.ring-1]="savedId() === product.id"

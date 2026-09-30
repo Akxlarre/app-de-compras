@@ -9,7 +9,6 @@ import { IonContent, IonItem, IonLabel, IonList, IonSpinner } from '@ionic/angul
 import { AuthFacade } from '@core/facades/auth.facade';
 import { AppUpdateFacade } from '@core/facades/app-update.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { ToastService } from '@core/services/ui/toast.service';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { FamilySectionComponent } from './family-section/family-section.component';
@@ -71,29 +70,6 @@ import { FamilySectionComponent } from './family-section/family-section.componen
               [ariaHidden]="true"
             />
             }
-          </ion-item>
-          <ion-item
-            button
-            detail="false"
-            lines="none"
-            class="option-item"
-            (click)="showPreferencesComingSoon()"
-          >
-            <app-icon
-              name="settings"
-              slot="start"
-              class="option-icon"
-              [size]="20"
-              [ariaHidden]="true"
-            />
-            <ion-label>Preferencias</ion-label>
-            <app-icon
-              name="chevron-right"
-              slot="end"
-              class="chevron-icon"
-              [size]="18"
-              [ariaHidden]="true"
-            />
           </ion-item>
         </ion-list>
       </div>
@@ -205,6 +181,11 @@ import { FamilySectionComponent } from './family-section/family-section.componen
         padding: 2rem 1rem;
       }
 
+      /* "Cerrar sesión" por encima de la barra flotante (spec 0013, Q1). */
+      .profile-content {
+        --padding-bottom: calc(var(--chrome-bottom) + var(--space-6));
+      }
+
       .logout-btn {
         width: 100%;
         padding: 0.9rem;
@@ -241,7 +222,6 @@ export class ProfilePage implements AfterViewInit {
   auth = inject(AuthFacade);
   updateFacade = inject(AppUpdateFacade);
   gsap = inject(GsapAnimationsService);
-  private toast = inject(ToastService);
   private host = inject(ElementRef<HTMLElement>);
 
   ngAfterViewInit() {
@@ -252,10 +232,6 @@ export class ProfilePage implements AfterViewInit {
 
   async checkForUpdates() {
     await this.updateFacade.checkForUpdates('manual');
-  }
-
-  showPreferencesComingSoon(): void {
-    this.toast.info('Preferencias', 'Esta sección estará disponible próximamente.');
   }
 
   async logout() {

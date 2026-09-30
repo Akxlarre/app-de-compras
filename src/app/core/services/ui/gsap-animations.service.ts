@@ -596,6 +596,81 @@ export class GsapAnimationsService {
   }
 
   /**
+   * FLIP de una lista que se reordena (marcar un producto en Mi Lista, spec 0013 Q3).
+   *
+   * A diferencia de `animateBentoLayoutChange`, todo ocurre en el mismo tick: medir, aplicar el
+   * cambio (que debe renderizar síncrono, p. ej. `detectChanges()`), medir de nuevo e invertir
+   * con `gsap.set` antes de que el navegador pinte. Medir un frame después hacía que la fila se
+   * viera en su lugar nuevo, saltara al viejo y volviera deslizándose ("se anima 3 veces").
+   *
+   * @param list   Contenedor cuyos hijos directos son las filas.
+   * @param change Aplica el cambio y renderiza síncrono.
+   */
+  animateListReorder(list: HTMLElement, change: () => void): void {
+    const rows = Array.from(list.children) as HTMLElement[];
+    if (!isPlatformBrowser(this.platformId) || !this.shouldAnimate() || rows.length === 0) {
+      change();
+      return;
+    }
+
+    gsap.killTweensOf(rows); // un toque rápido sobre otra fila parte desde donde está
+    gsap.set(rows, { clearProps: 'transform' });
+    const before = new Map(rows.map((el) => [el, el.getBoundingClientRect().top]));
+
+    change();
+
+    const moved: HTMLElement[] = [];
+    for (const el of Array.from(list.children) as HTMLElement[]) {
+      const old = before.get(el);
+      if (old === undefined) continue;
+      const dy = old - el.getBoundingClientRect().top;
+      if (Math.abs(dy) < 1) continue;
+      gsap.set(el, { y: dy });
+      moved.push(el);
+    }
+    if (moved.length === 0) return;
+
+    gsap.to(moved, {
+      y: 0,
+      duration: this.readDuration('--duration-normal', 0.3),
+      ease: 'power2.out',
+      clearProps: 'transform',
+    });
+  }
+
+  /**
+   * Aplica un cambio de pantalla dentro de una View Transition (p. ej. del login a la app, spec
+   * 0013 Q5). `cssClass` queda en <html> mientras dura, para que `_view-transitions.scss` elija la
+   * animación. Sin soporte o con movimiento reducido, solo aplica el cambio.
+   */
+  async runViewTransition(cssClass: string, update: () => Promise<unknown>): Promise<void> {
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => Promise<unknown>) => { finished: Promise<void> };
+    };
+    if (!isPlatformBrowser(this.platformId) || !this.shouldAnimate() || !doc.startViewTransition) {
+      await update();
+      return;
+    }
+    const root = document.documentElement;
+    root.classList.add(cssClass);
+    let done!: () => void;
+    const updated = new Promise<void>((r) => (done = r));
+    const vt = doc.startViewTransition(async () => {
+      await update();
+      done();
+    });
+    vt.finished.catch(() => undefined).finally(() => root.classList.remove(cssClass));
+    await updated;
+  }
+
+  /** Duración en segundos de un token `--duration-*` (fallback si no se puede leer). */
+  private readDuration(token: string, fallback: number): number {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    const ms = parseFloat(raw);
+    return Number.isFinite(ms) && ms > 0 ? ms / 1000 : fallback;
+  }
+
+  /**
    * FLIP manual para reflow del bento grid.
    * Captura posiciones y tamaños de celdas, ejecuta callback (cambio de layout),
    * anima cada celda a su nueva posición (translate) y tamaño (height/width).

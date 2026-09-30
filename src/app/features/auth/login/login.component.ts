@@ -314,7 +314,10 @@ export class LoginComponent implements AfterViewInit {
           if (error) {
             this.errorMsg.set(sanitizeAuthError(error.message)); // SEC-T05
           } else {
-            this.router.navigate(['/app']);
+            // Entrada con transición en vez de un corte seco (spec 0013, Q5).
+            await this.gsap.runViewTransition('vt-login-enter', () =>
+              this.router.navigate(['/app'])
+            );
           }
           break;
         }

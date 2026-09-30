@@ -80,6 +80,10 @@
   --target-min-critical: 56px;
   --text-floor: 13px;
 
+  /* Barra de pestañas flotante (tabs-layout): 64px de alto a 16px del borde (+ safe area).
+     chrome-bottom es lo que tapa desde abajo; el contenido y el `+` flotante lo reservan. */
+  --chrome-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+
   /* Grosor de borde por tier — la densidad gráfica baja a medida que
      sube la repetición del elemento en pantalla. */
   --border-tier1: 3px;

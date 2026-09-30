@@ -47,37 +47,38 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
   },
   template: `
     @if (icon()) {
-      <!-- Contenedor ilustrativo del ícono -->
-      <div
-        class="flex items-center justify-center w-16 h-16 rounded-2xl flex-shrink-0 bg-subtle"
-        aria-hidden="true"
-      >
-        <app-icon [name]="icon()!" [size]="32" class="text-text-muted" />
-      </div>
+    <!-- Contenedor ilustrativo del ícono -->
+    <div
+      class="flex items-center justify-center w-16 h-16 rounded-2xl flex-shrink-0 bg-subtle"
+      aria-hidden="true"
+    >
+      <app-icon [name]="icon()!" [size]="32" class="text-text-muted" />
+    </div>
     }
 
     <!-- Texto principal -->
     <div class="flex flex-col gap-1.5 max-w-[280px]">
       <p class="m-0 text-sm font-semibold text-text-primary">{{ message() }}</p>
       @if (subtitle()) {
-        <p class="m-0 text-sm text-text-muted">{{ subtitle() }}</p>
+      <p class="m-0 text-sm text-text-muted">{{ subtitle() }}</p>
       }
     </div>
 
     <!-- Acción de recuperación (opcional) -->
     @if (actionLabel()) {
-      <button
-        type="button"
-        class="empty-state-action inline-flex items-center gap-1.5 rounded-full px-4 text-sm font-medium border cursor-pointer"
-        [appPressFeedback]="'press'"
-        (click)="action.emit()"
-        [attr.aria-label]="actionLabel()"
-      >
-        @if (actionIcon()) {
-          <app-icon [name]="actionIcon()!" [size]="14" />
-        }
-        {{ actionLabel() }}
-      </button>
+    <button
+      type="button"
+      class="empty-state-action inline-flex items-center gap-1.5 rounded-full px-4 text-sm font-medium border cursor-pointer"
+      [class.is-primary]="actionVariant() === 'primary'"
+      [appPressFeedback]="'press'"
+      (click)="action.emit()"
+      [attr.aria-label]="actionLabel()"
+    >
+      @if (actionIcon()) {
+      <app-icon [name]="actionIcon()!" [size]="14" />
+      }
+      {{ actionLabel() }}
+    </button>
     }
   `,
   styles: [
@@ -89,6 +90,15 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
         border-color: var(--border-subtle);
         background: var(--bg-elevated);
         color: var(--text-secondary);
+      }
+
+      /* Cuando la acción es lo único que se puede hacer en la pantalla (spec 0013, Q12). */
+      .empty-state-action.is-primary {
+        border-color: transparent;
+        background: var(--ds-brand);
+        color: var(--color-primary-text);
+        font-weight: var(--font-bold);
+        padding-inline: var(--space-6);
       }
     `,
   ],
@@ -120,6 +130,12 @@ export class EmptyStateComponent {
    * Default: 'plus'.
    */
   readonly actionIcon = input<string>('plus');
+
+  /**
+   * `primary` cuando la acción es lo único que se puede hacer en la pantalla (p. ej. "Crear
+   * Lista"); `secondary` (default) para recuperaciones discretas.
+   */
+  readonly actionVariant = input<'primary' | 'secondary'>('secondary');
 
   /** Emitido al hacer clic en el botón de acción. */
   readonly action = output<void>();

@@ -19,7 +19,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               <app-icon name="arrow-left" [size]="20"></app-icon>
             </button>
             }
-            <h1 class="page-main-title">{{ title() }}</h1>
+            <h1 class="header-title">{{ title() }}</h1>
           </div>
         </div>
         <div class="header-actions">
@@ -81,7 +81,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         color: var(--ds-brand);
         text-transform: uppercase;
       }
-      .page-main-title {
+      /* No usar el prefijo "page-": [class^="page-"] (page-shell) le suma padding (Q16). */
+      .header-title {
         font-family: var(--font-display);
         font-size: 1.75rem;
         font-weight: 900;

@@ -6,6 +6,10 @@ Cada hallazgo tiene severidad, cómo reproducirlo y la causa cuando se encontró
 Severidad: **Alta** = bloquea una acción o deja datos incorrectos · **Media** = confunde o se
 ve mal en un flujo frecuente · **Baja** = pulido.
 
+> **Estado (2026-09-30):** resueltos en la spec 0011 (Q23, Q24, Q35–Q37, Q36/Q38 aviso), 0012
+> (Q2, Q6, Q7, Q14, Q25, Q26) y 0013 (Q1, Q3–Q5, Q8–Q13, Q15–Q22, Q27–Q34, Q39, Q41, Q42).
+> Abierto: Q40 (nombre por defecto "Mi Familia", lo define la BD).
+
 ## Ronda 1 — 2026-09-29 (Mi Lista, buscador, cierre, Historial, Perfil)
 
 ### Reportados por el dueño (reproducidos)

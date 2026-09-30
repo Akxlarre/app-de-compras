@@ -52,7 +52,7 @@ describe('ShoppingListFacade', () => {
 
   beforeEach(() => {
     stopWatching = vi.fn();
-    toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() };
+    toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn(), action: vi.fn() };
     family = {
       getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1'),
       findMine: vi.fn().mockResolvedValue({ id: 'fam-1', name: 'Los Pérez' }),
@@ -122,6 +122,14 @@ describe('ShoppingListFacade', () => {
       expect(stopWatching).toHaveBeenCalled();
     });
 
+    it('muestra la lista sin esperar el nombre de la familia (spec 0013, Q5)', async () => {
+      family['findMine'].mockReturnValue(new Promise(() => {})); // nunca responde
+
+      await facade.initialize();
+
+      expect(facade.data()?.id).toBe('list-1');
+    });
+
     it('guarda una foto de la lista para abrirla sin red', async () => {
       await facade.initialize();
       expect(store['saveSnapshot']).toHaveBeenCalledWith(list());
@@ -159,6 +167,55 @@ describe('ShoppingListFacade', () => {
 
       expect(facade.data()?.list_items.map((i) => i.id)).toEqual(['item-2']);
       expect(items['remove']).toHaveBeenCalledWith('item-1');
+    });
+
+    describe('deshacer al quitar (spec 0013, Q27)', () => {
+      beforeEach(() => {
+        facade['_data'].set(
+          list([
+            { id: 'item-1', is_checked: false, quantity: 3, product: { id: 'p1', name: 'Leche' } },
+            { id: 'item-2', is_checked: true, quantity: 2, product: { id: 'p2', name: 'Pan' } },
+          ])
+        );
+      });
+
+      it('avisa "Quitaste X" con "Deshacer"', async () => {
+        await facade.deleteItem('item-1');
+
+        expect(toast['action']).toHaveBeenCalledWith(
+          'Quitaste Leche',
+          'Deshacer',
+          expect.any(Function)
+        );
+      });
+
+      it('Deshacer lo vuelve a agregar con su cantidad', async () => {
+        await facade.deleteItem('item-1');
+        const undo = toast['action'].mock.calls[0][2];
+
+        await undo();
+
+        expect(items['add']).toHaveBeenCalledWith('list-1', 'p1', 3);
+        expect(items['setChecked']).not.toHaveBeenCalled();
+      });
+
+      it('si estaba marcado, vuelve marcado', async () => {
+        items['add'].mockResolvedValue({ id: 'nuevo', quantity: 2 });
+        await facade.deleteItem('item-2');
+
+        await toast['action'].mock.calls[0][2]();
+
+        expect(items['add']).toHaveBeenCalledWith('list-1', 'p2', 2);
+        expect(items['setChecked']).toHaveBeenCalledWith('nuevo', true);
+      });
+
+      it('si el borrado falla no ofrece deshacer', async () => {
+        items['remove'].mockRejectedValue(new Error('rls'));
+
+        await facade.deleteItem('item-1');
+
+        expect(toast['action']).not.toHaveBeenCalled();
+      });
     });
 
     it('updateItemQuantity manda el incremento y fija la cantidad que devuelve la BD (AC2)', async () => {
@@ -495,6 +552,67 @@ describe('ShoppingListFacade', () => {
       expect(items['findByList']).toHaveBeenCalledWith('list-1');
       expect(items['addMany']).toHaveBeenCalledWith('tpl-1', [{ product_id: 'p1', quantity: 2 }]);
       expect(loadSpy).toHaveBeenCalled();
+    });
+
+    describe('plantillas (spec 0013, Q28/Q30)', () => {
+      beforeEach(() => {
+        lists['renameTemplate'] = vi.fn().mockResolvedValue(undefined);
+        lists['deleteTemplate'] = vi.fn().mockResolvedValue(undefined);
+        facade.templates.set([
+          { id: 'tpl-1', name: 'Asado', list_items: [] },
+          { id: 'tpl-2', name: 'Mensual', list_items: [] },
+        ] as any);
+      });
+
+      it('saveAsTemplate confirma con toast y recorta el nombre', async () => {
+        lists['create'].mockResolvedValue({ id: 'tpl-9' });
+        vi.spyOn(facade, 'loadTemplates').mockResolvedValue();
+
+        expect(await facade.saveAsTemplate('list-1', '  Once  ')).toBe(true);
+
+        expect(lists['create']).toHaveBeenCalledWith(expect.objectContaining({ name: 'Once' }));
+        expect(toast['success']).toHaveBeenCalledWith('Plantilla guardada', expect.any(String));
+      });
+
+      it('saveAsTemplate sin nombre avisa y no crea nada', async () => {
+        expect(await facade.saveAsTemplate('list-1', '   ')).toBe(false);
+
+        expect(lists['create']).not.toHaveBeenCalled();
+        expect(toast['warning']).toHaveBeenCalled();
+      });
+
+      it('renameTemplate cambia el nombre al instante y lo guarda', async () => {
+        expect(await facade.renameTemplate('tpl-1', ' Asado domingo ')).toBe(true);
+
+        expect(facade.templates()[0].name).toBe('Asado domingo');
+        expect(lists['renameTemplate']).toHaveBeenCalledWith('tpl-1', 'Asado domingo');
+      });
+
+      it('renameTemplate con nombre vacío avisa y no toca nada', async () => {
+        expect(await facade.renameTemplate('tpl-1', '')).toBe(false);
+
+        expect(lists['renameTemplate']).not.toHaveBeenCalled();
+        expect(toast['warning']).toHaveBeenCalled();
+      });
+
+      it('renameTemplate revierte si falla', async () => {
+        lists['renameTemplate'].mockRejectedValue(new Error('rls'));
+
+        expect(await facade.renameTemplate('tpl-1', 'Otra')).toBe(false);
+
+        expect(facade.templates()[0].name).toBe('Asado');
+        expect(toast['error']).toHaveBeenCalled();
+      });
+
+      it('deleteTemplate la quita al instante; si falla vuelve', async () => {
+        expect(await facade.deleteTemplate('tpl-1')).toBe(true);
+        expect(facade.templates().map((t) => t.id)).toEqual(['tpl-2']);
+        expect(lists['deleteTemplate']).toHaveBeenCalledWith('tpl-1');
+
+        lists['deleteTemplate'].mockRejectedValue(new Error('rls'));
+        expect(await facade.deleteTemplate('tpl-2')).toBe(false);
+        expect(facade.templates().map((t) => t.id)).toEqual(['tpl-2']);
+      });
     });
 
     it('startListFrom: sin lista activa, crea la lista y copia los ítems de la compra elegida (0010)', async () => {

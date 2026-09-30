@@ -71,6 +71,7 @@ const PROVIDED_ICONS = new Set([
   'printer',
   'refresh-cw',
   'wifi-off',
+  'more-vertical',
   'rotate-ccw',
   'rotate-cw',
   'save',

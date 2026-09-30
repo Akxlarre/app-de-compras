@@ -18,9 +18,11 @@ describe('ActiveListPage', () => {
 
   beforeEach(() => {
     alertController = {
-      create: vi
-        .fn()
-        .mockResolvedValue({ present: vi.fn(), onDidDismiss: () => new Promise(() => {}) }),
+      create: vi.fn().mockResolvedValue({
+        present: vi.fn(),
+        onDidDismiss: () => new Promise(() => {}),
+        querySelector: vi.fn(),
+      }),
     };
     closeFacade = { start: vi.fn() };
     nav = { navigateForward: vi.fn() };
@@ -46,6 +48,9 @@ describe('ActiveListPage', () => {
       hasChecked: signal(false),
       clearList: vi.fn().mockResolvedValue(true),
       createList: vi.fn(),
+      saveAsTemplate: vi.fn().mockResolvedValue(true),
+      renameTemplate: vi.fn().mockResolvedValue(true),
+      deleteTemplate: vi.fn().mockResolvedValue(true),
     };
     familyFacade = {
       currentFamily: signal(null),
@@ -165,28 +170,28 @@ describe('ActiveListPage', () => {
       expect(mockFacade.completeList).toHaveBeenCalledWith('list-1', true);
     });
 
-    it('"Sin boleta" empieza el cierre y navega a la pantalla de cierre', async () => {
+    it('"Sin boleta" va directo al cierre: los pendientes se eligen allí, no se pregunta dos veces (Q29)', async () => {
       mockFacade.data.set(conPendiente);
       const done = component.completeList('list-1');
 
       await press(0, /sin boleta/i);
-      await press(1, /descartar/i);
       await done;
 
-      expect(closeFacade.start).toHaveBeenCalledWith(conPendiente, false, 'manual');
+      expect(alertController.create).toHaveBeenCalledTimes(1);
+      expect(closeFacade.start).toHaveBeenCalledWith(conPendiente, true, 'manual');
       expect(nav.navigateForward).toHaveBeenCalledWith('/app/close');
       expect(mockFacade.completeList).not.toHaveBeenCalled();
     });
 
-    it('"Escanear boleta" sin pendientes no pregunta por ellos', async () => {
-      mockFacade.data.set({ id: 'list-1', list_items: [{ id: '1', is_checked: true }] });
+    it('"Escanear boleta" tampoco pregunta por pendientes', async () => {
+      mockFacade.data.set(conPendiente);
       const done = component.completeList('list-1');
 
       await press(0, /escanear/i);
       await done;
 
       expect(alertController.create).toHaveBeenCalledTimes(1);
-      expect(closeFacade.start).toHaveBeenCalledWith(expect.anything(), false, 'receipt');
+      expect(closeFacade.start).toHaveBeenCalledWith(conPendiente, true, 'receipt');
     });
 
     it('cancelar no cierra nada', async () => {
@@ -253,6 +258,77 @@ describe('ActiveListPage', () => {
       TestBed.tick();
 
       expect(familyFacade.loadMyFamily).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('plantillas y pista de borrar (spec 0013)', () => {
+    const opts = (n: number) => alertController.create.mock.calls[n][0];
+    const button = (n: number, text: string) =>
+      (opts(n).buttons as any[]).find((b) => b.text === text);
+    const tpl = { id: 't1', name: 'Asado', list_items: [] } as any;
+
+    beforeEach(() => {
+      mockFacade.data.set({ id: 'list-1', list_items: [{ id: 'i1' }] });
+      mockFacade.templates.set([tpl, { id: 't2', name: 'Mensual', list_items: [] }]);
+    });
+
+    it('guardar plantilla: sin nombre la alerta queda abierta; con nombre guarda (Q30)', async () => {
+      await component.saveTemplate();
+      const save = button(0, 'Guardar');
+
+      expect(save.handler({ name: '  ' })).toBe(false);
+      expect(save.handler({ name: ' Asado ' })).toBe(true);
+      expect(mockFacade.saveAsTemplate).toHaveBeenLastCalledWith('list-1', 'Asado');
+    });
+
+    it('renombrar una plantilla desde "⋯" (Q28)', async () => {
+      const done = component.manageTemplate(tpl);
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalledTimes(1));
+      button(0, 'Renombrar').handler();
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalledTimes(2));
+      await done;
+
+      expect(opts(1).inputs[0].value).toBe('Asado');
+      button(1, 'Guardar').handler({ name: 'Asado domingo' });
+      expect(mockFacade.renameTemplate).toHaveBeenCalledWith('t1', 'Asado domingo');
+    });
+
+    it('borrar una plantilla pide confirmación (Q28)', async () => {
+      const done = component.manageTemplate(tpl);
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalledTimes(1));
+      button(0, 'Borrar').handler();
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalledTimes(2));
+      expect(opts(1).header).toBe('¿Borrar la plantilla?');
+      button(1, 'Borrar').handler();
+      await done;
+
+      expect(mockFacade.deleteTemplate).toHaveBeenCalledWith('t1');
+    });
+
+    it('agregar una plantilla a la lista en curso suma sus productos (Q28)', async () => {
+      const done = component.addTemplateToList();
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalled());
+      expect((opts(0).buttons as any[]).map((b) => b.text)).toEqual([
+        'Asado',
+        'Mensual',
+        'Cancelar',
+      ]);
+      button(0, 'Mensual').handler();
+      await done;
+
+      expect(mockFacade.cloneListItems).toHaveBeenCalledWith('t2', 'list-1');
+    });
+
+    it('la pista "desliza para quitar" se va después de quitar un producto (Q27)', () => {
+      localStorage.removeItem('shop.hint.swipe-delete.v1');
+      TestBed.resetTestingModule();
+      expect(component.swipeHintSeen()).toBe(false);
+
+      component.deleteItem('i1');
+
+      expect(mockFacade.deleteItem).toHaveBeenCalledWith('i1');
+      expect(component.swipeHintSeen()).toBe(true);
+      expect(localStorage.getItem('shop.hint.swipe-delete.v1')).toBe('1');
     });
   });
 

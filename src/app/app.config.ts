@@ -93,6 +93,7 @@ import {
   ShieldCheck,
   Star,
   Tag,
+  Receipt,
   XCircle,
   // ── Tema ──
   Moon,
@@ -227,6 +228,7 @@ export const appConfig: ApplicationConfig = {
         ShieldCheck,
         Star,
         Tag,
+        Receipt, // "Registrar una compra sin lista" en Historial (spec 0013)
         XCircle,
         // Tema
         Moon,

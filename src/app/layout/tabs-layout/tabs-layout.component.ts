@@ -1,4 +1,13 @@
-import { Component, ChangeDetectionStrategy, inject, DestroyRef } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  ElementRef,
+  ViewChild,
+  inject,
+  computed,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -11,7 +20,8 @@ import {
   listOutline,
   list,
 } from 'ionicons/icons';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
+import { tabChromeFor } from '@core/utils/tab-chrome.utils';
 
 @Component({
   selector: 'app-tabs-layout',
@@ -19,8 +29,14 @@ import { Router } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel],
   template: `
-    <ion-tabs>
-      <ion-tab-bar slot="bottom" class="main-tab-bar">
+    <ion-tabs (ionTabsDidChange)="markSelectedTab()">
+      <ion-tab-bar
+        #tabBar
+        slot="bottom"
+        class="main-tab-bar"
+        [class.bar-hidden]="chrome().hideBar"
+        [attr.aria-hidden]="chrome().hideBar"
+      >
         <ion-tab-button tab="active">
           <ion-icon name="cart-outline"></ion-icon>
           <ion-label>Mi Lista</ion-label>
@@ -48,10 +64,11 @@ import { Router } from '@angular/router';
       :host {
         display: block;
         height: 100%;
+      }
 
-        /* Geometría del pie */
-        --tabbar-h: calc(56px + env(safe-area-inset-bottom, 0px));
-        --chrome-bottom: calc(var(--tabbar-h) + var(--space-4));
+      /* Flujos (cierre de compra): sin barra que invite a salir a mitad (spec 0013). */
+      ion-tab-bar.main-tab-bar.bar-hidden {
+        display: none !important;
       }
 
       ion-tab-bar.main-tab-bar {
@@ -61,7 +78,8 @@ import { Router } from '@angular/router';
         --border: 1px solid var(--border-subtle);
 
         position: absolute !important;
-        bottom: calc(env(safe-area-inset-bottom, 16px) + 16px) !important;
+        /* Alto 64 + 16 de margen = --chrome-bottom (tokens/_variables.scss). */
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
         left: 16px !important;
         right: 16px !important;
         width: auto !important;
@@ -107,8 +125,30 @@ import { Router } from '@angular/router';
   ],
 })
 export class TabsLayoutComponent {
-  router = inject(Router);
-  private destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects)
+    ),
+    { initialValue: this.router.url }
+  );
+
+  /** Pestaña activa (Historial y cierre cuelgan de Mi Lista) y si la barra se oculta. */
+  readonly chrome = computed(() => tabChromeFor(this.url()));
+
+  @ViewChild('tabBar', { read: ElementRef }) private tabBar?: ElementRef<HTMLIonTabBarElement>;
+
+  /**
+   * ion-tabs marca como pestaña el primer segmento de la URL ("history" no existe y no queda
+   * ninguna activa). Después de cada cambio se corrige con la de `tabChromeFor` (Q18).
+   */
+  markSelectedTab(): void {
+    const tab = this.chrome().tab;
+    const bar = this.tabBar?.nativeElement;
+    if (bar && tab && bar.selectedTab !== tab) bar.selectedTab = tab;
+  }
 
   constructor() {
     addIcons({
