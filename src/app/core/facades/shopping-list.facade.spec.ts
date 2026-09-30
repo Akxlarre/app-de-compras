@@ -122,6 +122,14 @@ describe('ShoppingListFacade', () => {
       expect(stopWatching).toHaveBeenCalled();
     });
 
+    it('muestra la lista sin esperar el nombre de la familia (spec 0013, Q5)', async () => {
+      family['findMine'].mockReturnValue(new Promise(() => {})); // nunca responde
+
+      await facade.initialize();
+
+      expect(facade.data()?.id).toBe('list-1');
+    });
+
     it('guarda una foto de la lista para abrirla sin red', async () => {
       await facade.initialize();
       expect(store['saveSnapshot']).toHaveBeenCalledWith(list());

@@ -114,7 +114,9 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
       throw new Error('NO_ACTIVE_LIST');
     }
 
-    await this.rememberFamily(list.family_id);
+    // El nombre de la familia solo sirve para un aviso futuro: no se espera, la lista se muestra
+    // ya (spec 0013, Q5: esa consulta sumaba ~0,5 s a cada entrada).
+    void this.rememberFamily(list.family_id);
     this.watchList(list.id);
     return applyQueue(list, this.queue);
   }

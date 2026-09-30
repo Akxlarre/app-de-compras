@@ -638,6 +638,31 @@ export class GsapAnimationsService {
     });
   }
 
+  /**
+   * Aplica un cambio de pantalla dentro de una View Transition (p. ej. del login a la app, spec
+   * 0013 Q5). `cssClass` queda en <html> mientras dura, para que `_view-transitions.scss` elija la
+   * animación. Sin soporte o con movimiento reducido, solo aplica el cambio.
+   */
+  async runViewTransition(cssClass: string, update: () => Promise<unknown>): Promise<void> {
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => Promise<unknown>) => { finished: Promise<void> };
+    };
+    if (!isPlatformBrowser(this.platformId) || !this.shouldAnimate() || !doc.startViewTransition) {
+      await update();
+      return;
+    }
+    const root = document.documentElement;
+    root.classList.add(cssClass);
+    let done!: () => void;
+    const updated = new Promise<void>((r) => (done = r));
+    const vt = doc.startViewTransition(async () => {
+      await update();
+      done();
+    });
+    vt.finished.catch(() => undefined).finally(() => root.classList.remove(cssClass));
+    await updated;
+  }
+
   /** Duración en segundos de un token `--duration-*` (fallback si no se puede leer). */
   private readDuration(token: string, fallback: number): number {
     const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim();

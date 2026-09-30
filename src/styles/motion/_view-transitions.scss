@@ -53,11 +53,38 @@
   }
 }
 
-/* ── 3. ACCESIBILIDAD ─────────────────────────────────────── */
+/* ── 3. LOGIN → APP ───────────────────────────────────────── */
+/* GsapAnimationsService.runViewTransition('vt-login-enter', …) pone la clase en <html> mientras
+   dura (spec 0013, Q5): el login se desvanece y la app entra, en vez de un corte seco. */
+.vt-login-enter::view-transition-old(root) {
+  animation: vt-login-out var(--duration-login-out, 250ms) var(--ease-in) both;
+}
+
+.vt-login-enter::view-transition-new(root) {
+  animation: vt-login-in var(--duration-login-in, 400ms) var(--ease-out) 80ms both;
+}
+
+@keyframes vt-login-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes vt-login-in {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+/* ── 4. ACCESIBILIDAD ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
 
   ::view-transition-old(main-content),
-  ::view-transition-new(main-content) {
+  ::view-transition-new(main-content),
+  .vt-login-enter::view-transition-old(root),
+  .vt-login-enter::view-transition-new(root) {
     animation: none !important;
   }
 }
