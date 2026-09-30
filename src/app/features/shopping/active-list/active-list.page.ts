@@ -9,6 +9,8 @@ import {
   ViewChild,
   ElementRef,
   ChangeDetectorRef,
+  effect,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -73,6 +75,13 @@ export class ActiveListPage implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('ionList', { read: ElementRef }) listElementRef?: ElementRef;
+
+  constructor() {
+    // Me quitaron de la familia (spec 0011): nombres y miembros pasan a ser los de la nueva.
+    effect(() => {
+      if (this.facade.familyChanged() > 0) untracked(() => this.family.loadMyFamily());
+    });
+  }
 
   public isSearchOpen = signal(false);
 
@@ -192,9 +201,8 @@ export class ActiveListPage implements OnInit {
 
   updateQuantity(itemId: string, currentQty: number, change: number, event: Event) {
     event.stopPropagation();
-    const newQty = currentQty + change;
-    if (newQty < 1) return;
-    this.facade.updateItemQuantity(itemId, newQty);
+    if (currentQty + change < 1) return;
+    this.facade.updateItemQuantity(itemId, change); // incremento: la BD suma (spec 0011)
   }
 
   deleteItem(itemId: string) {

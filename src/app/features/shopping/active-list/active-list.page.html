@@ -12,6 +12,29 @@
   </app-header>
 
   <main class="flex-1 overflow-y-auto px-4 pb-32">
+    @if (!facade.isOnline()) {
+    <div
+      class="mt-3 flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface px-4 py-3"
+      role="status"
+      data-testid="offline-banner"
+    >
+      <app-icon
+        name="wifi-off"
+        [size]="18"
+        class="text-warning shrink-0 mt-0.5"
+        [attr.aria-label]="'Sin conexión'"
+      />
+      <div class="flex flex-col gap-0.5 text-sm">
+        <span class="font-semibold text-text-primary"
+          >Sin conexión: tus cambios se guardan y se envían al volver</span
+        >
+        <span class="text-xs text-text-muted">
+          Puedes marcar y cambiar cantidades. Agregar, borrar y finalizar vuelven con la señal. @if
+          (facade.pendingChanges() > 0) { · {{ facade.pendingChanges() }} por enviar }
+        </span>
+      </div>
+    </div>
+    }
     <div class="flex flex-col gap-6">
       @if (facade.isLoading() && !facade.hasData()) {
       <!-- Skeleton Loading SWR -->
@@ -66,14 +89,17 @@
           @if (listSummary().total > 0) {
           <div class="flex flex-col items-end gap-2">
             <button
-              class="px-5 py-2 bg-brand text-brand-contrast rounded-full text-sm font-bold shadow-md shadow-brand/20 transition-transform active:scale-95"
+              class="px-5 py-2 bg-brand text-brand-contrast rounded-full text-sm font-bold shadow-md shadow-brand/20 transition-transform active:scale-95 disabled:opacity-40 disabled:shadow-none"
               data-llm-action="finalizar-compra"
+              [disabled]="!facade.isOnline()"
               (click)="completeList(list.id)"
             >
               Finalizar
             </button>
             <button
-              class="text-xs text-text-muted font-medium hover:text-text-primary active:scale-95 transition-all flex items-center gap-1"
+              class="text-xs text-text-muted font-medium hover:text-text-primary active:scale-95 transition-all flex items-center gap-1 disabled:opacity-40"
+              data-llm-action="guardar-plantilla"
+              [disabled]="!facade.isOnline()"
               (click)="saveTemplate()"
             >
               <app-icon name="bookmark" [size]="12" />
@@ -184,6 +210,7 @@
                 >
                   <button
                     class="w-12 h-12 flex items-center justify-center text-text-muted hover:bg-surface active:bg-border-subtle transition-colors disabled:opacity-30"
+                    aria-label="Quitar uno"
                     [disabled]="(item.quantity || 1) <= 1"
                     (click)="updateQuantity(item.id, item.quantity || 1, -1, $event)"
                   >
@@ -203,7 +230,12 @@
             </ion-item>
 
             <ion-item-options side="end">
-              <ion-item-option color="danger" (click)="deleteItem(item.id)">
+              <ion-item-option
+                color="danger"
+                data-llm-action="delete-list-item"
+                [disabled]="!facade.isOnline()"
+                (click)="deleteItem(item.id)"
+              >
                 <div class="flex flex-col items-center justify-center w-full h-full px-4">
                   <app-icon name="trash-2" [size]="24" class="text-white mb-1" />
                   <span class="text-[10px] uppercase font-bold text-white">Borrar</span>
@@ -223,7 +255,10 @@
   <!-- Botón flotante Global (Fixed) -->
   @if (facade.data()) {
   <button
-    class="fixed bottom-[calc(env(safe-area-inset-bottom)+100px)] right-5 w-16 h-16 bg-brand text-brand-contrast rounded-full shadow-[var(--shadow-lg)] flex items-center justify-center hover:scale-105 transition-transform z-50"
+    class="fixed bottom-[calc(env(safe-area-inset-bottom)+100px)] right-5 w-16 h-16 bg-brand text-brand-contrast rounded-full shadow-[var(--shadow-lg)] flex items-center justify-center hover:scale-105 transition-transform z-50 disabled:opacity-40 disabled:shadow-none"
+    aria-label="Agregar productos"
+    data-llm-action="abrir-buscador"
+    [disabled]="!facade.isOnline()"
     (click)="isSearchOpen.set(true)"
   >
     <app-icon name="plus" [size]="28" />

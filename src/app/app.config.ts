@@ -78,6 +78,7 @@ import {
   RefreshCw,
   Save,
   Share2,
+  WifiOff,
   // ── Comunicación ──
   Mail,
   MessageCircle,
@@ -211,6 +212,7 @@ export const appConfig: ApplicationConfig = {
         RefreshCw,
         Save,
         Share2,
+        WifiOff,
         // Comunicación
         Mail,
         MessageCircle,

@@ -8,6 +8,7 @@
 | `AppUpdate` | `other` | `src/app/core/models/app-update.model.ts` |
 | `Family`, `FamilyRole`, `FamilyMember`, `FamilyInfo`, `FamilyMemberView`, `FamilyPreview`, `JoinFamilyResult` | `other` | `src/app/core/models/family.model.ts` |
 | `NotificationType`, `Notification` | `other` | `src/app/core/models/notification.model.ts` |
+| `QueuedChange` | `other` | `src/app/core/models/offline-queue.model.ts` |
 | `Product` | `other` | `src/app/core/models/product.model.ts` |
 | `PurchasedItem`, `PurchaseSummary`, `MonthlySpending` | `other` | `src/app/core/models/purchase-history.model.ts` |
 | `ReceiptStatus`, `Receipt`, `OcrLineKind`, `OcrReceiptLine`, `OcrReceipt`, `DoubtReason`, `ReceiptValidation`, `TotalSource`, `ReconcileListItem`, `CatalogProduct`, `ReceiptAlias`, `MatchCandidate`, `ReconciledLine`, `ReconciliationResult`, `LineTarget`, `LineDecision`, `MissingDecision`, `ReceiptCorrection`, `ReceiptCheck`, `ManualPrice`, `ReceiptItemInput`, `ReceiptExtraInput`, `ApplyReceiptInput`, `OcrReceiptItem` | `other` | `src/app/core/models/receipt.model.ts` |

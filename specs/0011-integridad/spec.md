@@ -76,7 +76,7 @@ viejo. La base de datos no protege nada:
   deja una sola lista y ningún error visible.
 - [ ] AC4: Los datos existentes no rompen la migración: duplicados de `list_items` y listas activas
   sobrantes se juntan (probado en staging, que hoy tiene duplicados de la cuenta `test1`).
-- [ ] AC5: Una mutación que afecta 0 filas lanza error; la UI revierte el cambio y avisa. Test por
+- [x] AC5: Una mutación que afecta 0 filas lanza error; la UI revierte el cambio y avisa. Test por
   cada repository de lista.
 - [ ] AC6: Un miembro quitado que intenta marcar ve el aviso "Ya no eres parte de «X»" y su pantalla
   pasa a su propia familia sin recargar a mano. Nada queda marcado en la lista de la familia.
@@ -85,6 +85,10 @@ viejo. La base de datos no protege nada:
 - [ ] AC8: La cola sobrevive a cerrar y reabrir la app sin red.
 - [ ] AC9: Un cambio de la cola rechazado al sincronizar (ítem borrado por otro miembro) se descarta
   y se avisa una vez; los demás se aplican.
-- [ ] AC10: Sin red, agregar, borrar, finalizar y crear lista están deshabilitados con explicación.
+- [x] AC10: Sin red, agregar, borrar, finalizar y crear lista están deshabilitados con explicación.
 - [ ] AC11: `test:ci`, `lint:arch` (0 errores) y `ng build` en verde; índices (DATABASE,
   REPOSITORIES, FACADES) actualizados; PR de plataforma-db aplicado en staging.
+
+> **Estado (2026-09-30):** código y tests listos para AC1–AC10 (BD: pgTAP + carrera real en
+> Postgres local; app: tests de repos, facade y página). AC1–AC4 y AC6–AC9 quedan abiertos hasta
+> probarlos en staging, que requiere aplicar plataforma-db#13. AC11: todo en verde salvo ese paso.

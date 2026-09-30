@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ShoppingListFacade } from './shopping-list.facade';
 import { FamilyRepository } from '../repositories/family.repository';
@@ -6,39 +7,35 @@ import { ShoppingListsRepository } from '../repositories/shopping-lists.reposito
 import { ListItemsRepository } from '../repositories/list-items.repository';
 import { ToastService } from '../services/ui/toast.service';
 import { SessionScopeService } from '../services/auth/session-scope.service';
+import { NetworkStatusService } from '../services/infrastructure/network-status.service';
+import { OfflineStoreService } from '../services/infrastructure/offline-store.service';
+import { MutationError } from '../utils/mutation-error.utils';
+import type { QueuedChange } from '../models/offline-queue.model';
 
-const list = (items: any[] = []) =>
-  ({ id: 'list-1', name: 'Semana', status: 'active', list_items: items } as any);
+const list = (items: any[] = [], familyId = 'fam-1') =>
+  ({
+    id: 'list-1',
+    family_id: familyId,
+    name: 'Semana',
+    status: 'active',
+    list_items: items,
+  } as any);
+
+const offlineError = new MutationError('offline');
 
 describe('ShoppingListFacade', () => {
   let facade: ShoppingListFacade;
-  let family: { getOrCreateFamilyId: ReturnType<typeof vi.fn> };
+  let family: Record<string, ReturnType<typeof vi.fn>>;
   let lists: Record<string, ReturnType<typeof vi.fn>>;
   let items: Record<string, ReturnType<typeof vi.fn>>;
   let stopWatching: ReturnType<typeof vi.fn>;
-  let toast: { error: ReturnType<typeof vi.fn>; success: ReturnType<typeof vi.fn> };
+  let toast: Record<string, ReturnType<typeof vi.fn>>;
+  let online: ReturnType<typeof signal<boolean>>;
+  let network: { online: any; reportNetworkFailure: any; reportSuccess: any };
+  let stored: { queue: QueuedChange[]; snapshot: any };
+  let store: Record<string, ReturnType<typeof vi.fn>>;
 
-  beforeEach(() => {
-    stopWatching = vi.fn();
-    toast = { error: vi.fn(), success: vi.fn() };
-    family = { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') };
-    lists = {
-      findLatestActive: vi.fn().mockResolvedValue(list()),
-      findLastCompleted: vi.fn().mockResolvedValue(null),
-      findTemplates: vi.fn().mockResolvedValue([]),
-      create: vi.fn().mockResolvedValue({ id: 'new-list' }),
-      complete: vi.fn().mockResolvedValue(undefined),
-    };
-    items = {
-      add: vi.fn().mockResolvedValue(undefined),
-      addMany: vi.fn().mockResolvedValue(undefined),
-      findByList: vi.fn().mockResolvedValue([]),
-      updateQuantity: vi.fn().mockResolvedValue(undefined),
-      setChecked: vi.fn().mockResolvedValue(undefined),
-      remove: vi.fn().mockResolvedValue(undefined),
-      watchList: vi.fn(() => stopWatching),
-    };
-
+  function create(): ShoppingListFacade {
     TestBed.configureTestingModule({
       providers: [
         ShoppingListFacade,
@@ -46,9 +43,52 @@ describe('ShoppingListFacade', () => {
         { provide: ShoppingListsRepository, useValue: lists },
         { provide: ListItemsRepository, useValue: items },
         { provide: ToastService, useValue: toast },
+        { provide: NetworkStatusService, useValue: network },
+        { provide: OfflineStoreService, useValue: store },
       ],
     });
-    facade = TestBed.inject(ShoppingListFacade);
+    return TestBed.inject(ShoppingListFacade);
+  }
+
+  beforeEach(() => {
+    stopWatching = vi.fn();
+    toast = { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() };
+    family = {
+      getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1'),
+      findMine: vi.fn().mockResolvedValue({ id: 'fam-1', name: 'Los Pérez' }),
+    };
+    lists = {
+      findLatestActive: vi.fn().mockResolvedValue(list()),
+      findLastCompleted: vi.fn().mockResolvedValue(null),
+      findTemplates: vi.fn().mockResolvedValue([]),
+      create: vi.fn().mockResolvedValue({ id: 'new-list' }),
+      startActive: vi.fn().mockResolvedValue({ id: 'nueva', created: true }),
+      complete: vi.fn().mockResolvedValue(undefined),
+    };
+    items = {
+      add: vi.fn().mockResolvedValue({ id: 'x', quantity: 1 }),
+      addMany: vi.fn().mockResolvedValue(undefined),
+      findByList: vi.fn().mockResolvedValue([]),
+      changeQuantity: vi.fn().mockResolvedValue(1),
+      setChecked: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+      watchList: vi.fn(() => stopWatching),
+    };
+    online = signal(true);
+    network = {
+      online: online.asReadonly(),
+      reportNetworkFailure: vi.fn(() => online.set(false)),
+      reportSuccess: vi.fn(() => online.set(true)),
+    };
+    stored = { queue: [], snapshot: null };
+    store = {
+      loadQueue: vi.fn(() => stored.queue),
+      saveQueue: vi.fn((q: QueuedChange[]) => (stored.queue = q)),
+      loadSnapshot: vi.fn(() => stored.snapshot),
+      saveSnapshot: vi.fn((l: any) => (stored.snapshot = l)),
+      clear: vi.fn(),
+    };
+    facade = create();
   });
 
   describe('carga y Realtime', () => {
@@ -81,6 +121,11 @@ describe('ShoppingListFacade', () => {
       facade.dispose();
       expect(stopWatching).toHaveBeenCalled();
     });
+
+    it('guarda una foto de la lista para abrirla sin red', async () => {
+      await facade.initialize();
+      expect(store['saveSnapshot']).toHaveBeenCalledWith(list());
+    });
   });
 
   describe('mutaciones optimistas', () => {
@@ -100,13 +145,13 @@ describe('ShoppingListFacade', () => {
       expect(items['setChecked']).toHaveBeenCalledWith('item-1', true);
     });
 
-    it('toggleItemCheck vuelve al estado del servidor si falla', async () => {
+    it('toggleItemCheck revierte si el servidor lo rechaza', async () => {
       items['setChecked'].mockRejectedValue(new Error('rls'));
-      lists['findLatestActive'].mockResolvedValue(list([{ id: 'item-1', is_checked: false }]));
 
       await facade.toggleItemCheck('item-1', false);
 
       expect(facade.data()?.list_items[0].is_checked).toBe(false);
+      expect(toast['error']).toHaveBeenCalled();
     });
 
     it('deleteItem quita el ítem al instante', async () => {
@@ -116,17 +161,30 @@ describe('ShoppingListFacade', () => {
       expect(items['remove']).toHaveBeenCalledWith('item-1');
     });
 
-    it('updateItemQuantity revierte la cantidad si falla y avisa con toast sin tapar la lista', async () => {
-      items['updateQuantity'].mockRejectedValue(new Error('network'));
+    it('updateItemQuantity manda el incremento y fija la cantidad que devuelve la BD (AC2)', async () => {
+      items['changeQuantity'].mockResolvedValue(4); // otro miembro sumó 1 a la vez
 
-      await facade.updateItemQuantity('item-2', 5);
+      await facade.updateItemQuantity('item-2', 1);
+
+      expect(items['changeQuantity']).toHaveBeenCalledWith('item-2', 1);
+      expect(facade.data()?.list_items[1].quantity).toBe(4);
+    });
+
+    it('updateItemQuantity no baja de 1', async () => {
+      await facade.updateItemQuantity('item-1', -1);
+
+      expect(items['changeQuantity']).not.toHaveBeenCalled();
+      expect(facade.data()?.list_items[0].quantity).toBe(1);
+    });
+
+    it('updateItemQuantity revierte si falla y avisa sin tapar la lista', async () => {
+      items['changeQuantity'].mockRejectedValue(new Error('boom'));
+
+      await facade.updateItemQuantity('item-2', 3);
 
       expect(facade.data()?.list_items[1].quantity).toBe(2);
       expect(facade.error()).toBeNull();
-      expect(toast.error).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.stringContaining('conexión')
-      );
+      expect(toast['error']).toHaveBeenCalled();
     });
 
     it.each([
@@ -144,32 +202,203 @@ describe('ShoppingListFacade', () => {
 
       expect(facade.error()).toBeNull();
       expect(facade.data()).not.toBeNull();
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast['error']).toHaveBeenCalled();
     });
 
-    it('addItem suma cantidad si el producto ya está en la lista', async () => {
+    it('addItem de un producto que ya está: suma al instante y deja la cantidad de la BD (AC1)', async () => {
+      items['add'].mockResolvedValue({ id: 'item-2', quantity: 5 });
+
       await facade.addItem('list-1', 'p2', 3);
 
+      expect(items['add']).toHaveBeenCalledWith('list-1', 'p2', 3);
+      expect(facade.data()?.list_items).toHaveLength(2);
       expect(facade.data()?.list_items[1].quantity).toBe(5);
-      expect(items['updateQuantity']).toHaveBeenCalledWith('item-2', 5);
-      expect(items['add']).not.toHaveBeenCalled();
     });
 
-    it('addItem inserta si el producto es nuevo', async () => {
-      await facade.addItem('list-1', 'p3', 1);
+    it('addItem dos veces seguidas (doble toque) llama dos veces a la BD, que las junta', async () => {
+      await Promise.all([facade.addItem('list-1', 'p3'), facade.addItem('list-1', 'p3')]);
+
+      expect(items['add']).toHaveBeenCalledTimes(2);
       expect(items['add']).toHaveBeenCalledWith('list-1', 'p3', 1);
     });
   });
 
+  describe('errores tipados (AC5, AC6)', () => {
+    beforeEach(async () => {
+      lists['findLatestActive'].mockResolvedValue(
+        list([{ id: 'item-1', is_checked: false, quantity: 1, product: { id: 'p1' } }])
+      );
+      await facade.initialize();
+    });
+
+    it('not_found de un ítem borrado por otro: revierte, avisa y refresca', async () => {
+      items['setChecked'].mockRejectedValue(new MutationError('not_found'));
+      lists['findLatestActive'].mockResolvedValue(list([]));
+
+      await facade.toggleItemCheck('item-1', false);
+
+      expect(toast['warning']).toHaveBeenCalledWith(
+        'Ese producto ya no está en la lista',
+        expect.any(String)
+      );
+      expect(facade.data()?.list_items).toEqual([]);
+    });
+
+    it('not_found porque me quitaron de la familia: avisa "Ya no eres parte de «X»" una vez y pasa a mi familia', async () => {
+      items['setChecked'].mockRejectedValue(new MutationError('not_found'));
+      family['getOrCreateFamilyId'].mockResolvedValue('fam-propia');
+      lists['findLatestActive'].mockResolvedValue(null);
+
+      await facade.toggleItemCheck('item-1', false);
+      await facade.toggleItemCheck('item-1', false);
+
+      const lost = toast['warning'].mock.calls.filter(([t]) => t.startsWith('Ya no eres parte'));
+      expect(lost).toEqual([['Ya no eres parte de «Los Pérez»', expect.any(String)]]);
+      expect(facade.familyChanged()).toBe(1);
+      expect(facade.error()).toBe('NO_ACTIVE_LIST');
+    });
+
+    it('al refrescar (Realtime) descubre que lo quitaron: avisa y deja de mostrar la lista ajena', async () => {
+      family['getOrCreateFamilyId'].mockResolvedValue('fam-propia');
+      lists['findLatestActive'].mockResolvedValue(null);
+
+      await items['watchList'].mock.calls[0][1]();
+      await vi.waitFor(() => expect(facade.error()).toBe('NO_ACTIVE_LIST'));
+
+      expect(toast['warning']).toHaveBeenCalledWith(
+        'Ya no eres parte de «Los Pérez»',
+        expect.any(String)
+      );
+    });
+
+    it('list_not_active: la compra se cerró; avisa y recarga', async () => {
+      items['changeQuantity'].mockRejectedValue(new MutationError('list_not_active'));
+      lists['findLatestActive'].mockResolvedValue(null);
+
+      await facade.updateItemQuantity('item-1', 1);
+
+      expect(toast['warning']).toHaveBeenCalledWith('Esta compra ya se cerró', expect.any(String));
+      expect(facade.error()).toBe('NO_ACTIVE_LIST');
+    });
+  });
+
+  describe('sin conexión (AC7–AC10)', () => {
+    beforeEach(async () => {
+      lists['findLatestActive'].mockResolvedValue(
+        list([
+          { id: 'item-1', is_checked: false, quantity: 1, product: { id: 'p1' } },
+          { id: 'item-2', is_checked: false, quantity: 2, product: { id: 'p2' } },
+        ])
+      );
+      await facade.initialize();
+      online.set(false);
+      TestBed.tick();
+    });
+
+    it('marcar y cambiar cantidad se ven al instante y quedan en la cola persistida', async () => {
+      await facade.toggleItemCheck('item-1', false);
+      await facade.updateItemQuantity('item-2', 1);
+
+      expect(facade.data()?.list_items[0].is_checked).toBe(true);
+      expect(facade.data()?.list_items[1].quantity).toBe(3);
+      expect(items['setChecked']).not.toHaveBeenCalled();
+      expect(items['changeQuantity']).not.toHaveBeenCalled();
+      expect(stored.queue).toEqual([
+        { kind: 'check', itemId: 'item-1', checked: true },
+        { kind: 'quantity', itemId: 'item-2', delta: 1 },
+      ]);
+      expect(facade.pendingChanges()).toBe(2);
+    });
+
+    it('un fallo de red a mitad de camino también encola y marca sin conexión', async () => {
+      online.set(true);
+      items['setChecked'].mockRejectedValue(offlineError);
+
+      await facade.toggleItemCheck('item-1', false);
+
+      expect(facade.data()?.list_items[0].is_checked).toBe(true);
+      expect(stored.queue).toEqual([{ kind: 'check', itemId: 'item-1', checked: true }]);
+      expect(facade.isOnline()).toBe(false);
+    });
+
+    it('al volver la red envía la cola en orden y refresca', async () => {
+      await facade.toggleItemCheck('item-1', false);
+      await facade.updateItemQuantity('item-2', 1);
+
+      online.set(true);
+      TestBed.tick();
+      await vi.waitFor(() => expect(stored.queue).toEqual([]));
+
+      expect(items['setChecked']).toHaveBeenCalledWith('item-1', true);
+      expect(items['changeQuantity']).toHaveBeenCalledWith('item-2', 1);
+      expect(items['setChecked'].mock.invocationCallOrder[0]).toBeLessThan(
+        items['changeQuantity'].mock.invocationCallOrder[0]
+      );
+      expect(facade.pendingChanges()).toBe(0);
+    });
+
+    it('un cambio rechazado al sincronizar se descarta y se avisa una vez; los demás se aplican (AC9)', async () => {
+      await facade.toggleItemCheck('item-1', false);
+      await facade.updateItemQuantity('item-2', 1);
+      items['setChecked'].mockRejectedValue(new MutationError('not_found'));
+
+      await (online.set(true), facade.flushQueue());
+
+      expect(items['changeQuantity']).toHaveBeenCalledWith('item-2', 1);
+      expect(stored.queue).toEqual([]);
+      expect(toast['warning']).toHaveBeenCalledTimes(1);
+      expect(toast['warning']).toHaveBeenCalledWith(
+        '1 cambio no se pudo guardar',
+        expect.any(String)
+      );
+    });
+
+    it('si se corta la red mientras envía, deja el resto en la cola', async () => {
+      await facade.toggleItemCheck('item-1', false);
+      await facade.updateItemQuantity('item-2', 1);
+      items['changeQuantity'].mockRejectedValue(offlineError);
+
+      await (online.set(true), facade.flushQueue());
+
+      expect(stored.queue).toEqual([{ kind: 'quantity', itemId: 'item-2', delta: 1 }]);
+      expect(toast['warning']).not.toHaveBeenCalled();
+    });
+
+    it('al reabrir la app sin red muestra la última lista con la cola aplicada (AC8)', async () => {
+      stored.queue = [{ kind: 'check', itemId: 'item-2', checked: true }];
+      stored.snapshot = list([{ id: 'item-2', is_checked: false, quantity: 2 }]);
+      lists['findLatestActive'].mockRejectedValue(offlineError);
+      TestBed.resetTestingModule();
+
+      const reopened = create();
+      await reopened.initialize();
+
+      expect(reopened.error()).toBeNull();
+      expect(reopened.data()?.list_items[0].is_checked).toBe(true);
+      expect(reopened.pendingChanges()).toBe(1);
+    });
+
+    it.each([
+      ['addItem', (f: ShoppingListFacade) => f.addItem('list-1', 'p3'), 'add'],
+      ['deleteItem', (f: ShoppingListFacade) => f.deleteItem('item-1'), 'remove'],
+      ['completeList', (f: ShoppingListFacade) => f.completeList('list-1', true), 'complete'],
+      ['createList', (f: ShoppingListFacade) => f.createList('x'), 'startActive'],
+      ['startListFrom', (f: ShoppingListFacade) => f.startListFrom('src'), 'startActive'],
+    ])('%s no se hace sin red y avisa (AC10)', async (_, act, repoMethod) => {
+      await act(facade);
+
+      expect({ ...items, ...lists }[repoMethod]).not.toHaveBeenCalled();
+      expect(toast['info']).toHaveBeenCalledWith('Sin conexión', expect.any(String));
+      expect(facade.data()?.list_items).toHaveLength(2);
+    });
+  });
+
   describe('listas y plantillas', () => {
-    it('createList crea una lista activa en la familia del usuario', async () => {
+    it('createList crea (o reutiliza) la lista activa con start_active_list', async () => {
       await facade.createList('Compra de la Semana');
 
-      expect(lists['create']).toHaveBeenCalledWith({
-        name: 'Compra de la Semana',
-        familyId: 'fam-1',
-        status: 'active',
-      });
+      expect(lists['startActive']).toHaveBeenCalledWith('Compra de la Semana');
+      expect(lists['create']).not.toHaveBeenCalled();
     });
 
     it('createList desde "sin lista activa" muestra la lista nueva sin recargar', async () => {
@@ -185,11 +414,11 @@ describe('ShoppingListFacade', () => {
     });
 
     it('createList: si falla, avisa con toast', async () => {
-      lists['create'].mockRejectedValue(new Error('rls'));
+      lists['startActive'].mockRejectedValue(new Error('rls'));
 
       await facade.createList('Compra de la Semana');
 
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast['error']).toHaveBeenCalled();
     });
 
     it('completeList descartando pendientes: finaliza, avisa y queda sin lista activa', async () => {
@@ -200,7 +429,7 @@ describe('ShoppingListFacade', () => {
 
       expect(lists['complete']).toHaveBeenCalledWith('list-1', false);
       expect(facade.error()).toBe('NO_ACTIVE_LIST');
-      expect(toast.success).toHaveBeenCalled();
+      expect(toast['success']).toHaveBeenCalled();
     });
 
     it('completeList pasando pendientes: muestra la lista que los recibió', async () => {
@@ -230,11 +459,11 @@ describe('ShoppingListFacade', () => {
 
     it('completeList: si la RPC falla, avisa con toast y la lista sigue visible', async () => {
       facade['_data'].set(list([{ id: 'item-1' }]));
-      lists['complete'].mockRejectedValue(new Error('list_not_active'));
+      lists['complete'].mockRejectedValue(new Error('boom'));
 
       expect(await facade.completeList('list-1', true)).toBe(false);
 
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast['error']).toHaveBeenCalled();
       expect(facade.data()?.id).toBe('list-1');
       expect(facade.error()).toBeNull();
     });
@@ -264,53 +493,53 @@ describe('ShoppingListFacade', () => {
         status: 'template',
       });
       expect(items['findByList']).toHaveBeenCalledWith('list-1');
-      expect(items['addMany']).toHaveBeenCalledWith([
-        { list_id: 'tpl-1', product_id: 'p1', quantity: 2 },
-      ]);
+      expect(items['addMany']).toHaveBeenCalledWith('tpl-1', [{ product_id: 'p1', quantity: 2 }]);
       expect(loadSpy).toHaveBeenCalled();
     });
 
     it('startListFrom: sin lista activa, crea la lista y copia los ítems de la compra elegida (0010)', async () => {
       lists['findLatestActive'].mockResolvedValue(null);
       await facade.initialize();
-      lists['create'].mockResolvedValue({ id: 'nueva' });
       items['findByList'].mockResolvedValue([{ product_id: 'p1', quantity: 2 }]);
       lists['findLatestActive'].mockResolvedValue(list());
 
       expect(await facade.startListFrom('ultima')).toBe(true);
 
-      expect(lists['create']).toHaveBeenCalledWith({
-        name: 'Compra de la Semana',
-        familyId: 'fam-1',
-        status: 'active',
-      });
+      expect(lists['startActive']).toHaveBeenCalledWith('Compra de la Semana');
       expect(items['findByList']).toHaveBeenCalledWith('ultima');
-      expect(items['addMany']).toHaveBeenCalledWith([
-        { list_id: 'nueva', product_id: 'p1', quantity: 2 },
-      ]);
+      expect(items['addMany']).toHaveBeenCalledWith('nueva', [{ product_id: 'p1', quantity: 2 }]);
       expect(facade.error()).toBeNull();
+      expect(facade.data()?.id).toBe('list-1');
+    });
+
+    it('startListFrom: si ya había lista activa (doble toque) no copia otra vez (AC3)', async () => {
+      lists['startActive'].mockResolvedValue({ id: 'list-1', created: false });
+
+      expect(await facade.startListFrom('ultima')).toBe(true);
+
+      expect(items['addMany']).not.toHaveBeenCalled();
       expect(facade.data()?.id).toBe('list-1');
     });
 
     it('startListFrom: si falla copiar, avisa y deja la lista creada (vacía) visible', async () => {
       lists['findLatestActive'].mockResolvedValue(null);
       await facade.initialize();
-      items['findByList'].mockRejectedValue(new Error('red'));
+      items['findByList'].mockRejectedValue(new Error('boom'));
       lists['findLatestActive'].mockResolvedValue(list());
 
       expect(await facade.startListFrom('ultima')).toBe(false);
 
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast['error']).toHaveBeenCalled();
       expect(facade.data()?.id).toBe('list-1');
     });
 
     it('startListFrom: si falla crear la lista, avisa y no intenta copiar', async () => {
-      lists['create'].mockRejectedValue(new Error('rls'));
+      lists['startActive'].mockRejectedValue(new Error('rls'));
 
       expect(await facade.startListFrom('ultima')).toBe(false);
 
       expect(items['findByList']).not.toHaveBeenCalled();
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast['error']).toHaveBeenCalled();
     });
 
     it('cloneListItems no inserta si la lista origen está vacía', async () => {
@@ -320,17 +549,21 @@ describe('ShoppingListFacade', () => {
   });
 
   describe('cierre de sesión', () => {
-    it('vacía lista, plantillas y última compra, y deja de observar Realtime', async () => {
+    it('vacía lista, plantillas, última compra y cola, y deja de observar Realtime', async () => {
       await facade.initialize();
       lists['findLastCompleted'].mockResolvedValue(list());
       lists['findTemplates'].mockResolvedValue([list()]);
       await facade.loadTemplates();
+      online.set(false);
+      facade['_data'].set(list([{ id: 'item-1', is_checked: false, quantity: 1 }]));
+      await facade.toggleItemCheck('item-1', false);
 
       TestBed.inject(SessionScopeService).clear();
 
       expect(facade.data()).toBeNull();
       expect(facade.templates()).toEqual([]);
       expect(facade.lastCompletedList()).toBeNull();
+      expect(facade.pendingChanges()).toBe(0);
       expect(stopWatching).toHaveBeenCalled();
     });
   });
