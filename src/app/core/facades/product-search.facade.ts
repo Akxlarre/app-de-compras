@@ -14,6 +14,9 @@ export class ProductSearchFacade {
   readonly error = signal<string | null>(null);
 
   readonly essentials = signal<Product[]>([]);
+  /** Primera carga de los esenciales: la UI muestra un skeleton, no "Aún no tienes productos". */
+  readonly essentialsLoading = signal(false);
+  private essentialsLoaded = false;
 
   constructor() {
     inject(SessionScopeService).register(() => this.reset());
@@ -22,17 +25,26 @@ export class ProductSearchFacade {
   /** Cierre de sesión: los esenciales son del catálogo de la familia anterior. */
   reset(): void {
     this.essentials.set([]);
+    this.essentialsLoaded = false;
+    this.essentialsLoading.set(false);
     this.isSearching.set(false);
     this.clear();
   }
 
+  /**
+   * SWR: la primera vez con estado de carga; al reabrir se ve lo guardado y se refresca por
+   * detrás (así aparece lo que creó otro miembro) (spec 0013, Q17/Q39).
+   */
   async loadEssentials(familyId: string): Promise<void> {
-    if (this.essentials().length > 0) return; // Caché por sesión (se limpia en reset())
+    if (!this.essentialsLoaded) this.essentialsLoading.set(true);
     try {
       // MVP: los primeros 8 en orden alfabético. Idealmente, por frecuencia de compra.
       this.essentials.set(await this.catalog.findByFamily(familyId, 8));
+      this.essentialsLoaded = true;
     } catch (e) {
       console.error('Error cargando esenciales', e);
+    } finally {
+      this.essentialsLoading.set(false);
     }
   }
 
@@ -58,7 +70,10 @@ export class ProductSearchFacade {
   async createProduct(name: string, familyId: string): Promise<Product | null> {
     this.isSearching.set(true);
     try {
-      return await this.catalog.create({ name: name.trim(), familyId });
+      const product = await this.catalog.create({ name: name.trim(), familyId });
+      // Recién creado: primero en "Tus esenciales" sin esperar a la próxima apertura (Q17).
+      this.essentials.update((list) => [product, ...list.filter((p) => p.id !== product.id)]);
+      return product;
     } catch (e) {
       this.error.set('Error al crear producto');
       console.error('Create product error', e);

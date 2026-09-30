@@ -47,15 +47,47 @@ describe('ProductSearchFacade', () => {
     });
   });
 
-  it('loadEssentials carga hasta 8 productos y cachea en la sesión', async () => {
-    catalog.findByFamily.mockResolvedValue([{ id: '1', name: 'Arroz' }]);
+  describe('loadEssentials (spec 0013, Q17/Q39)', () => {
+    it('la primera carga muestra estado de carga y trae hasta 8 productos', async () => {
+      let resolve!: (v: unknown) => void;
+      catalog.findByFamily.mockReturnValue(new Promise((r) => (resolve = r)));
 
-    await facade.loadEssentials('fam-1');
-    await facade.loadEssentials('fam-1');
+      const done = facade.loadEssentials('fam-1');
+      expect(facade.essentialsLoading()).toBe(true);
+      resolve([{ id: '1', name: 'Arroz' }]);
+      await done;
 
-    expect(catalog.findByFamily).toHaveBeenCalledTimes(1);
-    expect(catalog.findByFamily).toHaveBeenCalledWith('fam-1', 8);
-    expect(facade.essentials()).toHaveLength(1);
+      expect(facade.essentialsLoading()).toBe(false);
+      expect(catalog.findByFamily).toHaveBeenCalledWith('fam-1', 8);
+      expect(facade.essentials()).toHaveLength(1);
+    });
+
+    it('al reabrir muestra lo guardado y refresca sin estado de carga (otro miembro creó productos)', async () => {
+      catalog.findByFamily.mockResolvedValueOnce([{ id: '1', name: 'Arroz' }]);
+      await facade.loadEssentials('fam-1');
+
+      catalog.findByFamily.mockResolvedValueOnce([
+        { id: '1', name: 'Arroz' },
+        { id: '2', name: 'Pan' },
+      ]);
+      const again = facade.loadEssentials('fam-1');
+      expect(facade.essentialsLoading()).toBe(false);
+      expect(facade.essentials()).toHaveLength(1);
+      await again;
+
+      expect(facade.essentials()).toHaveLength(2);
+    });
+
+    it('si falla, deja de cargar y conserva lo que había', async () => {
+      catalog.findByFamily.mockResolvedValueOnce([{ id: '1', name: 'Arroz' }]);
+      await facade.loadEssentials('fam-1');
+      catalog.findByFamily.mockRejectedValueOnce(new Error('red'));
+
+      await facade.loadEssentials('fam-1');
+
+      expect(facade.essentialsLoading()).toBe(false);
+      expect(facade.essentials()).toEqual([{ id: '1', name: 'Arroz' }]);
+    });
   });
 
   describe('createProduct', () => {
@@ -65,6 +97,16 @@ describe('ProductSearchFacade', () => {
 
       expect(await facade.createProduct('  Huevos ', 'fam-1')).toEqual(created);
       expect(catalog.create).toHaveBeenCalledWith({ name: 'Huevos', familyId: 'fam-1' });
+    });
+
+    it('el producto nuevo aparece primero en "Tus esenciales" (Q17)', async () => {
+      catalog.findByFamily.mockResolvedValue([{ id: '1', name: 'Arroz' }]);
+      await facade.loadEssentials('fam-1');
+      catalog.create.mockResolvedValue({ id: 'p1', name: 'Huevos' });
+
+      await facade.createProduct('Huevos', 'fam-1');
+
+      expect(facade.essentials().map((p) => p.id)).toEqual(['p1', '1']);
     });
 
     it('devuelve null y setea error si falla', async () => {
@@ -85,7 +127,9 @@ describe('ProductSearchFacade', () => {
 
     expect(facade.essentials()).toEqual([]);
     expect(facade.searchResults()).toEqual([]);
-    await facade.loadEssentials('fam-C');
+    const next = facade.loadEssentials('fam-C');
+    expect(facade.essentialsLoading()).toBe(true); // otra sesión: vuelve a mostrar carga
+    await next;
     expect(catalog.findByFamily).toHaveBeenLastCalledWith('fam-C', 8);
   });
 });
