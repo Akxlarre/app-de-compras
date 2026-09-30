@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import type { User } from '@core/models/user.model';
-import { getInitialsFromDisplayName } from '@core/models/user.model';
+import { initialsOf } from '@core/utils/avatar.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ProfilesRepository, type ProfileRow } from '@core/repositories/profiles.repository';
 import { mapAuthError } from '@core/utils/auth-errors.utils';
@@ -103,7 +103,7 @@ export class AuthFacade {
       name,
       email: authUser.email ?? '',
       role: 'unknown' as any,
-      initials: getInitialsFromDisplayName(name),
+      initials: initialsOf(name),
       firstLogin: false,
       branchId: undefined,
       isActive: true,

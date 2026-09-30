@@ -9,6 +9,7 @@ import {
 import { AlertController } from '@ionic/angular';
 import { FamilyFacade, type FamilyMemberView } from '@core/facades/family.facade';
 import { formatInviteCode, normalizeInviteCode } from '@core/utils/family.utils';
+import { avatarTone, initialsOf } from '@core/utils/avatar.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 /**
@@ -20,6 +21,14 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   standalone: true,
   imports: [IconComponent],
   templateUrl: './family-section.component.html',
+  styles: [
+    `
+      /* Fondo del avatar: el tono de la persona (currentColor) diluido. */
+      .member-avatar {
+        background: color-mix(in srgb, currentColor 15%, transparent);
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FamilySectionComponent implements OnInit {
@@ -30,6 +39,9 @@ export class FamilySectionComponent implements OnInit {
   readonly joinError = signal<string | null>(null);
   /** El botón de copiar muestra un check un momento. */
   readonly copied = signal(false);
+
+  readonly initials = initialsOf;
+  readonly tone = avatarTone;
 
   readonly displayCode = computed(() => {
     const code = this.facade.currentFamily()?.inviteCode;
