@@ -16,6 +16,12 @@ export type { ActiveShoppingList, PopulatedListItem } from '../models/shopping-l
 
 const OFFLINE_DETAIL = 'Sin conexión: esto se puede hacer cuando vuelva la señal.';
 
+const NOTHING_CHECKED_DETAIL =
+  'Sin nada marcado no es una compra. Para tirar la lista, usa "Vaciar lista".';
+
+/** Nombre de la lista activa; cerrada se muestra con la fecha (spec 0012). */
+export const DEFAULT_LIST_NAME = 'Lista de compras';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -49,6 +55,8 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   /** Sube cuando el usuario pasó a otra familia (lo quitaron): la página recarga la familia. */
   readonly familyChanged = this._familyChanged.asReadonly();
   readonly hasPendingChanges = computed(() => this._pendingChanges() > 0);
+  /** Sin nada marcado no es una compra: Finalizar se deshabilita (spec 0012). */
+  readonly hasChecked = computed(() => !!this._data()?.list_items.some((i) => i.is_checked));
 
   constructor() {
     super();
@@ -135,7 +143,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     if (!this.requireOnline()) return false;
     let started: { id: string; created: boolean };
     try {
-      started = await this.lists.startActive('Compra de la Semana');
+      started = await this.lists.startActive(DEFAULT_LIST_NAME);
     } catch (e) {
       await this.handleMutationError(e);
       return false;
@@ -272,6 +280,25 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   /**
    * Elimina un ítem de la lista (swipe-to-delete).
    */
+  /**
+   * "Vaciar lista" (spec 0012): borra todos los ítems de la lista activa sin crear una compra.
+   * @returns false si no se pudo (sin red o error; la lista vuelve a como estaba).
+   */
+  async clearList(): Promise<boolean> {
+    const list = this._data();
+    if (!list || !this.requireOnline()) return false;
+
+    this._data.set({ ...list, list_items: [] }); // optimistic
+    try {
+      await this.items.clearList(list.id);
+      return true;
+    } catch (e) {
+      this._data.set(list); // rollback
+      await this.handleMutationError(e);
+      return false;
+    }
+  }
+
   async deleteItem(itemId: string): Promise<void> {
     if (!this.requireOnline()) return;
     this._data.update((list) =>
@@ -389,6 +416,11 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
         return;
       }
       this.toast.warning('Ese producto ya no está en la lista', 'Otro miembro lo cambió.');
+      await this.refreshSilently();
+      return;
+    }
+    if (error instanceof MutationError && error.code === 'nothing_checked') {
+      this.toast.warning('Marca lo que compraste para finalizar', NOTHING_CHECKED_DETAIL);
       await this.refreshSilently();
       return;
     }

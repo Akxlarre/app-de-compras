@@ -14,6 +14,7 @@ import type {
   ReceiptValidation,
 } from '@core/models/receipt.model';
 import { validateReceipt } from '@core/utils/receipt.utils';
+import { MutationError, toMutationError } from '@core/utils/mutation-error.utils';
 import { reconcileReceipt } from '@core/utils/reconcile.utils';
 import {
   buildApplyReceipt,
@@ -69,7 +70,9 @@ export class PurchaseCloseFacade {
   readonly manualTotal = signal<number | null>(null);
   readonly manualPrices = signal<Record<string, number | null>>({});
   /** Una compra ya cerrada pide el total (es el motivo de ingresarlo); al finalizar es opcional. */
-  readonly canConfirmManual = computed(() => this.kind() !== 'completed' || this.manualTotal() != null);
+  readonly canConfirmManual = computed(
+    () => this.kind() !== 'completed' || this.manualTotal() != null
+  );
   readonly manualSum = computed(() =>
     this.checkedItems().reduce(
       (s, i) => s + (this.manualPrices()[i.id] ?? 0) * (i.quantity || 1),
@@ -273,6 +276,15 @@ export class PurchaseCloseFacade {
       }
       return true;
     } catch (e) {
+      const error = toMutationError(e);
+      if (error instanceof MutationError && error.code === 'nothing_checked') {
+        // Todo quedó como "no lo compraste" y la boleta no trae extras (spec 0012).
+        this.toast.warning(
+          'Marca lo que compraste para finalizar',
+          'Sin nada marcado no es una compra.'
+        );
+        return false;
+      }
       console.error(e);
       this.toast.error('No se pudo cerrar la compra', 'Revisa tu conexión e inténtalo de nuevo.');
       return false;

@@ -59,7 +59,7 @@
             (click)="toggle(purchase.id)"
           >
             <div class="flex-1 min-w-0">
-              <p class="font-semibold text-text-primary truncate">{{ purchase.name }}</p>
+              <p class="font-semibold text-text-primary truncate">{{ purchase.title }}</p>
               <p class="text-xs text-text-muted mt-0.5">
                 {{ purchase.dateLabel }} · {{ purchase.itemCount }}
                 {{ purchase.itemCount === 1 ? 'producto' : 'productos' }}
@@ -130,6 +130,21 @@
               {{ receiptPhoto()?.id === purchase.id ? 'Ocultar boleta' : 'Ver boleta' }}
             </button>
             }
+            <button
+              class="px-3 py-1.5 rounded-full text-sm font-semibold border border-border-default text-text-primary active:scale-95 transition-transform"
+              data-llm-action="renombrar-compra"
+              (click)="renamePurchase(purchase)"
+            >
+              Renombrar
+            </button>
+            <button
+              class="px-3 py-1.5 rounded-full text-sm font-semibold border border-border-default text-error active:scale-95 transition-transform"
+              aria-label="Borrar compra"
+              data-llm-action="delete-compra"
+              (click)="deletePurchase(purchase)"
+            >
+              Borrar compra
+            </button>
           </div>
 
           @if (receiptPhoto()?.id === purchase.id) {

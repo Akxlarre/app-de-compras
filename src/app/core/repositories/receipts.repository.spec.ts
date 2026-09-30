@@ -175,17 +175,33 @@ describe('ReceiptsRepository', () => {
     });
 
     it('getSignedUrl da una URL firmada de 1 hora para la foto privada', async () => {
-      const createSignedUrl = vi
-        .fn()
-        .mockResolvedValue({
-          data: { signedUrl: 'https://x/receipts/fam/b.jpg?token=t' },
-          error: null,
-        });
+      const createSignedUrl = vi.fn().mockResolvedValue({
+        data: { signedUrl: 'https://x/receipts/fam/b.jpg?token=t' },
+        error: null,
+      });
       mock.client.storage.from.mockReturnValue({ createSignedUrl });
 
       expect(await repo.getSignedUrl('fam/b.jpg')).toBe('https://x/receipts/fam/b.jpg?token=t');
       expect(mock.client.storage.from).toHaveBeenCalledWith('receipts');
       expect(createSignedUrl).toHaveBeenCalledWith('fam/b.jpg', 3600);
+    });
+
+    it('removeImage borra la foto del bucket (spec 0012)', async () => {
+      const remove = vi.fn().mockResolvedValue({ data: [{}], error: null });
+      mock.client.storage.from.mockReturnValue({ remove });
+
+      await repo.removeImage('fam/b.jpg');
+
+      expect(mock.client.storage.from).toHaveBeenCalledWith('receipts');
+      expect(remove).toHaveBeenCalledWith(['fam/b.jpg']);
+    });
+
+    it('removeImage lanza el error de Storage', async () => {
+      const error = new Error('denied');
+      mock.client.storage.from.mockReturnValue({
+        remove: vi.fn().mockResolvedValue({ data: null, error }),
+      });
+      await expect(repo.removeImage('fam/b.jpg')).rejects.toBe(error);
     });
 
     it('getSignedUrl lanza si no hay acceso a la foto', async () => {

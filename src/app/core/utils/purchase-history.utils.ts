@@ -4,6 +4,7 @@ import type {
   PurchaseSummary,
   PurchasedItem,
 } from '@core/models/purchase-history.model';
+import { disambiguateTitles, purchaseTitle } from './purchase-name.utils';
 
 /** La boleta de la compra (PostgREST la devuelve como objeto o como arreglo de uno). */
 function receiptOf(list: ActiveShoppingList): ListReceipt | null {
@@ -37,6 +38,7 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
   return {
     id: list.id,
     name: list.name,
+    title: purchaseTitle(list.name, list.completed_at ?? list.created_at),
     completedAt: list.completed_at ?? list.created_at,
     itemCount: items.length,
     total: paid ?? estimatedTotal,
@@ -48,6 +50,13 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
     items,
     source: list,
   };
+}
+
+/** Resume las compras del Historial; las automáticas del mismo día llevan la hora en el título. */
+export function summarizePurchases(lists: ActiveShoppingList[]): PurchaseSummary[] {
+  const summaries = lists.map(summarizePurchase);
+  const titles = disambiguateTitles(summaries);
+  return summaries.map((s, i) => ({ ...s, title: titles[i] }));
 }
 
 /**

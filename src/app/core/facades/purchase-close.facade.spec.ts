@@ -62,7 +62,7 @@ describe('PurchaseCloseFacade', () => {
   let lists: Record<string, ReturnType<typeof vi.fn>>;
   let receipts: Record<string, ReturnType<typeof vi.fn>>;
   let products: { findByFamily: ReturnType<typeof vi.fn> };
-  let toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+  let toast: Record<string, ReturnType<typeof vi.fn>>;
   const file = new File(['foto'], 'boleta.jpg', { type: 'image/jpeg' });
 
   beforeEach(() => {
@@ -85,7 +85,7 @@ describe('PurchaseCloseFacade', () => {
         { id: 'p-cafe', name: 'Café molido' },
       ]),
     };
-    toast = { success: vi.fn(), error: vi.fn() };
+    toast = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -145,6 +145,16 @@ describe('PurchaseCloseFacade', () => {
       expect(await facade.confirmManual()).toBe(false);
       expect(facade.isSaving()).toBe(false);
       expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('sin nada marcado (spec 0012) avisa que hay que marcar lo comprado', async () => {
+      lists.closeManual.mockRejectedValue({ code: 'P0001', message: 'nothing_checked' });
+      expect(await facade.confirmManual()).toBe(false);
+      expect(toast.warning).toHaveBeenCalledWith(
+        'Marca lo que compraste para finalizar',
+        expect.any(String)
+      );
+      expect(toast.error).not.toHaveBeenCalled();
     });
   });
 
@@ -341,8 +351,20 @@ describe('PurchaseCloseFacade', () => {
       const input = receipts['createReceiptPurchase'].mock.calls[0][0];
       expect(input.extras).toEqual([
         { productId: 'p-leche', rawText: 'LECHE', name: 'Leche', unitPrice: 1000, quantity: 1 },
-        { productId: 'p-cafe', rawText: 'CAFE JV', name: 'Café molido', unitPrice: 3990, quantity: 1 },
-        { productId: null, rawText: 'BOLSA BASURA', name: 'Bolsa basura', unitPrice: 200, quantity: 1 },
+        {
+          productId: 'p-cafe',
+          rawText: 'CAFE JV',
+          name: 'Café molido',
+          unitPrice: 3990,
+          quantity: 1,
+        },
+        {
+          productId: null,
+          rawText: 'BOLSA BASURA',
+          name: 'Bolsa basura',
+          unitPrice: 200,
+          quantity: 1,
+        },
       ]);
       expect(input.total).toBe(5190);
       expect(receipts['applyReceipt']).not.toHaveBeenCalled();

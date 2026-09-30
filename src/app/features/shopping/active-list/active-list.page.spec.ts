@@ -43,6 +43,9 @@ describe('ActiveListPage', () => {
       isOnline: signal(true),
       pendingChanges: signal(0),
       familyChanged: signal(0),
+      hasChecked: signal(false),
+      clearList: vi.fn().mockResolvedValue(true),
+      createList: vi.fn(),
     };
     familyFacade = {
       currentFamily: signal(null),
@@ -213,6 +216,33 @@ describe('ActiveListPage', () => {
     it('no baja de 1', () => {
       component.updateQuantity('i1', 1, -1, click);
       expect(mockFacade.updateItemQuantity).not.toHaveBeenCalled();
+    });
+
+    it('"Vaciar lista" pide confirmación y vacía (spec 0012)', async () => {
+      const done = component.clearList();
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalled());
+      const opts = alertController.create.mock.calls[0][0];
+      expect(opts.header).toBe('¿Vaciar la lista?');
+      (opts.buttons as any[]).find((b) => b.text === 'Vaciar').handler();
+      await done;
+
+      expect(mockFacade.clearList).toHaveBeenCalled();
+    });
+
+    it('"Vaciar lista" cancelado no vacía', async () => {
+      const done = component.clearList();
+      await vi.waitFor(() => expect(alertController.create).toHaveBeenCalled());
+      (alertController.create.mock.calls[0][0].buttons as any[])
+        .find((b) => b.text === 'Cancelar')
+        .handler();
+      await done;
+
+      expect(mockFacade.clearList).not.toHaveBeenCalled();
+    });
+
+    it('una lista nueva se llama "Lista de compras"', async () => {
+      await component.createNewList();
+      expect(mockFacade.createList).toHaveBeenCalledWith('Lista de compras');
     });
 
     it('si me pasan a otra familia, recarga los datos de la familia', () => {

@@ -145,6 +145,41 @@ describe('ShoppingListsRepository', () => {
     expect(q.single).toHaveBeenCalled();
   });
 
+  it('deletePurchase usa delete_purchase y devuelve la ruta de la foto (spec 0012)', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: 'fam/b.jpg', error: null });
+
+    expect(await repo.deletePurchase('l1')).toBe('fam/b.jpg');
+    expect(mock.shop.rpc).toHaveBeenCalledWith('delete_purchase', { p_list_id: 'l1' });
+  });
+
+  it('deletePurchase sin boleta devuelve null', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: null, error: null });
+    expect(await repo.deletePurchase('l1')).toBeNull();
+  });
+
+  it('renamePurchase usa rename_purchase y traduce invalid_name', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: null, error: null });
+    await repo.renamePurchase('l1', 'Asado');
+    expect(mock.shop.rpc).toHaveBeenCalledWith('rename_purchase', {
+      p_list_id: 'l1',
+      p_name: 'Asado',
+    });
+
+    mock.shop.rpc.mockResolvedValue({
+      data: null,
+      error: { code: '22023', message: 'invalid_name' },
+    });
+    await expect(repo.renamePurchase('l1', '')).rejects.toEqual(new MutationError('invalid_name'));
+  });
+
+  it('complete traduce nothing_checked', async () => {
+    mock.shop.rpc.mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'nothing_checked' },
+    });
+    await expect(repo.complete('l1', true)).rejects.toEqual(new MutationError('nothing_checked'));
+  });
+
   it('startActive sin red lanza offline', async () => {
     mock.shop.rpc.mockReturnValue(
       queryMock({ error: { code: '', message: 'TypeError: Failed to fetch' } })

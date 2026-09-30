@@ -75,6 +75,12 @@ export class ListItemsRepository {
     this.assertAffected(data, error);
   }
 
+  /** "Vaciar lista" (spec 0012): borra todos los ítems; si ya estaba vacía, no es error. */
+  async clearList(listId: string): Promise<void> {
+    const { error } = await this.db.from('list_items').delete().eq('list_id', listId);
+    if (error) throw toMutationError(error);
+  }
+
   /**
    * Avisa cuando cualquier miembro de la familia cambia un ítem de la lista.
    * @returns función que cancela la suscripción.
