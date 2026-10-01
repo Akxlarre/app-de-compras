@@ -55,7 +55,7 @@ falla o confunde, qué falta y qué daría un plus. Prioridad: **P1** = afecta e
 | X4 | **Agregar por voz o pegando un texto** ("leche, pan, 2 kg de papas") que se convierte en ítems. |
 | X5 | **Aviso a la familia** cuando alguien empieza o termina de comprar ("Ana está en el súper"). |
 
-### Mi recomendación para la próxima spec de Mi Lista
+### Mi recomendación para la próxima spec de Mi Lista (aprobada por el dueño, 2026-10-01)
 1. L1 (bug, rápido), L2 + L9 (compactar encabezado y filas), L3, L4.
 2. F1 + F2 (detalle del ítem con nota) — es lo que más valor agrega al uso compartido.
 3. Después F3/F4/F5 juntos ("lista para el súper": unidades, pasillos, precio al marcar).
