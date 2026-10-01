@@ -174,3 +174,87 @@ Probado con `test3` (15 productos, algunos comprados con la boleta de la secció
 2. En la misma spec o la siguiente: **H2 + K2 + K4** (buscar, crear, encabezado compacto) y **H3**
    (juntar duplicados), que se vuelve necesario en cuanto se usan boletas.
 3. Después **H4/H5** junto con F4 de Mi Lista (categorías y pasillos), y **Z1** cuando exista G5.
+
+---
+
+## 4. Historial (2026-10-01)
+
+Se abre desde el ícono arriba a la derecha de Mi Lista. Probado con `test3` (10 compras, una con
+boleta) y `test5` (ninguna).
+
+### Qué hay hoy
+- "Gastado en <mes>" con cantidad de compras y aviso de cuántas son estimadas.
+- "Registrar una compra sin lista" (boleta).
+- Compras de más nueva a más antigua: nombre, fecha, N productos, total y su origen (Boleta /
+  Total ingresado / Estimado). Al abrir: productos con cantidad × precio, tienda, "Agregar boleta",
+  "Ingresar total", "Ver boleta", "Renombrar" y "Borrar compra".
+- Estado vacío con explicación.
+
+### Qué falla o confunde
+| # | Prio | Hallazgo | Detalle |
+|---|---|---|---|
+| R1 | P1 | **Está escondido** | Solo se llega por un ícono sin texto en Mi Lista; la barra marca "Mi Lista". Es donde están las boletas (G1) y el gasto, lo que más valor tiene después de la lista. |
+| R2 | P2 | **Solo se ve el gasto del mes actual** | test3 tiene 7 compras de septiembre y no hay forma de ver cuánto gastó en septiembre; tampoco hay separadores por mes en la lista. |
+| R3 | P2 | **"$0 Estimado"** | Compras sin precios muestran $0 (igual que L4): parece que no costaron nada. Mejor "Sin precios · Ingresar total". |
+| R4 | P2 | **Título y fecha repiten lo mismo** | "Compra del jue 1 oct" / "01-10-2026". La tienda ("Líder") aporta más y queda escondida dentro del detalle. |
+| R5 | P3 | **Acciones apiladas en pastillas** | Hasta 5 botones por compra; "Borrar compra" en rojo junto a "Renombrar". Un menú ⋯ con Renombrar/Borrar deja visibles solo las acciones útiles (boleta / total). |
+| R6 | P3 | **Estado vacío sin acción** | test5 no ve "Registrar una compra sin lista" (solo aparece con compras): quien tiene una boleta de hoy no sabe cómo empezar. |
+
+### Qué falta (funcionalidad)
+| # | Prio | Falta | Por qué |
+|---|---|---|---|
+| R7 | P2 | **Meses anteriores** (selector o lista por mes con su total) y comparación con el mes anterior. | Responder "¿cuánto gastamos al mes?" es la razón para registrar. |
+| R8 | P2 | **"Agregar estos productos a la lista"** desde cualquier compra pasada (hoy solo "Repetir última compra"). | Reusar la compra de hace dos semanas sin guardar plantilla. |
+| R9 | P3 | **Quién compró** (quién cerró la compra / quién marcó). | En familia: saber quién fue. |
+| R10 | P3 | **Buscar** en el historial ("¿cuándo compramos pilas?"). | Con meses de historia. |
+
+### Ideas que darían un plus
+| # | Idea |
+|---|---|
+| W1 | **Gráfico de gasto por mes** (últimos 6 meses) y gasto promedio por compra. |
+| W2 | **Productos que más pesan** en el gasto del mes. |
+| W3 | **Resumen mensual** a la familia ("En septiembre gastaron $X, 8% menos que agosto"). |
+
+---
+
+## 5. Perfil (2026-10-01)
+
+Probado con `test3` (dueño de "Casa QA" con test4) y `test5` (solo).
+
+### Qué hay hoy
+- Avatar con iniciales, nombre y correo.
+- Familia: nombre editable, código para invitar (copiar / compartir), miembros con avatar y rol,
+  quitar miembro (dueño), unirse a otra familia por código con confirmación.
+- "Buscar Actualizaciones" (en la web responde "Estás al día").
+- Cerrar sesión. Recuperar contraseña existe desde el login (correo).
+
+### Qué falla o confunde
+| # | Prio | Hallazgo | Detalle |
+|---|---|---|---|
+| P1 | P2 | **No se puede cambiar el propio nombre** | El nombre se ve en "marcado por", en los avatares y en "Familia de <nombre>". Quien se registró sin nombre queda como la parte del correo ("test3"). |
+| P2 | P3 | **El encabezado ocupa media pantalla** | Avatar de 88 px + nombre grande: la familia empieza en y≈350. |
+| P3 | P3 | **"Unirme" siempre visible** | Es una acción rara (una vez) y ocupa espacio en cada visita; mejor "¿Te invitaron a otra familia?" plegado. |
+| P4 | P3 | **"Buscar Actualizaciones" sin versión** | No dice qué versión tienes; en la web no aplica. |
+
+### Qué falta (funcionalidad)
+| # | Prio | Falta | Por qué |
+|---|---|---|---|
+| P5 | P1 | **Borrar mi cuenta** desde la app. | Google Play lo exige a las apps que permiten crear cuenta; sin esto la publicación puede ser rechazada. |
+| P6 | P2 | **Cambiar contraseña** estando dentro (hoy solo "¿Olvidaste tu contraseña?" por correo). | Básico de cuenta. |
+| P7 | P2 | **Invitar con un enlace** (WhatsApp con link que abre la app y propone unirse), además del código. | Escribir un código de 8 caracteres es el paso donde se pierde gente. |
+| P8 | P3 | **Salir de la familia** explícito y **pasar el rol de dueño**. | Hoy solo se sale uniéndose a otra; si el dueño se va, nadie puede quitar miembros. |
+| P9 | P3 | **Preferencias**: supermercado habitual, aviso de "Te puede faltar", moneda/formato. | Base para notificaciones y modo supermercado. |
+
+---
+
+## Resumen y orden propuesto (todas las pestañas)
+
+| Orden | Qué | Incluye | Por qué primero |
+|---|---|---|---|
+| 1 | **Hotfix** | B1 (cerrar compra tapado por la barra), L1 (buscador borra lo escrito) | Rompen flujos diarios y son chicos. |
+| 2 | **Spec: cierre con boleta confiable** | B2–B6, G2 | Hoy la boleta deja datos equivocados (pendientes que se compraron, líneas perdidas, fecha). Todo lo que viene después (gasto, precios, sugerencias) se apoya en esos datos. |
+| 3 | **Spec: pestaña Compras** | La pestaña "Boletas" pasa a ser **Compras**: historial con boletas (G1 + R1), meses (R2/R7), "Escanear boleta" arriba, galería/PDF (G3), editar tienda y fecha (G4), R3–R6, R8 | Junta en un lugar visible lo que hoy está repartido entre Boletas (sin archivo) y un Historial escondido. |
+| 4 | **Spec: Mi Lista** (ya aprobada) | L2–L9, F1 + F2 | Uso diario en el súper. |
+| 5 | **Spec: ficha de producto** | H1, K1–K7, H2, H3 | Corregir y entender lo comprado; necesaria cuando hay boletas. |
+| 6 | **Spec: cuenta** | P5 (borrar cuenta, antes de publicar en Play), P1, P6, P7 | Requisito de tienda + invitar más fácil. |
+| 7 | **Plus** | F3/F4/F5 + H4 (unidades, pasillos, precio al marcar), G5/Z1/Y1 (precios por tienda), W1 (gráfico) | Con datos confiables ya acumulados. |
