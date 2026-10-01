@@ -38,8 +38,8 @@
   en la barra; en el buscador, escribir durante la creación conserva el texto.
 
 ## Verificación (2026-10-01)
-- `npm run test:ci`: 580 pasan (5 tests nuevos en el buscador, 1 en el cierre; los 4 de
-  comportamiento fallaban antes del cambio). `npm run lint:arch` sin errores.
+- `npm run test:ci`: 580 pasan (5 tests nuevos en el buscador, 1 en el cierre; 4 fallaban
+  antes del cambio: 3 del buscador y el del cierre). `npm run lint:arch` sin errores.
 - Staging, 375×667, cuenta `test5`:
   - `/app/receipt` inicial: "Es otra compra" en y 542–562, sobre la barra (579–651).
   - Con la boleta leída: el punto central de "Cerrar compra" cae en el botón
