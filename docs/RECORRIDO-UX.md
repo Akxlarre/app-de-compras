@@ -26,7 +26,7 @@ falla o confunde, qué falta y qué daría un plus. Prioridad: **P1** = afecta e
 ### Qué falla o confunde
 | # | Prio | Hallazgo | Detalle |
 |---|---|---|---|
-| L1 | P1 | **Se borra lo que escribes después de "Crear y añadir"** | El campo se vacía cuando vuelve el servidor (~1–2 s). Si ya empezaste a escribir el siguiente producto, se pierde. Reproducido con Playwright. Debe vaciarse al tocar (optimista). |
+| L1 | P1 | ✅ fix-048 · **Se borra lo que escribes después de "Crear y añadir"** | El campo se vacía cuando vuelve el servidor (~1–2 s). Si ya empezaste a escribir el siguiente producto, se pierde. Reproducido con Playwright. Debe vaciarse al tocar (optimista). |
 | L2 | P1 | **Caben 2 productos en pantalla** | Título "Mi Lista" + nombre de lista en 2 líneas + costo + acciones + contadores ocupan ~330 px de 667. Cada fila mide 82 px. Es la pantalla que se usa en el supermercado con una mano. |
 | L3 | P1 | **Nombres largos se cortan sin forma de leerlos** | "Detergente l…": no hay segunda línea ni detalle del producto. |
 | L4 | P2 | **"Est. Costo: $0" engaña** | Productos sin precio suman 0; no se dice cuántos no tienen precio. Mejor "$6.060 · 2 sin precio" o "Sin precios aún". |
@@ -85,7 +85,7 @@ Huevos marcados, y Arroz pendiente. `test5` probó "Es otra compra". La lectura 
 ### Qué falla o confunde
 | # | Prio | Hallazgo | Detalle |
 |---|---|---|---|
-| B1 | P1 | **"Cerrar compra" queda debajo de la barra de pestañas: tocarlo abre Catálogo** | Medido: botón en y 592–634, barra en 579–651; el toque cae en la pestaña. En `/app/close` la barra se oculta (0013), pero en `/app/receipt` sigue visible y la página reserva solo `pb-8`. Lo mismo con "Es otra compra" en la pantalla inicial (queda en y 654–674, cortado). **Hoy no se puede cerrar con boleta desde la pestaña Boletas en un teléfono de 667 px.** |
+| B1 | P1 | ✅ fix-048 · **"Cerrar compra" queda debajo de la barra de pestañas: tocarlo abre Catálogo** | Medido: botón en y 592–634, barra en 579–651; el toque cae en la pestaña. En `/app/close` la barra se oculta (0013), pero en `/app/receipt` sigue visible y la página reserva solo `pb-8`. Lo mismo con "Es otra compra" en la pantalla inicial (queda en y 654–674, cortado). **Hoy no se puede cerrar con boleta desde la pestaña Boletas en un teléfono de 667 px.** |
 | B2 | P1 | **Un producto pendiente de la lista que sí está en la boleta se trata como ajeno** | Arroz estaba en la lista sin marcar y salió en "No estaban en la lista" como "Arroz G1 grano largo 1kg", sin ofrecer el Arroz de la lista ni del catálogo. Al cerrar, Arroz **siguió pendiente en la lista nueva** aunque se compró, y su `last_purchased_at` no cambió ("Te puede faltar" aprende mal). Causa: el cruce solo mira lo marcado, y los nombres cortos del catálogo ("Arroz") no alcanzan el umbral contra líneas largas. |
 | B3 | P1 | **Lo que no se guarda en catálogo desaparece de la compra** | El Historial dice "4 productos" y el detalle suma $8.098 de $9.288: Arroz, Coca-Cola y la bolsa no están (solo cuentan en el total). En una compra sin lista sin guardar nada, el detalle queda vacío. La lectura completa existe (`receipts.ocr_result`) pero no se muestra. |
 | B4 | P2 | **"¿No lo compraste?" viene con "Lo compré" marcado** | Huevos quedó comprado a $1.890 (precio anterior) sin estar en la boleta: el detalle no cuadra con la boleta y no pasa a la próxima lista. Mejor que se elija ("No lo compré" → vuelve a la lista / "Lo compré en otro lado"). |

@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { signal, computed } from '@angular/core';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { NavController } from '@ionic/angular';
 import { PurchaseClosePage } from './purchase-close.page';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
@@ -62,6 +64,16 @@ describe('PurchaseClosePage', () => {
       ],
     });
     page = TestBed.inject(PurchaseClosePage);
+  });
+
+  it('el contenido reserva el espacio de la barra: en Boletas está visible (fix-048, B1)', () => {
+    const html = readFileSync(
+      join(process.cwd(), 'src/app/features/shopping/purchase-close/purchase-close.page.html'),
+      'utf8'
+    );
+    const main = html.match(/<main[^>]*class="([^"]*)"/)?.[1].split(/\s+/) ?? [];
+
+    expect(main).toContain('pb-chrome');
   });
 
   describe('montos del cierre sin boleta (spec 0013, Q32)', () => {
