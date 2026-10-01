@@ -123,3 +123,54 @@ Huevos marcados, y Arroz pendiente. `test5` probó "Es otra compra". La lectura 
    incompletos o equivocados.
 2. **Spec "pestaña Boletas"**: G1 (archivo), G3 (galería/PDF), G4, B7–B11.
 3. Después G5 + Y1 (gasto por tienda y precios), que se apoyan en tener todas las líneas guardadas.
+
+---
+
+## 3. Catálogo (2026-10-01)
+
+Probado con `test3` (15 productos, algunos comprados con la boleta de la sección 2) y `test5`
+(3 productos creados desde el buscador).
+
+### Qué hay hoy
+- Lista alfabética de los productos de la familia con "Comprado hoy / hace N días / Sin compras aún".
+- Precio editable en la fila (se guarda al salir del campo o con Enter, con un check de confirmación;
+  vacío o inválido vuelve al anterior).
+- Estado vacío con una pista ("desde tu lista de compras o escaneando boletas").
+- Nada más: es la pantalla con menos funciones de la app.
+
+### Qué falla o confunde
+| # | Prio | Hallazgo | Detalle |
+|---|---|---|---|
+| K1 | P1 | **No se puede renombrar, borrar ni juntar productos** | Los duplicados ya aparecen solos: la boleta crea "Arroz G1 grano largo 1kg" junto a "Arroz" (B2), y hay restos como "Leche QA 0011" o "QA nuevo 9365". Una vez creados, quedan para siempre en el buscador y en las sugerencias. |
+| K2 | P1 | **No hay búsqueda ni forma de agregar** | Orden alfabético sin filtro; caben ~6 productos por pantalla (fila de 69 px + encabezado de ~190 px). Con 100+ productos, encontrar uno es hacer scroll. Para crear un producto hay que ir a Mi Lista. |
+| K3 | P2 | **Tocar un producto no hace nada** | No hay detalle ni "agregar a la lista". La fila parece tocable (tarjeta) y no responde. |
+| K4 | P2 | **"Catálogo Inteligente" no muestra nada inteligente** | Desde 0014 las sugerencias viven en Mi Lista. El título, la línea de acento y "Todos tus productos" ocupan ~190 px sin información. |
+| K5 | P2 | **Poca información por producto** | Solo la última compra. Ya existe en la BD cada cuánto se compra (`restock_stats`), cuántas veces, los precios pagados por compra (`list_items.unit_price`) y la tienda (boleta), pero no se muestra. "Sin compras aún" sale también para el Arroz que se compró con boleta (B2). |
+| K6 | P2 | **El precio editable en la fila es ambiguo** | ¿Es el último precio pagado o un precio estimado? Escribirlo a mano pisa el último pagado. Sin formato ("1290"), y al hacer scroll es fácil tocar un campo y abrir el teclado. |
+| K7 | P3 | **Nombres largos cortados** | "Detergente líquido co…". |
+| K8 | P3 | **`category` existe en la BD y no se usa** | Ni para asignar, ni para filtrar, ni para agrupar (ver F4 de Mi Lista). |
+
+### Qué falta (funcionalidad)
+| # | Prio | Falta | Por qué |
+|---|---|---|---|
+| H1 | P1 | **Ficha del producto** (tocar → detalle): nombre, categoría, precio; historial de compras con fecha, tienda y precio; "lo compras cada ~N días"; textos de boleta asociados (alias) con opción de quitar uno equivocado; "Agregar a la lista"; borrar. | Es donde se corrige lo que la IA o el usuario hicieron mal, y donde se ve el valor de registrar compras. |
+| H2 | P1 | **Buscar y crear** desde el Catálogo. | Básico para un catálogo de más de una pantalla. |
+| H3 | P2 | **Juntar duplicados** ("Arroz G1…" → "Arroz"): mueve historial y alias al producto que queda. | Las boletas generan duplicados con nombres largos; sin esto, el historial de precios y las sugerencias se parten en dos. |
+| H4 | P2 | **Categorías** asignables (con sugerencia automática al crear) y filtro por categoría. | Base para agrupar Mi Lista por pasillo (F4) y para el gasto por categoría. |
+| H5 | P2 | **Orden y filtros**: más comprados, comprados hace tiempo, sin precio. | Encontrar rápido lo que importa sin buscar. |
+| H6 | P3 | **Archivar** un producto que ya no se compra (sale del buscador y de las sugerencias, sin perder el historial). | Borrar pierde historia; archivar no. |
+
+### Ideas que darían un plus
+| # | Idea |
+|---|---|
+| Z1 | **Comparar precios entre tiendas** en la ficha ("más barato en Líder: $990"), con los datos de las boletas (G5). |
+| Z2 | **Escanear el código de barras** para buscar o crear un producto. |
+| Z3 | **Foto o marca preferida** por producto ("este detergente, no otro"), visible al comprar. |
+| Z4 | **Catálogo inicial** para familias nuevas (los 30 productos más comunes), para que `test5` no empiece en blanco. |
+
+### Mi recomendación
+1. **Spec "ficha de producto"**: H1 + K1 (renombrar, borrar) + K3 + K7. Convierte el Catálogo en el
+   lugar donde se ordena y se entiende lo comprado.
+2. En la misma spec o la siguiente: **H2 + K2 + K4** (buscar, crear, encabezado compacto) y **H3**
+   (juntar duplicados), que se vuelve necesario en cuanto se usan boletas.
+3. Después **H4/H5** junto con F4 de Mi Lista (categorías y pasillos), y **Z1** cuando exista G5.
