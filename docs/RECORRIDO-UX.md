@@ -59,3 +59,67 @@ falla o confunde, qué falta y qué daría un plus. Prioridad: **P1** = afecta e
 1. L1 (bug, rápido), L2 + L9 (compactar encabezado y filas), L3, L4.
 2. F1 + F2 (detalle del ítem con nota) — es lo que más valor agrega al uso compartido.
 3. Después F3/F4/F5 juntos ("lista para el súper": unidades, pasillos, precio al marcar).
+
+---
+
+## 2. Boletas (2026-10-01)
+
+Probado con una boleta sintética de Líder (`PAPA BLANCA GRANEL KG 1,250 × 1.390`, queso, fideos ×2,
+arroz, Coca-Cola, bolsa $200; total $9.288). `test3` tenía en la lista Papas, Queso, Fideos y
+Huevos marcados, y Arroz pendiente. `test5` probó "Es otra compra". La lectura tardó ~10 s.
+
+### Qué hay hoy
+- La pestaña Boletas abre el cierre de la lista activa con foto (hasta 5 fotos por boleta).
+- Lectura con IA: tienda, total, cantidad (incluye kg con decimales), precio unitario y total por
+  línea. Los nombres de la boleta se muestran con nombre legible ("Papa blanca a granel kg").
+- Cruce automático con lo marcado: alias aprendidos, cruce del OCR y similitud. Si hay dudas,
+  "¿Es este?" con candidatos de la lista y del catálogo, y "No es este".
+- "No estaban en la lista": suman al gasto; "Guardar en catálogo" con nombre editable.
+- "¿No lo compraste?": lo marcado que no aparece en la boleta, con "Lo compré".
+- Aviso cuando la suma de las líneas no cuadra con el total, y líneas dudosas.
+- "Es otra compra (no de esta lista)": compra sin lista con la fecha de la boleta.
+- Pasar los pendientes a la próxima lista.
+- En el Historial: "Ver boleta" (foto), "Agregar boleta" a una compra cerrada sin boleta,
+  "Ingresar total" y la tienda en el detalle.
+
+### Qué falla o confunde
+| # | Prio | Hallazgo | Detalle |
+|---|---|---|---|
+| B1 | P1 | **"Cerrar compra" queda debajo de la barra de pestañas: tocarlo abre Catálogo** | Medido: botón en y 592–634, barra en 579–651; el toque cae en la pestaña. En `/app/close` la barra se oculta (0013), pero en `/app/receipt` sigue visible y la página reserva solo `pb-8`. Lo mismo con "Es otra compra" en la pantalla inicial (queda en y 654–674, cortado). **Hoy no se puede cerrar con boleta desde la pestaña Boletas en un teléfono de 667 px.** |
+| B2 | P1 | **Un producto pendiente de la lista que sí está en la boleta se trata como ajeno** | Arroz estaba en la lista sin marcar y salió en "No estaban en la lista" como "Arroz G1 grano largo 1kg", sin ofrecer el Arroz de la lista ni del catálogo. Al cerrar, Arroz **siguió pendiente en la lista nueva** aunque se compró, y su `last_purchased_at` no cambió ("Te puede faltar" aprende mal). Causa: el cruce solo mira lo marcado, y los nombres cortos del catálogo ("Arroz") no alcanzan el umbral contra líneas largas. |
+| B3 | P1 | **Lo que no se guarda en catálogo desaparece de la compra** | El Historial dice "4 productos" y el detalle suma $8.098 de $9.288: Arroz, Coca-Cola y la bolsa no están (solo cuentan en el total). En una compra sin lista sin guardar nada, el detalle queda vacío. La lectura completa existe (`receipts.ocr_result`) pero no se muestra. |
+| B4 | P2 | **"¿No lo compraste?" viene con "Lo compré" marcado** | Huevos quedó comprado a $1.890 (precio anterior) sin estar en la boleta: el detalle no cuadra con la boleta y no pasa a la próxima lista. Mejor que se elija ("No lo compré" → vuelve a la lista / "Lo compré en otro lado"). |
+| B5 | P2 | **La compra toma la fecha de cierre, no la de la boleta** | Boleta del 30/09 18:42 cerrada el 1/10: la compra dice "jue 1 oct" y el gasto cae en octubre. La compra sin lista sí usa la fecha de la boleta. |
+| B6 | P2 | **"$9.288 · Suma de las líneas $9.088" sin explicación** | La diferencia es la bolsa ($200), que se lee pero no aparece en ninguna parte. Mostrar bolsas, envases y descuentos como líneas propias. |
+| B7 | P2 | **Compra sin lista dice "No estaban en la lista"** | No hay lista. Además todo viene sin "Guardar en catálogo" (y por B3 se pierde). |
+| B8 | P2 | **Campos de precio y cantidad sin formato** | "1390" junto a "$1.738"; "1.25" con punto y sin "kg". |
+| B9 | P3 | **Pantalla inicial: el recuadro de foto ocupa 420 px** | Y "Pasar el pendiente a la próxima lista" se pregunta antes de ver qué faltó. Dos títulos ("Escanear boleta" y "Lista de compras"). |
+| B10 | P3 | **Lo que coincide ocupa ~140 px por línea** | Con una boleta de 30 líneas son ~4.000 px de scroll para revisar lo que ya está bien. Plegar "12 coinciden ✓" y abrir solo lo dudoso. |
+| B11 | P3 | **No se ve la foto mientras se revisa** | Para una línea dudosa no hay forma de mirar la boleta sin salir. |
+
+### Qué falta (funcionalidad)
+| # | Prio | Falta | Por qué |
+|---|---|---|---|
+| G1 | P1 | **Archivo de boletas** en la pestaña Boletas: lista por fecha con tienda, total y miniatura; buscar por tienda o producto; botón "Escanear" arriba. | La pestaña se llama Boletas y no muestra ninguna. Hoy están escondidas en Mi Lista → Historial → compra → "Ver boleta". |
+| G2 | P1 | **Guardar todas las líneas de la boleta** en la compra, aunque no se agreguen al catálogo. | Detalle completo y gasto real por producto (B3). |
+| G3 | P2 | **Subir desde la galería o un PDF** (boleta electrónica). | `capture="environment"` abre la cámara directo en muchos Android: no se puede usar una foto ya tomada ni la boleta que llega por correo. |
+| G4 | P2 | **Editar tienda y fecha** antes de cerrar y después. | Si la IA lee mal la tienda o la fecha, hoy no hay cómo corregirlo. |
+| G5 | P2 | **Gasto por tienda y por mes**, y precio de cada producto por tienda ("Queso: $2.190 en Líder, $2.350 en Jumbo"). | Es lo que hace valer la pena fotografiar boletas. |
+| G6 | P2 | **Descuentos visibles** (por producto y sobre el total). | Ya se leen (`kind: discount`), pero no se muestran. |
+| G7 | P3 | **Corregir una línea de una compra cerrada.** | Hoy solo se puede borrar la compra entera. |
+
+### Ideas que darían un plus
+| # | Idea |
+|---|---|
+| Y1 | **Alerta de precio**: "El aceite subió 18% desde la última compra". |
+| Y2 | **Reenviar la boleta electrónica por correo** a una dirección de la familia y que se registre sola. |
+| Y3 | **Exportar el mes** a una planilla (CSV) para el presupuesto familiar. |
+| Y4 | **Boletas de otras compras** (farmacia, ferretería, electro) con recordatorio de garantía. |
+| Y5 | **Dividir el gasto** entre miembros ("pagó Ana", "pagó Beto"). |
+
+### Mi recomendación
+1. **Spec "cierre con boleta confiable"**: B1 (bloquea el flujo, rápido), B2, B3 + G2, B4, B5, B6.
+   Lo que deja una boleta alimenta el Historial, los precios y "Te puede faltar": hoy deja datos
+   incompletos o equivocados.
+2. **Spec "pestaña Boletas"**: G1 (archivo), G3 (galería/PDF), G4, B7–B11.
+3. Después G5 + Y1 (gasto por tienda y precios), que se apoyan en tener todas las líneas guardadas.
