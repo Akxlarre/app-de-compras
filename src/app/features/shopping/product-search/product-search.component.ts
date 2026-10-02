@@ -275,19 +275,26 @@ export class ProductSearchComponent {
     if (list) await this.shoppingFacade.addItem(list.id, product.id);
   }
 
-  /** Crea el producto y lo agrega; el buscador queda listo para el siguiente (Q9). */
+  /**
+   * Crea el producto y lo agrega; el buscador queda listo para el siguiente (Q9). El campo se
+   * vacía al tocar: lo que se escriba mientras responde el servidor no se pisa (fix-048).
+   */
   async createNewProduct() {
     const term = this.searchTerm().trim();
     const list = this.shoppingFacade.data();
     if (!term || !list) return;
 
-    const newProduct = await this.facade.createProduct(term, list.family_id);
-    if (!newProduct) return;
-    await this.shoppingFacade.addItem(list.id, newProduct.id);
     clearTimeout(this.searchTimeout);
     this.searchTerm.set('');
     this.facade.clear();
     this.focusSearch();
+
+    const newProduct = await this.facade.createProduct(term, list.family_id);
+    if (!newProduct) {
+      if (!this.searchTerm()) this.searchTerm.set(term);
+      return;
+    }
+    await this.shoppingFacade.addItem(list.id, newProduct.id);
   }
 
   private focusSearch() {

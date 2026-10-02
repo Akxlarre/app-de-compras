@@ -79,4 +79,58 @@ describe('ProductSearchComponent (spec 0013)', () => {
     expect(lists.addItem).not.toHaveBeenCalled();
     expect(component.searchTerm()).toBe('Huevos');
   });
+
+  describe('escribir mientras se crea (fix-048, L1)', () => {
+    let resolveCreate: (p: unknown) => void;
+
+    beforeEach(() => {
+      search['createProduct'].mockReturnValue(new Promise((r) => (resolveCreate = r)));
+      component.searchTerm.set('Huevos');
+    });
+
+    it('el campo se vacía al tocar, antes de que responda el servidor', () => {
+      void component.createNewProduct();
+
+      expect(component.searchTerm()).toBe('');
+    });
+
+    it('lo escrito mientras se crea se conserva y no se limpian sus resultados', async () => {
+      const pending = component.createNewProduct();
+      component.onSearch('Pan');
+      search['clear'].mockClear();
+
+      resolveCreate({ id: 'p2', name: 'Huevos' });
+      await pending;
+
+      expect(lists.addItem).toHaveBeenCalledWith('L1', 'p2');
+      expect(component.searchTerm()).toBe('Pan');
+      expect(search['clear']).not.toHaveBeenCalled();
+    });
+
+    it('un segundo toque mientras se crea no crea otro', async () => {
+      const pending = component.createNewProduct();
+      await component.createNewProduct();
+      resolveCreate({ id: 'p2', name: 'Huevos' });
+      await pending;
+
+      expect(search['createProduct']).toHaveBeenCalledTimes(1);
+    });
+
+    it('si falla con el campo vacío, vuelve el texto', async () => {
+      const pending = component.createNewProduct();
+      resolveCreate(null);
+      await pending;
+
+      expect(component.searchTerm()).toBe('Huevos');
+    });
+
+    it('si falla con algo nuevo escrito, no lo pisa', async () => {
+      const pending = component.createNewProduct();
+      component.onSearch('Pan');
+      resolveCreate(null);
+      await pending;
+
+      expect(component.searchTerm()).toBe('Pan');
+    });
+  });
 });
