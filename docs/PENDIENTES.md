@@ -14,6 +14,13 @@ con ese mismo aviso; nunca firma con una llave desechable.
 La primera versión firmada con la llave estable exige desinstalar la app una última vez; desde ahí
 las actualizaciones se instalan encima.
 
+## Cierre con boleta confiable (spec 0015): migración antes que la app
+
+plataforma-db#17 (migración `20261009010000_shop_receipt_reliable`) ya está en staging. **Falta
+producción, y tiene que ir antes de publicar la release de la app que trae la spec 0015:** el
+Historial pide `purchase_lines` y sin la tabla la consulta falla. plataforma-db → Actions →
+*Deploy de migraciones* → Run workflow con `confirmar = produccion`.
+
 ## Migraciones de boletas en el Historial en producción (plataforma-db#11)
 
 Antes de publicar la release que trae la spec 0009. Al mergear, staging se aplica solo. Producción:

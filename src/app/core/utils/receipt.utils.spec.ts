@@ -136,10 +136,17 @@ describe('validateReceipt', () => {
       const esperaDudas = c.lines.some((l) => !l.legible);
 
       // Las transcripciones cuadran salvo las que tienen líneas ilegibles (04 Jumbo, 09 dedo).
-      expect(r.totalMatches).toBe(!esperaDudas);
+      // Un voucher sin detalle (15 Getnet) no tiene con qué comparar el total.
+      expect(r.totalMatches).toBe(c.lines.length ? !esperaDudas : null);
       expect(r.doubtfulLines.some((d) => d.reason === 'ilegible')).toBe(esperaDudas);
       expect(r.doubtfulLines.filter((d) => d.reason === 'no-cuadra')).toEqual([]);
     });
+  });
+
+  it('una boleta sin detalle (solo total) no "deja de cuadrar" (spec 0015, B8)', () => {
+    const r = validateReceipt({ store: 'Feria', date: '2026-10-05', total: 22800, lines: [] });
+
+    expect(r).toEqual({ computedTotal: 0, totalMatches: null, doubtfulLines: [] });
   });
 
   it('sin cantidad o sin precio unitario no revisa la línea: basta su total', () => {

@@ -72,8 +72,35 @@ describe('ReceiptsRepository', () => {
       ocrCheck: check,
       items: [{ itemId: 'i1', unitPrice: 640, quantity: 2, rawText: 'BETUN', saveAlias: true }],
       extras: [
-        { productId: null, rawText: 'BOLSA', name: 'Bolsa basura', unitPrice: 450, quantity: 1 },
-        { productId: 'p-cafe', rawText: 'CAFE JV', name: 'Café', unitPrice: 3990, quantity: 1 },
+        {
+          productId: null,
+          rawText: 'BOLSA',
+          name: 'Bolsa basura',
+          unitPrice: 450,
+          quantity: 1,
+          lineIndex: 1,
+        },
+        {
+          productId: 'p-cafe',
+          rawText: 'CAFE JV',
+          name: 'Café',
+          unitPrice: 3990,
+          quantity: 1,
+          lineIndex: null,
+        },
+      ],
+      lines: [
+        {
+          index: 0,
+          rawText: 'BETUN',
+          name: 'Betún',
+          kind: 'product',
+          quantity: 2,
+          unitPrice: 640,
+          amount: 1280,
+          itemId: 'i1',
+          productId: 'p-betun',
+        },
       ],
       uncheckItemIds: ['i2'],
     });
@@ -89,6 +116,19 @@ describe('ReceiptsRepository', () => {
         image_path: 'fam/b.jpg',
         ocr_result: ocr,
         ocr_check: check,
+        lines: [
+          {
+            index: 0,
+            raw_text: 'BETUN',
+            name: 'Betún',
+            kind: 'product',
+            quantity: 2,
+            unit_price: 640,
+            amount: 1280,
+            item_id: 'i1',
+            product_id: 'p-betun',
+          },
+        ],
       },
       p_items: [
         { item_id: 'i1', unit_price: 640, quantity: 2, raw_text: 'BETUN', save_alias: true },
@@ -101,10 +141,95 @@ describe('ReceiptsRepository', () => {
           name: 'Bolsa basura',
           unit_price: 450,
           quantity: 1,
+          line_index: 1,
         },
-        { product_id: 'p-cafe', raw_text: 'CAFE JV', name: 'Café', unit_price: 3990, quantity: 1 },
+        {
+          product_id: 'p-cafe',
+          raw_text: 'CAFE JV',
+          name: 'Café',
+          unit_price: 3990,
+          quantity: 1,
+          line_index: null,
+        },
       ],
     });
+  });
+
+  it('con varias boletas manda las demás en p_receipt.others y el extra con su boleta (spec 0015 D6)', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: 'r1', error: null });
+    await repo.applyReceipt({
+      listId: 'l1',
+      carryPending: true,
+      store: 'Aroca',
+      purchasedAt: '2026-10-05',
+      total: 2200,
+      imagePath: null,
+      ocrResult: null,
+      ocrCheck: null,
+      items: [],
+      extras: [
+        {
+          productId: null,
+          rawText: 'TE',
+          name: 'Té',
+          unitPrice: 700,
+          quantity: 1,
+          lineIndex: 0,
+          receiptIndex: 1,
+        },
+      ],
+      lines: [],
+      others: [
+        {
+          store: 'Pedregal',
+          purchasedAt: null,
+          total: 700,
+          imagePath: 'fam/p.jpg',
+          ocrResult: null,
+          ocrCheck: null,
+          lines: [
+            {
+              index: 0,
+              rawText: 'TE',
+              name: 'Té',
+              kind: 'product',
+              quantity: 1,
+              unitPrice: 700,
+              amount: 700,
+              itemId: null,
+              productId: null,
+            },
+          ],
+        },
+      ],
+      uncheckItemIds: [],
+    });
+
+    const args = mock.shop.rpc.mock.calls[0][1];
+    expect(args.p_receipt.others).toEqual([
+      {
+        store: 'Pedregal',
+        purchased_at: null,
+        total: 700,
+        image_path: 'fam/p.jpg',
+        ocr_result: null,
+        ocr_check: null,
+        lines: [
+          {
+            index: 0,
+            raw_text: 'TE',
+            name: 'Té',
+            kind: 'product',
+            quantity: 1,
+            unit_price: 700,
+            amount: 700,
+            item_id: null,
+            product_id: null,
+          },
+        ],
+      },
+    ]);
+    expect(args.p_extras[0]).toMatchObject({ line_index: 0, receipt_index: 1 });
   });
 
   describe('boleta sobre compras cerradas (spec 0009)', () => {
@@ -119,8 +244,16 @@ describe('ReceiptsRepository', () => {
       ocrCheck: null,
       items: [{ itemId: 'i1', unitPrice: 640, quantity: 2, rawText: 'BETUN', saveAlias: true }],
       extras: [
-        { productId: null, rawText: 'BOLSA', name: 'Bolsa basura', unitPrice: 450, quantity: 1 },
+        {
+          productId: null,
+          rawText: 'BOLSA',
+          name: 'Bolsa basura',
+          unitPrice: 450,
+          quantity: 1,
+          lineIndex: 0,
+        },
       ],
+      lines: [],
       uncheckItemIds: ['i2'],
     };
     const receipt = {
@@ -130,13 +263,21 @@ describe('ReceiptsRepository', () => {
       image_path: 'fam/b.jpg',
       ocr_result: null,
       ocr_check: null,
+      lines: [],
     };
     const items = [
       { item_id: 'i1', unit_price: 640, quantity: 2, raw_text: 'BETUN', save_alias: true },
       { item_id: 'i2', checked: false },
     ];
     const extras = [
-      { product_id: null, raw_text: 'BOLSA', name: 'Bolsa basura', unit_price: 450, quantity: 1 },
+      {
+        product_id: null,
+        raw_text: 'BOLSA',
+        name: 'Bolsa basura',
+        unit_price: 450,
+        quantity: 1,
+        line_index: 0,
+      },
     ];
 
     it('attachReceipt agrega la boleta a una compra ya cerrada (sin pendientes que mover)', async () => {
@@ -228,6 +369,7 @@ describe('ReceiptsRepository', () => {
         ocrCheck: null,
         items: [],
         extras: [],
+        lines: [],
         uncheckItemIds: [],
       })
     ).rejects.toBe(error);

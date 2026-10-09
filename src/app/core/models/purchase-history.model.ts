@@ -1,5 +1,5 @@
 import type { ActiveShoppingList } from './shopping-list.model';
-import type { TotalSource } from './receipt.model';
+import type { OcrLineKind, TotalSource } from './receipt.model';
 
 /** Producto comprado dentro de una compra finalizada. */
 export interface PurchasedItem {
@@ -8,6 +8,14 @@ export interface PurchasedItem {
   /** Precio pagado por unidad; null si no se conocía al finalizar. */
   unitPrice: number | null;
   subtotal: number;
+}
+
+/** Bolsa, envase, descuento a la compra u otro cargo de la boleta (spec 0015). */
+export interface PurchasedCharge {
+  kind: OcrLineKind;
+  rawText: string | null;
+  /** Negativo en los descuentos. */
+  amount: number;
 }
 
 /** Una compra finalizada, lista para el Historial. */
@@ -29,6 +37,8 @@ export interface PurchaseSummary {
   receiptImagePath: string | null;
   store: string | null;
   items: PurchasedItem[];
+  /** Lo que no es producto en la boleta; vacío sin boleta o en compras antiguas. */
+  charges: PurchasedCharge[];
   /** La compra tal como vino de la base, para cerrarla con boleta o total desde el Historial. */
   source: ActiveShoppingList;
 }

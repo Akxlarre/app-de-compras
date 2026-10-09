@@ -2,14 +2,15 @@ import type { ActiveShoppingList, ListReceipt } from '@core/models/shopping-list
 import type {
   MonthlySpending,
   PurchaseSummary,
+  PurchasedCharge,
   PurchasedItem,
 } from '@core/models/purchase-history.model';
 import { disambiguateTitles, purchaseTitle } from './purchase-name.utils';
 
-/** La boleta de la compra (PostgREST la devuelve como objeto o como arreglo de uno). */
-function receiptOf(list: ActiveShoppingList): ListReceipt | null {
+/** Las boletas de la compra: varias si la salida fue por varias tiendas (spec 0015 D6). */
+function receiptsOf(list: ActiveShoppingList): ListReceipt[] {
   const r = list.receipts;
-  return (Array.isArray(r) ? r[0] : r) ?? null;
+  return Array.isArray(r) ? r : r ? [r] : [];
 }
 
 /**
@@ -18,21 +19,48 @@ function receiptOf(list: ActiveShoppingList): ListReceipt | null {
  * `total` es lo pagado de verdad (boleta o a mano) si se sabe; si no, la suma estimada.
  */
 export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
-  const items: PurchasedItem[] = (list.list_items ?? [])
-    .filter((item) => item.is_checked)
-    .map((item) => {
-      const quantity = Number(item.quantity ?? 1) || 1;
-      const unitPrice = item.unit_price == null ? null : Number(item.unit_price);
-      return {
-        name: item.product?.name ?? 'Producto sin nombre',
-        quantity,
-        unitPrice,
-        subtotal: quantity * (unitPrice ?? 0),
-      };
-    });
+  // Boleta por boleta (en el orden de la compra) y, dentro de cada una, en el orden impreso.
+  const receiptOrder = new Map(receiptsOf(list).map((r, i) => [r.id, i]));
+  const lines = [...(list.purchase_lines ?? [])].sort(
+    (a, b) =>
+      (receiptOrder.get(a.receipt_id) ?? 0) - (receiptOrder.get(b.receipt_id) ?? 0) ||
+      a.line_index - b.line_index
+  );
+  // Con las líneas de la boleta (spec 0015) el detalle es la boleta completa; si no, lo marcado.
+  const items: PurchasedItem[] = lines.length
+    ? lines
+        .filter((l) => l.kind === 'product')
+        .map((l) => ({
+          name: l.product?.name ?? l.name ?? l.raw_text ?? 'Producto sin nombre',
+          quantity: Number(l.quantity ?? 1) || 1,
+          unitPrice: l.unit_price == null ? null : Number(l.unit_price),
+          subtotal: Number(l.amount),
+        }))
+    : (list.list_items ?? [])
+        .filter((item) => item.is_checked)
+        .map((item) => {
+          const quantity = Number(item.quantity ?? 1) || 1;
+          const unitPrice = item.unit_price == null ? null : Number(item.unit_price);
+          return {
+            name: item.product?.name ?? 'Producto sin nombre',
+            quantity,
+            unitPrice,
+            subtotal: quantity * (unitPrice ?? 0),
+          };
+        });
+  const charges: PurchasedCharge[] = lines
+    .filter((l) => l.kind !== 'product')
+    .map((l) => ({ kind: l.kind, rawText: l.raw_text, amount: Number(l.amount) }));
 
-  const estimatedTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
-  const receipt = receiptOf(list);
+  // `other` (redondeo, donación) no suma al total, igual que en la revisión de la boleta.
+  const estimatedTotal =
+    items.reduce((sum, item) => sum + item.subtotal, 0) +
+    charges.filter((c) => c.kind !== 'other').reduce((sum, c) => sum + c.amount, 0);
+  const receipts = receiptsOf(list);
+  const stores = receipts
+    .map((r) => r.store)
+    .filter(Boolean)
+    .join(' · ');
   const paid = list.total_paid == null ? null : Number(list.total_paid);
 
   return {
@@ -44,10 +72,11 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
     total: paid ?? estimatedTotal,
     estimatedTotal,
     totalSource: paid == null ? 'estimated' : list.total_source ?? 'estimated',
-    hasReceipt: receipt !== null,
-    receiptImagePath: receipt?.image_url ?? null,
-    store: receipt?.store ?? null,
+    hasReceipt: receipts.length > 0,
+    receiptImagePath: receipts.find((r) => r.image_url)?.image_url ?? null,
+    store: stores || null,
     items,
+    charges,
     source: list,
   };
 }

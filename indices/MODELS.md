@@ -10,10 +10,10 @@
 | `NotificationType`, `Notification` | `other` | `src/app/core/models/notification.model.ts` |
 | `QueuedChange` | `other` | `src/app/core/models/offline-queue.model.ts` |
 | `Product` | `other` | `src/app/core/models/product.model.ts` |
-| `PurchasedItem`, `PurchaseSummary`, `MonthlySpending` | `other` | `src/app/core/models/purchase-history.model.ts` |
-| `ReceiptStatus`, `Receipt`, `OcrLineKind`, `OcrReceiptLine`, `OcrReceipt`, `DoubtReason`, `ReceiptValidation`, `TotalSource`, `ReconcileListItem`, `CatalogProduct`, `ReceiptAlias`, `MatchCandidate`, `ReconciledLine`, `ReconciliationResult`, `LineTarget`, `LineDecision`, `MissingDecision`, `ReceiptCorrection`, `ReceiptCheck`, `ManualPrice`, `ReceiptItemInput`, `ReceiptExtraInput`, `ApplyReceiptInput`, `OcrReceiptItem` | `other` | `src/app/core/models/receipt.model.ts` |
+| `PurchasedItem`, `PurchasedCharge`, `PurchaseSummary`, `MonthlySpending` | `other` | `src/app/core/models/purchase-history.model.ts` |
+| `ReceiptStatus`, `Receipt`, `OcrLineKind`, `OcrReceiptLine`, `OcrReceipt`, `DoubtReason`, `ReceiptValidation`, `TotalSource`, `ReconcileListItem`, `CatalogProduct`, `ReceiptAlias`, `MatchCandidate`, `ReconciledLine`, `ReconciliationResult`, `LineTarget`, `LineDecision`, `OtherCharge`, `MissingDecision`, `ReceiptCorrection`, `ReceiptCheck`, `ManualPrice`, `ReceiptItemInput`, `ReceiptExtraInput`, `ReceiptPartInput`, `ReceiptLineInput`, `ApplyReceiptInput`, `OcrReceiptItem` | `other` | `src/app/core/models/receipt.model.ts` |
 | `RestockStat`, `RestockData`, `RestockSuggestion` | `other` | `src/app/core/models/restock.model.ts` |
-| `ShoppingListStatus`, `ShoppingList`, `ListReceipt`, `ListItem`, `PopulatedListItem`, `ActiveShoppingList` | `other` | `src/app/core/models/shopping-list.model.ts` |
+| `ShoppingListStatus`, `ShoppingList`, `ListReceipt`, `ListItem`, `PopulatedListItem`, `PurchaseLine`, `ActiveShoppingList` | `other` | `src/app/core/models/shopping-list.model.ts` |
 | `UserRole`, `User` | `other` | `src/app/core/models/user.model.ts` |
 
 <!-- AUTO-GENERATED:END -->

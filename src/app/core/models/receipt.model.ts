@@ -78,6 +78,8 @@ export interface MatchCandidate {
   itemId: string | null;
   name: string;
   score: number;
+  /** El ítem estaba pendiente (sin marcar) en la lista: al cerrar queda comprado (spec 0015). */
+  wasPending?: boolean;
 }
 
 /**
@@ -104,7 +106,7 @@ export interface ReconciliationResult {
 /** A qué va una línea de la boleta al cerrar la compra. */
 export type LineTarget =
   /** Un ítem de la compra. */
-  | { kind: 'item'; itemId: string; productId: string; name: string }
+  | { kind: 'item'; itemId: string; productId: string; name: string; wasPending?: boolean }
   /** Un producto del catálogo que no estaba en la lista. */
   | { kind: 'product'; productId: string; name: string }
   /** Algo nuevo: suma al gasto; entra al catálogo solo si `saveToCatalog`. */
@@ -132,11 +134,20 @@ export interface LineDecision {
   ocr: { quantity: number; unitPrice: number; target: string | null };
 }
 
+/** Línea de la boleta que no es un producto: bolsa, envase, descuento a la compra u otro (spec 0015). */
+export interface OtherCharge {
+  index: number;
+  rawText: string | null;
+  kind: Exclude<OcrLineKind, 'product'>;
+  /** Negativo en los descuentos. */
+  amount: number;
+}
+
 /** Ítem marcado que no aparece en la boleta: "¿no lo compraste?". */
 export interface MissingDecision {
   item: ReconcileListItem;
-  /** false: vuelve a pendiente. Por defecto true (la boleta no desmarca sin preguntar). */
-  bought: boolean;
+  /** false: vuelve a pendiente; true: se compró igual; null: sin elegir, no deja cerrar (spec 0015). */
+  bought: boolean | null;
 }
 
 export interface ReceiptCorrection {
@@ -177,6 +188,37 @@ export interface ReceiptExtraInput {
   name: string;
   unitPrice: number;
   quantity: number;
+  /** Línea de la boleta que lo trae: enlaza la línea guardada con el producto que se crea. */
+  lineIndex: number | null;
+  /** Con varias boletas (spec 0015, D6): cuál de ellas (0 = la principal). */
+  receiptIndex?: number;
+}
+
+/** Una boleta más de la misma salida (`p_receipt.others`, spec 0015 D6). */
+export interface ReceiptPartInput {
+  store: string | null;
+  /** YYYY-MM-DD */
+  purchasedAt: string | null;
+  total: number | null;
+  imagePath: string | null;
+  ocrResult: OcrReceipt | null;
+  ocrCheck: ReceiptCheck | ReceiptValidation | null;
+  lines: ReceiptLineInput[];
+}
+
+/** Una línea de la boleta tal como queda en la compra (`shop.purchase_lines`, spec 0015 G2). */
+export interface ReceiptLineInput {
+  index: number;
+  rawText: string | null;
+  /** Nombre del producto asignado o, si no tiene, el que leyó el OCR. */
+  name: string | null;
+  kind: OcrLineKind;
+  quantity: number | null;
+  unitPrice: number | null;
+  /** Lo que suma a la compra (negativo en los descuentos). */
+  amount: number;
+  itemId: string | null;
+  productId: string | null;
 }
 
 export interface ApplyReceiptInput {
@@ -191,6 +233,10 @@ export interface ApplyReceiptInput {
   ocrCheck: ReceiptCheck | ReceiptValidation | null;
   items: ReceiptItemInput[];
   extras: ReceiptExtraInput[];
+  /** Todas las líneas de la boleta (spec 0015 G2). */
+  lines: ReceiptLineInput[];
+  /** Las demás boletas de la misma salida (spec 0015 D6); solo al cerrar la lista activa. */
+  others?: ReceiptPartInput[];
   /** "¿No lo compraste?": ítems marcados que vuelven a pendiente. */
   uncheckItemIds: string[];
 }

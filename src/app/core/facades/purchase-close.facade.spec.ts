@@ -185,10 +185,20 @@ describe('PurchaseCloseFacade', () => {
       expect(d[0].target).toMatchObject({ kind: 'item', itemId: 'i-leche' });
       expect(d[1]).toMatchObject({ status: 'candidate', target: null });
       expect(facade.missing()).toEqual([
-        { item: { itemId: 'i-pan', productId: 'p-pan', name: 'Pan', quantity: 1 }, bought: true },
+        { item: { itemId: 'i-pan', productId: 'p-pan', name: 'Pan', quantity: 1 }, bought: null },
       ]);
       expect(facade.canConfirm()).toBe(false);
       expect(facade.isScanning()).toBe(false);
+    });
+
+    it('"¿No lo compraste?" viene sin elegir y no deja cerrar hasta elegir (spec 0015, B4)', () => {
+      facade.chooseCandidate(1, 'new');
+      expect(facade.missingUnchosen()).toBe(true);
+      expect(facade.canConfirm()).toBe(false);
+
+      facade.setMissingBought('i-pan', true);
+      expect(facade.missingUnchosen()).toBe(false);
+      expect(facade.canConfirm()).toBe(true);
     });
 
     it('elegir un candidato permite confirmar; sube la foto y aplica la boleta', async () => {
@@ -221,6 +231,7 @@ describe('PurchaseCloseFacade', () => {
               name: 'Café molido',
               unitPrice: 3990,
               quantity: 1,
+              lineIndex: 1,
             },
           ],
           uncheckItemIds: ['i-pan'],
@@ -229,6 +240,7 @@ describe('PurchaseCloseFacade', () => {
     });
 
     it('"otro": una línea nueva que se guarda en el catálogo con su nombre', async () => {
+      facade.setMissingBought('i-pan', true);
       facade.chooseCandidate(1, 'new');
       facade.updateDecision(1, { saveToCatalog: true, name: 'Café JV' });
 
@@ -241,12 +253,14 @@ describe('PurchaseCloseFacade', () => {
           name: 'Café JV',
           unitPrice: 3990,
           quantity: 1,
+          lineIndex: 1,
         },
       ]);
     });
 
     it('si la foto no sube, la compra igual se cierra (sin foto)', async () => {
       receipts['uploadImage'].mockRejectedValue(new Error('403'));
+      facade.setMissingBought('i-pan', true);
       facade.chooseCandidate(1, 'new');
 
       expect(await facade.confirmReceipt()).toBe(true);
@@ -255,11 +269,192 @@ describe('PurchaseCloseFacade', () => {
 
     it('si falla aplicar la boleta avisa y devuelve false', async () => {
       receipts['applyReceipt'].mockRejectedValue(new Error('list_not_active'));
+      facade.setMissingBought('i-pan', true);
       facade.chooseCandidate(1, 'new');
 
       expect(await facade.confirmReceipt()).toBe(false);
       expect(toast.error).toHaveBeenCalled();
       expect(facade.isSaving()).toBe(false);
+    });
+  });
+
+  describe('"¿Es este?" y "¿No lo compraste?" (spec 0015, perfumería)', () => {
+    beforeEach(async () => {
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue({
+        store: 'Perfumería',
+        date: '2026-10-05',
+        total: 2000,
+        lines: [
+          line({ raw_text: 'PAN AMASADO ESPECIAL GRANDE', unit_price: 2000, line_total: 2000 }),
+        ],
+      });
+      await facade.scan([file]);
+    });
+
+    it('un marcado ofrecido en un "¿Es este?" no se pregunta; si se elige "Otro", vuelve', () => {
+      expect(facade.decisions()[0].status).toBe('candidate');
+      expect(facade.missing().map((m) => m.item.itemId)).toEqual(['i-leche']);
+
+      const pan = facade.decisions()[0].candidates.find((c) => c.itemId === 'i-pan')!;
+      facade.chooseCandidate(0, pan);
+      expect(facade.missing().map((m) => m.item.itemId)).toEqual(['i-leche']);
+
+      facade.chooseCandidate(0, 'new');
+      expect(facade.missing().map((m) => m.item.itemId)).toEqual(['i-leche', 'i-pan']);
+    });
+
+    it('al elegirlo en "¿Es este?" ya no se puede desmarcar desde "¿No lo compraste?"', async () => {
+      facade.setMissingBought('i-pan', false);
+      const pan = facade.decisions()[0].candidates.find((c) => c.itemId === 'i-pan')!;
+      facade.chooseCandidate(0, pan);
+      facade.setMissingBought('i-leche', true);
+
+      expect(facade.canConfirm()).toBe(true);
+      await facade.confirmReceipt();
+      expect(receipts['applyReceipt'].mock.calls[0][0].uncheckItemIds).toEqual([]);
+    });
+  });
+
+  describe('pendientes en la boleta (spec 0015, B2)', () => {
+    it('un pendiente que sale en la boleta va al ítem, marcado como pendiente, y se aplica', async () => {
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue({
+        store: 'Líder',
+        date: '2026-10-05',
+        total: 3400,
+        lines: [
+          line({ raw_text: 'LECHE', quantity: 2, unit_price: 1100, line_total: 2200 }),
+          line({ raw_text: 'PAN', unit_price: 0, line_total: 0 }),
+          line({ raw_text: 'ARROZ', unit_price: 1200, line_total: 1200 }),
+        ],
+      });
+      await facade.scan([file]);
+
+      const arroz = facade.decisions().find((d) => d.rawText === 'ARROZ');
+      expect(arroz?.target).toMatchObject({ kind: 'item', itemId: 'i-arroz', wasPending: true });
+      expect(facade.missing()).toEqual([]);
+
+      await facade.confirmReceipt();
+      expect(receipts['applyReceipt'].mock.calls[0][0].items.map((i: any) => i.itemId)).toEqual([
+        'i-leche',
+        'i-pan',
+        'i-arroz',
+      ]);
+    });
+  });
+
+  describe('varias boletas en una compra (spec 0015, D6)', () => {
+    const file2 = new File(['foto2'], 'boleta2.jpg', { type: 'image/jpeg' });
+
+    beforeEach(async () => {
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValueOnce({
+        store: 'Aroca',
+        date: '2026-10-05',
+        total: 2200,
+        lines: [line({ raw_text: 'LECHE', quantity: 2, unit_price: 1100, line_total: 2200 })],
+      });
+      await facade.scan([file]);
+      receipts['extractReceipt'].mockResolvedValueOnce({
+        store: 'Pedregal',
+        date: '2026-10-05',
+        total: 1600,
+        lines: [
+          line({ raw_text: 'PAN', unit_price: 900, line_total: 900 }),
+          line({ raw_text: 'TE VERDE', unit_price: 700, line_total: 700 }),
+        ],
+      });
+      await facade.addReceipt([file2]);
+    });
+
+    it('la segunda boleta se suma: tiendas, total y líneas seguidas', () => {
+      expect(facade.receiptCount()).toBe(2);
+      expect(facade.receipt()).toMatchObject({ store: 'Aroca · Pedregal', total: 3800 });
+      expect(facade.decisions().map((d) => [d.index, d.rawText])).toEqual([
+        [0, 'LECHE'],
+        [1, 'PAN'],
+        [2, 'TE VERDE'],
+      ]);
+    });
+
+    it('lo que salió en otra tienda ya no se pregunta en "¿No lo compraste?"', () => {
+      expect(facade.decisions()[1].target).toMatchObject({ kind: 'item', itemId: 'i-pan' });
+      expect(facade.missing()).toEqual([]);
+    });
+
+    it('al cerrar va una boleta principal y las demás en "others", con sus líneas y sus fotos', async () => {
+      facade.updateDecision(2, { saveToCatalog: true, name: 'Té verde' });
+      expect(await facade.confirmReceipt()).toBe(true);
+
+      expect(receipts['uploadImage']).toHaveBeenCalledTimes(2);
+      const input = receipts['applyReceipt'].mock.calls[0][0];
+      expect(input).toMatchObject({ store: 'Aroca', total: 2200 });
+      expect(input.lines.map((l: { index: number }) => l.index)).toEqual([0]);
+      expect(input.others).toHaveLength(1);
+      expect(input.others[0]).toMatchObject({ store: 'Pedregal', total: 1600 });
+      expect(input.others[0].lines.map((l: { index: number }) => l.index)).toEqual([0, 1]);
+      expect(input.extras).toEqual([
+        expect.objectContaining({ name: 'Té verde', receiptIndex: 1, lineIndex: 1 }),
+      ]);
+    });
+
+    it('solo al cerrar la lista activa se pueden agregar boletas', () => {
+      expect(facade.canAddReceipt()).toBe(true);
+      facade.kind.set('completed');
+      expect(facade.canAddReceipt()).toBe(false);
+    });
+  });
+
+  describe('otros cargos (spec 0015, B6)', () => {
+    it('bolsas, envases y descuentos se separan de los productos y explican el total', async () => {
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue({
+        store: 'Líder',
+        date: '2026-10-05',
+        total: 2300,
+        lines: [
+          line({ raw_text: 'LECHE', quantity: 2, unit_price: 1100, line_total: 2200 }),
+          line({ raw_text: 'BOLSA', kind: 'bag', unit_price: 200, line_total: 200 }),
+          line({ raw_text: 'DCTO', kind: 'discount', unit_price: null, line_total: -100 }),
+          line({ raw_text: 'APORTE FUNDACION', kind: 'other', unit_price: 50, line_total: 50 }),
+        ],
+      });
+      await facade.scan([file]);
+
+      expect(facade.otherCharges()).toEqual([
+        { index: 1, rawText: 'BOLSA', kind: 'bag', amount: 200 },
+        { index: 2, rawText: 'DCTO', kind: 'discount', amount: -100 },
+        { index: 3, rawText: 'APORTE FUNDACION', kind: 'other', amount: 50 },
+      ]);
+      expect(facade.receiptSum()).toBe(2200);
+      expect(facade.otherSum()).toBe(100);
+    });
+  });
+
+  describe('boleta sin detalle (spec 0015, B8)', () => {
+    beforeEach(async () => {
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue({
+        store: 'El Nene Jr SPA',
+        date: '2026-10-05',
+        total: 22800,
+        lines: [],
+      });
+      await facade.scan([file]);
+    });
+
+    it('se reconoce, no manda lo marcado a "¿No lo compraste?" y se puede cerrar', () => {
+      expect(facade.hasNoDetail()).toBe(true);
+      expect(facade.missing()).toEqual([]);
+      expect(facade.canConfirm()).toBe(true);
+    });
+
+    it('cierra con el total de la boleta y lo marcado queda comprado', async () => {
+      expect(await facade.confirmReceipt()).toBe(true);
+      expect(receipts['applyReceipt']).toHaveBeenCalledWith(
+        expect.objectContaining({ total: 22800, items: [], extras: [], uncheckItemIds: [] })
+      );
     });
   });
 
@@ -279,7 +474,9 @@ describe('PurchaseCloseFacade', () => {
 
       expect(facade.kind()).toBe('completed');
       expect(facade.decisions()[0].target).toMatchObject({ kind: 'item', itemId: 'i-leche' });
+      expect(facade.missing().map((m) => m.item.itemId)).toEqual(['i-pan']);
 
+      facade.setMissingBought('i-pan', true);
       expect(await facade.confirmReceipt()).toBe(true);
 
       expect(receipts['attachReceipt']).toHaveBeenCalledWith(
@@ -350,13 +547,21 @@ describe('PurchaseCloseFacade', () => {
 
       const input = receipts['createReceiptPurchase'].mock.calls[0][0];
       expect(input.extras).toEqual([
-        { productId: 'p-leche', rawText: 'LECHE', name: 'Leche', unitPrice: 1000, quantity: 1 },
+        {
+          productId: 'p-leche',
+          rawText: 'LECHE',
+          name: 'Leche',
+          unitPrice: 1000,
+          quantity: 1,
+          lineIndex: 0,
+        },
         {
           productId: 'p-cafe',
           rawText: 'CAFE JV',
           name: 'Café molido',
           unitPrice: 3990,
           quantity: 1,
+          lineIndex: 1,
         },
         {
           productId: null,
@@ -364,7 +569,14 @@ describe('PurchaseCloseFacade', () => {
           name: 'Bolsa basura',
           unitPrice: 200,
           quantity: 1,
+          lineIndex: 2,
         },
+      ]);
+      // Sin lista, la compra igual conserva todas sus líneas (spec 0015, AC7).
+      expect(input.lines.map((l: { rawText: string }) => l.rawText)).toEqual([
+        'LECHE',
+        'CAFE JV',
+        'BOLSA BASURA',
       ]);
       expect(input.total).toBe(5190);
       expect(receipts['applyReceipt']).not.toHaveBeenCalled();

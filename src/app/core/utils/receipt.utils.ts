@@ -109,7 +109,10 @@ export function validateReceipt(receipt: OcrReceipt): ReceiptValidation {
     }
   });
 
+  // Sin detalle (voucher de tarjeta) no hay con qué comparar el total (spec 0015, B8).
   const totalMatches =
-    receipt.total == null ? null : Math.abs(computedTotal - receipt.total) <= TOLERANCE;
+    receipt.total == null || !receipt.lines.length
+      ? null
+      : Math.abs(computedTotal - receipt.total) <= TOLERANCE;
   return { computedTotal, totalMatches, doubtfulLines };
 }

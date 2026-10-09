@@ -114,10 +114,21 @@ export class PurchaseClosePage implements OnInit {
   }
 
   onFiles(event: Event): void {
+    const files = this.takeImages(event);
+    if (files.length) this.close.scan(files);
+  }
+
+  /** Otra boleta de la misma salida (otra tienda, spec 0015 D6). */
+  onMoreFiles(event: Event): void {
+    const files = this.takeImages(event);
+    if (files.length) this.close.addReceipt(files);
+  }
+
+  private takeImages(event: Event): File[] {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []).filter((f) => f.type.startsWith('image/'));
     input.value = '';
-    if (files.length) this.close.scan(files.slice(0, 5));
+    return files.slice(0, 5);
   }
 
   async confirm(): Promise<void> {

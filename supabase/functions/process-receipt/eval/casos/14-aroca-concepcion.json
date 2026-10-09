@@ -1,0 +1,348 @@
+{
+  "caso": "14-aroca-concepcion",
+  "foto": "14-aroca-concepcion.jpg",
+  "origen": "dueño",
+  "store": "Comercializadora Aroca",
+  "date": "2026-10-05",
+  "total": 58900,
+  "items_count": 33,
+  "lines": [
+    {
+      "raw_text": "NESTLE SAHNE-NUSS 14G 3X1000",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1000,
+      "line_total": 1000,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "BANDEJA HUEVO SEGUNDA 30UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 5250,
+      "line_total": 5250,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "OVELLA TOALLA DE PAPEL 3UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1190,
+      "line_total": 1190,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "LUCCHETTI SPAGHETTI 5 400G",
+      "kind": "product",
+      "quantity": 3,
+      "unit": "un",
+      "unit_price": 890,
+      "line_total": 2670,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "GILLETTE BLUE TRIPLE HOJA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 850,
+      "line_total": 850,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "COLGATE CEPILLO CARBON 3X1000",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1000,
+      "line_total": 1000,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "BRILLEX COTONITOSM EXTRA SUAVES 200UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 790,
+      "line_total": 790,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "COLUN LECHE SIN LACTOSA SEMIDES 1L",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1350,
+      "line_total": 2700,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PANCHO VILLA L 8UN",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 1980,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "BRILLEX BOLSA DE BASURA 70X90CM",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 790,
+      "line_total": 790,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "BABYCARE PACK AHORRO TOALLITAS 160UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1880,
+      "line_total": 1880,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "DISPLAY CREMA DE LECHE SURLAT NATURAL 6UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 5700,
+      "line_total": 5700,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PF SALCHICHAS SUREÑAS 20UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2990,
+      "line_total": 2990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "COLUN QUESO RALLADO PARMESANO 40G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 850,
+      "line_total": 850,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "EL JARDIN POROTO NAVY G2 1KG",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1990,
+      "line_total": 1990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ESMERALDA CHAMPIÑONES ENTEROS 400G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1490,
+      "line_total": 1490,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ABUELOS DEL CAMPO DURAZNOS MITADES 425G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ESMERALDA CHAMPIÑONES ENTEROS 400G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1490,
+      "line_total": 1490,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ABUELOS DEL CAMPO DURAZNOS MITADES 425G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PACK COLUN YOGHURT BATIDO LIGHT 12UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2990,
+      "line_total": 2990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "BABY CARE TOALLITAS HUMEDAS 21UN 3X1000",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1000,
+      "line_total": 1000,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PF SALAME AHUMADO 100G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1490,
+      "line_total": 1490,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AZUCAR COLISEO 1KG",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "TRAVERSO ADERESO ITALIAN 240G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1290,
+      "line_total": 1290,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "RAFULCO QUESO LAMINADO 500G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 4650,
+      "line_total": 4650,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "COSTA AZUL JIBIA 425G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1290,
+      "line_total": 1290,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AKBAR TE VERDE 20 BOLSAS 30G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "MAYONESA HELLMANNS 630G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1990,
+      "line_total": 1990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "SAL VENUS 3X1000 1KG",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1000,
+      "line_total": 1000,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "SALSA DORASOL 160G 4X1000",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1000,
+      "line_total": 2000,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "BRILLEX JABON LIQUIDO AVENA ALMENDRA 750",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 990,
+      "line_total": 990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "EDRA OREGANO ENTERO 20G",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 450,
+      "line_total": 450,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "DON AHORRITO TOALLA DESINF 80UN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1190,
+      "line_total": 1190,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Mayorista de abarrotes, compra del dueño (2026-10-05 17:30:07). 33 líneas en una sola foto larga.",
+    "Cantidad DEBAJO del nombre: \"1 X 1000\", \"3 X 890\", \"UN X 990\"; el total de la línea a la derecha.",
+    "\"3X1000\", \"4X1000\" dentro del nombre son promociones impresas en la descripción, NO la cantidad (la cantidad es la de abajo).",
+    "Champiñones y duraznos salen dos veces cada uno: son dos líneas (el cruce debe sumarlas al mismo ítem).",
+    "\"BRILLEX BOLSA DE BASURA\" es un producto, no una bolsa de la caja. No hay línea TOTAL: el total es el SubTotal $58.900 (= EFECTIVO)."
+  ]
+}

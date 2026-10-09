@@ -123,6 +123,19 @@ describe('PurchaseClosePage', () => {
     expect(close.start).not.toHaveBeenCalled();
   });
 
+  it('"Agregar otra boleta" lee las fotos como otra boleta de la misma salida (spec 0015 D6)', () => {
+    close.scan = vi.fn();
+    close.addReceipt = vi.fn();
+    const foto = new File(['x'], 'b.jpg', { type: 'image/jpeg' });
+    const input = { files: [foto], value: 'C:\\b.jpg' };
+
+    page.onMoreFiles({ target: input } as unknown as Event);
+
+    expect(close.addReceipt).toHaveBeenCalledWith([foto]);
+    expect(close.scan).not.toHaveBeenCalled();
+    expect(input.value).toBe('');
+  });
+
   it('"Es otra compra" cambia a una compra sin lista', () => {
     page.otherPurchase();
     expect(close.startNew).toHaveBeenCalled();

@@ -14,6 +14,119 @@ const completed = (items: any[], completed_at = '2026-09-20T15:00:00Z') =>
     list_items: items,
   } as ActiveShoppingList);
 
+describe('summarizePurchase con las líneas de la boleta (spec 0015, G2)', () => {
+  const conLineas = () =>
+    ({
+      ...completed([
+        { id: 'a', is_checked: true, quantity: 1, unit_price: 1100, product: { name: 'Leche' } },
+      ]),
+      total_paid: 2120,
+      total_source: 'receipt',
+      purchase_lines: [
+        {
+          line_index: 2,
+          raw_text: 'BOLSA',
+          name: null,
+          kind: 'bag',
+          quantity: 1,
+          unit_price: 20,
+          amount: 20,
+          product: null,
+        },
+        {
+          line_index: 0,
+          raw_text: 'LCH ENT',
+          name: 'Leche',
+          kind: 'product',
+          quantity: 1,
+          unit_price: 1100,
+          amount: 1100,
+          product: { name: 'Leche' },
+        },
+        {
+          line_index: 1,
+          raw_text: 'CHOCOLATE X',
+          name: null,
+          kind: 'product',
+          quantity: 2,
+          unit_price: 500,
+          amount: 1000,
+          product: null,
+        },
+      ],
+    } as unknown as ActiveShoppingList);
+
+  it('el detalle muestra todas las líneas de producto, con o sin catálogo, en orden', () => {
+    const s = summarizePurchase(conLineas());
+
+    expect(s.items).toEqual([
+      { name: 'Leche', quantity: 1, unitPrice: 1100, subtotal: 1100 },
+      { name: 'CHOCOLATE X', quantity: 2, unitPrice: 500, subtotal: 1000 },
+    ]);
+    expect(s.itemCount).toBe(2);
+  });
+
+  it('bolsas y descuentos van aparte; productos y cargos suman la boleta', () => {
+    const s = summarizePurchase(conLineas());
+
+    expect(s.charges).toEqual([{ kind: 'bag', rawText: 'BOLSA', amount: 20 }]);
+    expect(s.estimatedTotal).toBe(2120);
+    expect(s.total).toBe(2120);
+  });
+
+  it('con varias boletas (una salida por varias tiendas) muestra todas las tiendas (D6)', () => {
+    const s = summarizePurchase({
+      ...conLineas(),
+      receipts: [
+        { id: 'r1', image_url: 'fam/a.jpg', store: 'Aroca' },
+        { id: 'r2', image_url: null, store: 'Pedregal' },
+      ],
+    } as unknown as ActiveShoppingList);
+
+    expect(s.store).toBe('Aroca · Pedregal');
+    expect(s.receiptImagePath).toBe('fam/a.jpg');
+  });
+
+  it('con varias boletas las líneas van boleta por boleta, no mezcladas', () => {
+    const l = (receipt_id: string, line_index: number, raw_text: string) => ({
+      receipt_id,
+      line_index,
+      raw_text,
+      name: null,
+      kind: 'product',
+      quantity: 1,
+      unit_price: 100,
+      amount: 100,
+      product: null,
+    });
+    const s = summarizePurchase({
+      ...completed([]),
+      receipts: [
+        { id: 'r1', image_url: null, store: 'Aroca' },
+        { id: 'r2', image_url: null, store: 'Pedregal' },
+      ],
+      purchase_lines: [
+        l('r2', 0, 'PALMITOS'),
+        l('r1', 1, 'HUEVOS'),
+        l('r2', 1, 'AJO'),
+        l('r1', 0, 'LECHE'),
+      ],
+    } as unknown as ActiveShoppingList);
+
+    expect(s.items.map((i) => i.name)).toEqual(['LECHE', 'HUEVOS', 'PALMITOS', 'AJO']);
+  });
+
+  it('sin líneas (sin boleta o compra antigua) se arma como antes, desde lo marcado', () => {
+    const s = summarizePurchase(
+      completed([
+        { id: 'a', is_checked: true, quantity: 1, unit_price: 800, product: { name: 'Pan' } },
+      ])
+    );
+    expect(s.items).toEqual([{ name: 'Pan', quantity: 1, unitPrice: 800, subtotal: 800 }]);
+    expect(s.charges).toEqual([]);
+  });
+});
+
 describe('summarizePurchase', () => {
   it('suma cantidad × precio pagado de lo marcado', () => {
     const summary = summarizePurchase(

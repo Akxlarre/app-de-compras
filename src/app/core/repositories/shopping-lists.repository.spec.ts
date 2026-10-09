@@ -226,8 +226,11 @@ describe('ShoppingListsRepository', () => {
     mock.shop.from.mockReturnValue(q);
 
     expect(await repo.findCompleted('fam-1', 20)).toEqual([{ id: 'l0' }]);
-    // Trae también la boleta de cada compra (spec 0009): total real, comercio y foto.
-    expect(q.select).toHaveBeenCalledWith(`${WITH_ITEMS}, receipts(id, image_url, store)`);
+    // Trae también la boleta de cada compra (spec 0009): total real, comercio y foto; y todas sus
+    // líneas (spec 0015, G2).
+    expect(q.select).toHaveBeenCalledWith(
+      `${WITH_ITEMS}, receipts(id, image_url, store), purchase_lines(receipt_id, line_index, raw_text, name, kind, quantity, unit_price, amount, product:products(name))`
+    );
     expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
     expect(q.eq).toHaveBeenCalledWith('status', 'completed');
     expect(q.order).toHaveBeenCalledWith('completed_at', { ascending: false, nullsFirst: false });

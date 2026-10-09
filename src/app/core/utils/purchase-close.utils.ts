@@ -9,6 +9,7 @@ import type {
   ReceiptCorrection,
   ReceiptExtraInput,
   ReceiptItemInput,
+  ReceiptLineInput,
   ReceiptValidation,
   ReconciliationResult,
 } from '@core/models/receipt.model';
@@ -33,9 +34,9 @@ export function lineAmounts(
 }
 
 export function targetFromCandidate(c: MatchCandidate): LineTarget {
-  return c.itemId
-    ? { kind: 'item', itemId: c.itemId, productId: c.productId, name: c.name }
-    : { kind: 'product', productId: c.productId, name: c.name };
+  if (!c.itemId) return { kind: 'product', productId: c.productId, name: c.name };
+  const t: LineTarget = { kind: 'item', itemId: c.itemId, productId: c.productId, name: c.name };
+  return c.wasPending ? { ...t, wasPending: true } : t;
 }
 
 /** Clave de un destino para comparar lo que propuso la lectura con lo que eligió el usuario. */
@@ -131,6 +132,7 @@ export function buildApplyReceipt(args: {
         name: t.name,
         unitPrice: d.unitPrice,
         quantity: d.quantity,
+        lineIndex: d.index,
       });
     } else if (d.saveToCatalog && d.name.trim()) {
       extras.push({
@@ -139,9 +141,47 @@ export function buildApplyReceipt(args: {
         name: d.name.trim(),
         unitPrice: d.unitPrice,
         quantity: d.quantity,
+        lineIndex: d.index,
       });
     }
   }
+
+  // Todas las líneas (G2): un producto con lo que decidió el usuario; lo demás tal como se leyó.
+  // Un descuento a un producto ya va en su precio, no se repite.
+  const decided = new Map(decisions.map((d) => [d.index, d]));
+  const lines: ReceiptLineInput[] = receipt.lines.flatMap((l, index): ReceiptLineInput[] => {
+    const d = decided.get(index);
+    if (d) {
+      const t = d.target;
+      return [
+        {
+          index,
+          rawText: d.rawText,
+          name: t && t.kind !== 'new' ? t.name : d.name.trim() || null,
+          kind: 'product',
+          quantity: d.quantity,
+          unitPrice: d.unitPrice,
+          amount: Math.round(d.quantity * d.unitPrice),
+          itemId: t?.kind === 'item' ? t.itemId : null,
+          productId: t && t.kind !== 'new' ? t.productId : null,
+        },
+      ];
+    }
+    if (l.line_total == null || (l.kind === 'discount' && l.applies_to != null)) return [];
+    return [
+      {
+        index,
+        rawText: l.raw_text,
+        name: l.name,
+        kind: l.kind,
+        quantity: l.quantity,
+        unitPrice: l.unit_price,
+        amount: l.kind === 'discount' ? -Math.abs(l.line_total) : l.line_total,
+        itemId: null,
+        productId: null,
+      },
+    ];
+  });
 
   const items: ReceiptItemInput[] = [...byItem].map(([itemId, a]) => ({
     itemId,
@@ -162,6 +202,7 @@ export function buildApplyReceipt(args: {
     ocrCheck: { ...validation, corrections: corrections(decisions) },
     items,
     extras,
-    uncheckItemIds: args.missing.filter((m) => !m.bought).map((m) => m.item.itemId),
+    lines,
+    uncheckItemIds: args.missing.filter((m) => m.bought === false).map((m) => m.item.itemId),
   };
 }

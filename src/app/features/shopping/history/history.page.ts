@@ -45,6 +45,7 @@ export class HistoryPage implements OnInit {
   /** Foto de boleta abierta (URL firmada; null si no se pudo abrir). */
   readonly receiptPhoto = signal<{ id: string; url: string | null } | null>(null);
   readonly loadingPhoto = signal(false);
+  readonly abs = Math.abs;
 
   readonly monthLabel = capitalize(
     new Intl.DateTimeFormat('es-CL', { month: 'long' }).format(new Date())

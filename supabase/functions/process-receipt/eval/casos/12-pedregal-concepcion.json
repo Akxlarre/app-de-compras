@@ -1,0 +1,147 @@
+{
+  "caso": "12-pedregal-concepcion",
+  "foto": "12-pedregal-concepcion.jpg",
+  "origen": "dueño",
+  "store": "Del Pedregal Concepción",
+  "date": "2026-10-05",
+  "total": 41060,
+  "items_count": 13,
+  "lines": [
+    {
+      "raw_text": "PALM TOS TROZOS 400 GRS DP",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1490,
+      "line_total": 1490,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PALM TOS RODAJAS 400 GRS DP",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1550,
+      "line_total": 3100,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "MOKA E CAFE HELADO SABOR CARAMELO 8 UN. X 12 X 132",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1790,
+      "line_total": 1790,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CARN MOLIDA 250 GRS RUPANCO",
+      "kind": "product",
+      "quantity": 4,
+      "unit": "un",
+      "unit_price": 1090,
+      "line_total": 4360,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CERD CHULETA CENTRO 3 UN. DP",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1990,
+      "line_total": 3980,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ADOR TRUTRO CORTO 1 KG",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 2990,
+      "line_total": 5980,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "HAMB RGUESA DE POLLO 10 UN. HB",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1690,
+      "line_total": 1690,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AJO UBOS 200 GRS DP",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 690,
+      "line_total": 690,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "AJO NTEROS 200 GRS DP",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 650,
+      "line_total": 650,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "FILE ILLO DE POLLO 1 KG SADIA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 6490,
+      "line_total": 6490,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "FRUT LLAS SLICED 450 GRS DP",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1990,
+      "line_total": 1990,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ALCA ARRAS 100 GRS DP",
+      "kind": "product",
+      "quantity": 2,
+      "unit": "un",
+      "unit_price": 1440,
+      "line_total": 2880,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "CERD PULPA PIERNA CUBOS 350 GRS DP",
+      "kind": "product",
+      "quantity": 3,
+      "unit": "un",
+      "unit_price": 1990,
+      "line_total": 5970,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Minimarket de congelados, compra del dueño (2026-10-05). Tabla Descripción / Código Cant. Unitario Valor.",
+    "El nombre va en una línea y debajo el código interno (\"8351\") con cantidad \"1,00 x\", unitario y valor: el código NO es producto.",
+    "La impresora se come letras: \"PALM TOS\" (palmitos), \"HAMB RGUESA\", \"FILE ILLO\", \"ALCA ARRAS\" (alcaparras). El texto se copia tal cual; el cruce con la lista debe tolerarlo.",
+    "\"8 UN. X 12 X 132\" es descripción del envase, no cantidad. La hora va aparte al pie (\"Hora: 15:56\")."
+  ]
+}
