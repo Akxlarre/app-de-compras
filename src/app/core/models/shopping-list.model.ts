@@ -44,6 +44,7 @@ export interface PopulatedListItem extends ListItem {
 
 /** Una línea de la boleta guardada en la compra (`shop.purchase_lines`, spec 0015). */
 export interface PurchaseLine {
+  receipt_id: string;
   line_index: number;
   raw_text: string | null;
   name: string | null;

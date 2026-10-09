@@ -1,7 +1,8 @@
 > id: 0015-cierre-boleta-confiable
 > refs: `docs/RECORRIDO-UX.md` §2 Boletas (B2–B6, G2) y orden propuesto (paso 2).
 > Antecedentes: 0012 (modelo de compra), 0013 (pulido), fix-048 (B1, ya resuelto).
-> status: approved (D1–D5 recomendadas, "continuemos" 2026-10-09) — D6 pendiente del dueño
+> status: done (D1–D5 recomendadas, "continuemos" 2026-10-09; D6 = A, 2026-10-09)
+> closed: 2026-10-09
 > created: 2026-10-02
 
 ## Problema
@@ -56,7 +57,7 @@ El OCR lee bien. Lo que falla está en la app:
   dice "Esta boleta no trae el detalle" y muestra tienda, fecha y total. Se cierra con ese total
   (`total_source = receipt`) y lo marcado queda comprado sin precio (opcional: escribir precios
   como en el cierre sin boleta). Sin aviso de "no cuadra".
-- **D6. Varias boletas en una compra (B9). PENDIENTE DEL DUEÑO.** Recomendado: en el cierre,
+- **D6. Varias boletas en una compra (B9). Elegida A por el dueño (2026-10-09):** en el cierre,
   "Agregar otra boleta" después de leer una. Cada boleta se cruza con lo que aún no se asignó, el
   total de la compra es la suma y cada boleta guarda su tienda. Requiere quitar el único de
   `receipts.list_id`. Alternativa: cada boleta es su propia compra (como hoy con "Es otra compra"),
@@ -73,7 +74,7 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
 **B2 — pendientes**
 - [x] AC1. Un producto pendiente de la lista que aparece en la boleta sale en "Coinciden" (o en
   "¿Es este?" si hay duda) con la nota "estaba pendiente", no en "No estaban en la lista".
-- [ ] AC2. Al cerrar, ese producto queda comprado con el precio y la cantidad de la boleta, no pasa
+- [x] AC2. Al cerrar, ese producto queda comprado con el precio y la cantidad de la boleta, no pasa
   a la próxima lista y su `last_purchased_at` se actualiza.
 - [x] AC3. Un nombre corto del catálogo o de la lista contenido en una línea larga se ofrece como
   candidato ("Arroz" ↔ "Arroz G1 grano largo 1kg"; "Leche" ↔ "LECHE ENT COLUN 1L").
@@ -81,15 +82,15 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
   un pendiente, gana el marcado.
 
 **B3 / G2 — todas las líneas**
-- [ ] AC5. Al cerrar con boleta se guardan **todas** las líneas (productos, bolsas, descuentos,
+- [x] AC5. Al cerrar con boleta se guardan **todas** las líneas (productos, bolsas, descuentos,
   envases, otros), cada una con texto, tipo, cantidad, precio unitario, monto y, si tiene, el
   producto o ítem al que se asignó.
-- [ ] AC6. El detalle de la compra en el Historial muestra todas las líneas guardadas. Las que no
+- [x] AC6. El detalle de la compra en el Historial muestra todas las líneas guardadas. Las que no
   tienen producto se ven con su texto de boleta. La suma del detalle es igual a la suma de la
   boleta.
-- [ ] AC7. Una compra sin lista en la que no se guardó nada en el catálogo muestra igual todas sus
+- [x] AC7. Una compra sin lista en la que no se guardó nada en el catálogo muestra igual todas sus
   líneas.
-- [ ] AC8. Las compras cerradas sin boleta y las anteriores a esta spec se ven igual que hoy.
+- [x] AC8. Las compras cerradas sin boleta y las anteriores a esta spec se ven igual que hoy.
 
 **B4 — "¿No lo compraste?"**
 - [x] AC9. Nada viene elegido. "Cerrar compra" queda deshabilitado con el aviso "Elige qué pasó con
@@ -98,9 +99,9 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
   pendientes" está activo). "Lo compré" → queda comprado sin cambiar `products.last_price`.
 
 **B5 — fecha**
-- [ ] AC11. Con fecha de boleta válida, la compra queda con esa fecha y hora (`completed_at` y
+- [x] AC11. Con fecha de boleta válida, la compra queda con esa fecha y hora (`completed_at` y
   `receipts.purchased_at`), en el cierre y en "Agregar boleta".
-- [ ] AC12. Sin fecha, con fecha futura o de hace más de un año, se usa la fecha del cierre.
+- [x] AC12. Sin fecha, con fecha futura o de hace más de un año, se usa la fecha del cierre.
 
 **B6 — otras líneas**
 - [x] AC13. Bolsas, descuentos, envases y otros cargos salen en una sección "Otros cargos" con su
@@ -111,14 +112,19 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
 **B8 — boleta sin detalle** (D5)
 - [x] AC17. Con una boleta de 0 líneas y total, el cierre muestra "Esta boleta no trae el detalle"
   con tienda, fecha y total, sin aviso de "no cuadra", y permite cerrar.
-- [ ] AC18. Al cerrar, la compra queda con `total_paid` = total de la boleta, `total_source =
+- [x] AC18. Al cerrar, la compra queda con `total_paid` = total de la boleta, `total_source =
   receipt`, la boleta guardada (tienda, fecha, foto) y lo marcado comprado.
 
-**B9 — varias boletas** (D6, se redacta cuando el dueño decida)
+**B9 — varias boletas** (D6 = A)
+- [x] AC19. Después de leer una boleta, al cerrar la lista activa aparece "Agregar otra boleta (otra
+  tienda)". La nueva se cruza solo con lo que aún no apareció y sus líneas siguen a continuación.
+- [x] AC20. Al cerrar se guardan todas las boletas, cada una con su tienda, foto, total y líneas; el
+  total de la compra es la suma.
+- [x] AC21. El Historial muestra las tiendas de la compra y el detalle boleta por boleta.
 
 **General**
-- [ ] AC15. `npm run test:ci` y `npm run lint:arch` pasan. Hay tests de regresión para B2–B6.
-- [ ] AC16. Verificado en staging (375×667) con una boleta real que tenga un pendiente, un marcado
+- [x] AC15. `npm run test:ci` y `npm run lint:arch` pasan. Hay tests de regresión para B2–B6.
+- [x] AC16. Verificado en staging (375×667) con una boleta real que tenga un pendiente, un marcado
   que no sale, una bolsa y fecha de otro día.
 
 ## Avance (2026-10-09)
@@ -163,3 +169,21 @@ despliegue en `docs/PENDIENTES.md`: la migración antes que la app.
     "¿No lo compraste?"; "Cerrar compra" se habilita al elegir "No lo compré".
   - Voucher Getnet: "Esta boleta no trae el detalle", $22.800, "Cerrar compra" habilitado.
   - Líder Calama: "Otros cargos · Descuento RF CANJE PESOS MCL -$50.591", sin aviso de "no cuadra".
+
+## Verificación en staging (2026-10-09, cuenta `test5`)
+plataforma-db#17 mergeado y aplicado en staging (*Deploy de migraciones* #29). App de la rama
+`main-emk2r6` contra staging, OCR simulado con la transcripción de las boletas reales del dueño
+(casos 14, 12 y 15 del eval). Lista: Leche y Palmitos marcados, Champiñones pendiente, Pan marcado
+que no sale en ninguna boleta. Un solo cierre con 3 boletas (Aroca + "Agregar otra boleta" Pedregal
++ voucher de la feria):
+- Compra `completed_at` 2026-10-05 (no la del cierre, 09/10) — AC11.
+- 3 boletas guardadas con su tienda y total; `total_paid` $122.760 = 58.900 + 41.060 + 22.800 — AC20.
+- 46 líneas en `purchase_lines` (33 + 13), suman $99.960 = las dos boletas con detalle — AC5.
+- Champiñones (pendiente, dos líneas en Aroca) quedó comprado a $1.490 y con última compra
+  05/10 — AC2. Pan y Palmitos ("No lo compré") pasaron a la lista nueva — AC10.
+- Historial: "Compra del lun 5 oct · 46 productos · $122.760", detalle boleta por boleta (la primera
+  corrida los mezclaba: se corrigió ordenando por boleta) — AC6, AC21.
+- AC12 (fecha inválida) y AC7/AC8 quedan cubiertos por pgTAP `shop_receipt_reliable` y tests de la app.
+
+**Antes de publicar la release de la app:** aplicar la migración en producción (`docs/PENDIENTES.md`).
+Limitación conocida: al borrar una compra con varias boletas, solo se borra del bucket la foto de una.

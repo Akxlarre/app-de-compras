@@ -87,6 +87,35 @@ describe('summarizePurchase con las líneas de la boleta (spec 0015, G2)', () =>
     expect(s.receiptImagePath).toBe('fam/a.jpg');
   });
 
+  it('con varias boletas las líneas van boleta por boleta, no mezcladas', () => {
+    const l = (receipt_id: string, line_index: number, raw_text: string) => ({
+      receipt_id,
+      line_index,
+      raw_text,
+      name: null,
+      kind: 'product',
+      quantity: 1,
+      unit_price: 100,
+      amount: 100,
+      product: null,
+    });
+    const s = summarizePurchase({
+      ...completed([]),
+      receipts: [
+        { id: 'r1', image_url: null, store: 'Aroca' },
+        { id: 'r2', image_url: null, store: 'Pedregal' },
+      ],
+      purchase_lines: [
+        l('r2', 0, 'PALMITOS'),
+        l('r1', 1, 'HUEVOS'),
+        l('r2', 1, 'AJO'),
+        l('r1', 0, 'LECHE'),
+      ],
+    } as unknown as ActiveShoppingList);
+
+    expect(s.items.map((i) => i.name)).toEqual(['LECHE', 'HUEVOS', 'PALMITOS', 'AJO']);
+  });
+
   it('sin líneas (sin boleta o compra antigua) se arma como antes, desde lo marcado', () => {
     const s = summarizePurchase(
       completed([

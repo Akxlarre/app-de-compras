@@ -16,11 +16,10 @@ las actualizaciones se instalan encima.
 
 ## Cierre con boleta confiable (spec 0015): migración antes que la app
 
-Rama `feat/shop-receipt-reliable` de plataforma-db (migración `20261009010000_shop_receipt_reliable`,
-sin PR todavía). **Debe estar aplicada en un ambiente antes de que llegue esta versión de la app:**
-el Historial pide `purchase_lines` y sin la tabla la consulta falla. Orden: PR en plataforma-db →
-merge (staging se aplica solo) → probar en staging → *Deploy de migraciones* con
-`confirmar = produccion` → recién ahí publicar la release de la app.
+plataforma-db#17 (migración `20261009010000_shop_receipt_reliable`) ya está en staging. **Falta
+producción, y tiene que ir antes de publicar la release de la app que trae la spec 0015:** el
+Historial pide `purchase_lines` y sin la tabla la consulta falla. plataforma-db → Actions →
+*Deploy de migraciones* → Run workflow con `confirmar = produccion`.
 
 ## Migraciones de boletas en el Historial en producción (plataforma-db#11)
 

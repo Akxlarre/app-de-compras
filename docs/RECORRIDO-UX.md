@@ -252,7 +252,7 @@ Probado con `test3` (dueño de "Casa QA" con test4) y `test5` (solo).
 | Orden | Qué | Incluye | Por qué primero |
 |---|---|---|---|
 | 1 | **Hotfix** | B1 (cerrar compra tapado por la barra), L1 (buscador borra lo escrito) | Rompen flujos diarios y son chicos. |
-| 2 | **Spec: cierre con boleta confiable** | B2–B6, G2 | Hoy la boleta deja datos equivocados (pendientes que se compraron, líneas perdidas, fecha). Todo lo que viene después (gasto, precios, sugerencias) se apoya en esos datos. |
+| 2 | ✅ **Spec 0015: cierre con boleta confiable** (hecha 2026-10-09; además B8 voucher sin detalle y B9 varias boletas) | B2–B6, G2 | Hoy la boleta deja datos equivocados (pendientes que se compraron, líneas perdidas, fecha). Todo lo que viene después (gasto, precios, sugerencias) se apoya en esos datos. |
 | 3 | **Spec: pestaña Compras** | La pestaña "Boletas" pasa a ser **Compras**: historial con boletas (G1 + R1), meses (R2/R7), "Escanear boleta" arriba, galería/PDF (G3), editar tienda y fecha (G4), R3–R6, R8 | Junta en un lugar visible lo que hoy está repartido entre Boletas (sin archivo) y un Historial escondido. |
 | 4 | **Spec: Mi Lista** (ya aprobada) | L2–L9, F1 + F2 | Uso diario en el súper. |
 | 5 | **Spec: ficha de producto** | H1, K1–K7, H2, H3 | Corregir y entender lo comprado; necesaria cuando hay boletas. |

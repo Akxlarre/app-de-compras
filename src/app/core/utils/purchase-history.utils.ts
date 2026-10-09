@@ -19,7 +19,13 @@ function receiptsOf(list: ActiveShoppingList): ListReceipt[] {
  * `total` es lo pagado de verdad (boleta o a mano) si se sabe; si no, la suma estimada.
  */
 export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
-  const lines = [...(list.purchase_lines ?? [])].sort((a, b) => a.line_index - b.line_index);
+  // Boleta por boleta (en el orden de la compra) y, dentro de cada una, en el orden impreso.
+  const receiptOrder = new Map(receiptsOf(list).map((r, i) => [r.id, i]));
+  const lines = [...(list.purchase_lines ?? [])].sort(
+    (a, b) =>
+      (receiptOrder.get(a.receipt_id) ?? 0) - (receiptOrder.get(b.receipt_id) ?? 0) ||
+      a.line_index - b.line_index
+  );
   // Con las líneas de la boleta (spec 0015) el detalle es la boleta completa; si no, lo marcado.
   const items: PurchasedItem[] = lines.length
     ? lines
