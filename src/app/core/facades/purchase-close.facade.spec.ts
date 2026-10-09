@@ -399,6 +399,33 @@ describe('PurchaseCloseFacade', () => {
       ]);
     });
 
+    it('resume cada boleta: tienda, total y si trae detalle (fix-049, E8)', async () => {
+      receipts['extractReceipt'].mockResolvedValueOnce({
+        store: 'Feria',
+        date: null,
+        total: 22800,
+        lines: [],
+      });
+      await facade.addReceipt([file2]);
+
+      expect(facade.receiptSummaries()).toEqual([
+        { store: 'Aroca', total: 2200, noDetail: false },
+        { store: 'Pedregal', total: 1600, noDetail: false },
+        { store: 'Feria', total: 22800, noDetail: true },
+      ]);
+    });
+
+    it('"Guardar todos en el catálogo" marca y desmarca solo lo nuevo (fix-049, E6)', () => {
+      facade.saveAllToCatalog(true);
+      expect(facade.decisions().map((d) => [d.rawText, d.saveToCatalog])).toEqual([
+        ['LECHE', false],
+        ['PAN', false],
+        ['TE VERDE', true],
+      ]);
+      facade.saveAllToCatalog(false);
+      expect(facade.decisions().some((d) => d.saveToCatalog)).toBe(false);
+    });
+
     it('solo al cerrar la lista activa se pueden agregar boletas', () => {
       expect(facade.canAddReceipt()).toBe(true);
       facade.kind.set('completed');

@@ -4,6 +4,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NavController } from '@ionic/angular';
+import { ActivatedRoute } from '@angular/router';
 import { PurchaseClosePage } from './purchase-close.page';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
@@ -134,6 +135,41 @@ describe('PurchaseClosePage', () => {
     expect(close.addReceipt).toHaveBeenCalledWith([foto]);
     expect(close.scan).not.toHaveBeenCalled();
     expect(input.value).toBe('');
+  });
+
+  describe('en la pestaña Boletas (fix-049, E2)', () => {
+    let tab: PurchaseClosePage;
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          PurchaseClosePage,
+          { provide: PurchaseCloseFacade, useValue: close },
+          { provide: ShoppingListFacade, useValue: lists },
+          { provide: NavController, useValue: nav },
+          { provide: ActivatedRoute, useValue: { snapshot: { routeConfig: { path: 'receipt' } } } },
+        ],
+      });
+      tab = TestBed.inject(PurchaseClosePage);
+    });
+
+    it('se sabe que es la pestaña (no hay "Cancelar" antes de leer)', () => {
+      expect(tab.inTab).toBe(true);
+      expect(page.inTab).toBe(false);
+    });
+
+    it('"Descartar" olvida la boleta leída y vuelve a empezar con la compra activa', async () => {
+      const active = { id: 'l1', list_items: [{ id: 'i1', is_checked: true }] };
+      lists.initialize.mockImplementation(async () => lists.data.set(active));
+      close.reset.mockImplementation(() => close.list.set(null));
+      close.list.set({ id: 'l1' });
+
+      await tab.discard();
+
+      expect(close.reset).toHaveBeenCalled();
+      expect(close.start).toHaveBeenCalledWith(active, true, 'receipt');
+      expect(nav.navigateRoot).not.toHaveBeenCalled();
+    });
   });
 
   it('"Es otra compra" cambia a una compra sin lista', () => {

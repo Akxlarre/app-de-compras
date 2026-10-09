@@ -141,6 +141,14 @@ export class PurchaseCloseFacade {
     { receipt: OcrReceipt; validation: ReceiptValidation; files: File[] }[]
   >([]);
   readonly receiptCount = computed(() => this.parts().length);
+  /** Una fila por boleta en el resumen (fix-049): el voucher de la feria se ve "sin detalle". */
+  readonly receiptSummaries = computed(() =>
+    this.parts().map((p) => ({
+      store: p.receipt.store,
+      total: p.receipt.total ?? p.validation.computedTotal,
+      noDetail: p.receipt.lines.length === 0,
+    }))
+  );
   /** Otra boleta solo al cerrar la lista activa: "Agregar boleta" del Historial es de una. */
   readonly canAddReceipt = computed(() => this.kind() === 'active' && this.parts().length > 0);
 
@@ -302,6 +310,13 @@ export class PurchaseCloseFacade {
       choice === 'new'
         ? { target: { kind: 'new' }, ...(this.kind() === 'new' ? { saveToCatalog: true } : {}) }
         : { target: targetFromCandidate(choice) }
+    );
+  }
+
+  /** "Guardar todos en el catálogo" / "Ninguno": solo lo que no estaba en la lista ni en el catálogo. */
+  saveAllToCatalog(save: boolean): void {
+    this.decisions.update((ds) =>
+      ds.map((d) => (d.target?.kind === 'new' ? { ...d, saveToCatalog: save } : d))
     );
   }
 

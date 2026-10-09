@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, OnInit, computed, inject } from '@angular/core';
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { NavController } from '@ionic/angular';
+import { ActivatedRoute } from '@angular/router';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import type { LineDecision, MatchCandidate } from '@core/models/receipt.model';
@@ -56,6 +57,16 @@ export class PurchaseClosePage implements OnInit {
     }
     return { matched, candidates, extras };
   });
+
+  /** Entró por la pestaña Boletas (no desde "Finalizar"): no hay nada que cancelar (fix-049). */
+  readonly inTab =
+    inject(ActivatedRoute, { optional: true })?.snapshot.routeConfig?.path === 'receipt';
+
+  /** Pestaña Boletas: olvida la boleta leída y vuelve a la foto con la compra activa. */
+  async discard(): Promise<void> {
+    this.close.reset();
+    await this.ngOnInit();
+  }
 
   async ngOnInit(): Promise<void> {
     if (this.close.list()) return;

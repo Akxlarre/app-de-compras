@@ -18,27 +18,44 @@
         <h2 class="text-xl font-bold text-text-primary">
           @if (close.kind() !== 'new') { {{ close.list()!.name }} }
         </h2>
+        <!-- En la pestaña no hay nada que cancelar; con una boleta leída, se descarta (fix-049) -->
+        @if (!inTab) {
         <button
           class="text-sm text-text-muted font-medium active:scale-95 transition-all"
           (click)="cancel()"
         >
           Cancelar
         </button>
+        } @else if (close.receipt() && !close.isScanning()) {
+        <button
+          class="text-sm text-text-muted font-medium active:scale-95 transition-all"
+          data-llm-action="descartar-boleta"
+          (click)="discard()"
+        >
+          Descartar
+        </button>
+        }
       </div>
 
-      @if (close.kind() === 'active' && pendingCount() > 0) {
-      <label class="flex items-center gap-3 text-sm text-text-muted">
-        <input
-          type="checkbox"
-          class="w-5 h-5 accent-brand"
-          [checked]="close.carryPending()"
-          (change)="close.carryPending.set($any($event.target).checked)"
-        />
-        Pasar
-        {{ pendingCount() === 1 ? 'el pendiente' : 'los ' + pendingCount() + ' pendientes' }} a la
-        próxima lista
-      </label>
+      @if (close.error()) {
+      <app-alert-card severity="error" [title]="close.error()!" data-testid="error-cierre" />
       }
+
+      <ng-template #carry>
+        @if (close.kind() === 'active' && pendingCount() > 0) {
+        <label class="flex items-center gap-3 text-sm text-text-muted">
+          <input
+            type="checkbox"
+            class="w-5 h-5 accent-brand"
+            [checked]="close.carryPending()"
+            (change)="close.carryPending.set($any($event.target).checked)"
+          />
+          Pasar
+          {{ pendingCount() === 1 ? 'el pendiente' : 'los ' + pendingCount() + ' pendientes' }} a la
+          próxima lista
+        </label>
+        }
+      </ng-template>
 
       <!-- ── Sin boleta ─────────────────────────────────────────────── -->
       @if (close.mode() === 'manual') {
@@ -106,6 +123,7 @@
         }
       </div>
 
+      <ng-container *ngTemplateOutlet="carry" />
       <button
         class="btn-primary w-full"
         data-llm-action="cerrar-compra-sin-boleta"
@@ -138,7 +156,7 @@
       </div>
       } @else if (close.decisions().length === 0 && !close.hasNoDetail()) {
       <button
-        class="w-full aspect-[3/4] max-h-[420px] border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-surface p-6 text-center active:scale-[0.99] transition-transform"
+        class="w-full aspect-[3/4] max-h-[300px] border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-surface p-6 text-center active:scale-[0.99] transition-transform"
         (click)="fileInput.click()"
       >
         <app-icon name="camera" [size]="40" class="text-brand mb-4" [attr.aria-label]="'Cámara'" />
@@ -168,21 +186,36 @@
       } @else {
       <!-- Resumen -->
       <div
-        class="flex items-center justify-between p-4 bg-surface border border-border-default rounded-2xl"
+        class="flex flex-col gap-2 p-4 bg-surface border border-border-default rounded-2xl"
+        data-testid="resumen-boleta"
       >
-        <div>
-          <p class="text-sm text-text-muted">
-            @if (close.receiptCount() > 1) { {{ close.receiptCount() }} boletas · }
-            {{ close.receipt()?.store || 'Boleta' }}
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm text-text-muted truncate">
+            {{
+              close.receiptCount() > 1
+                ? close.receiptCount() + ' boletas'
+                : close.receipt()?.store || 'Boleta'
+            }}
           </p>
-          <p class="text-2xl font-black text-text-primary">
+          <p class="text-2xl font-black text-text-primary shrink-0">
             ${{ close.receipt()?.total ?? close.receiptSum() | number : '1.0-0' }}
           </p>
         </div>
-        @if (!close.hasNoDetail()) {
-        <p class="text-xs text-text-muted text-right" data-testid="resumen-boleta">
+        @if (close.receiptCount() > 1) { @for (r of close.receiptSummaries(); track $index) {
+        <div class="flex items-center justify-between gap-3 text-sm">
+          <span class="text-text-primary truncate">{{ r.store || 'Boleta ' + ($index + 1) }}</span>
+          <span class="text-text-muted shrink-0">
+            @if (r.noDetail) { sin detalle · } ${{ r.total | number : '1.0-0' }}
+          </span>
+        </div>
+        } } @else if (close.validation()?.totalMatches === true && !close.otherCharges().length) {
+        <p class="flex items-center gap-1 text-xs font-semibold text-success">
+          <app-icon name="check" [size]="14" [attr.aria-label]="'Cuadra'" /> Cuadra con la boleta
+        </p>
+        } @else if (!close.hasNoDetail()) {
+        <p class="text-xs text-text-muted">
           Productos ${{ close.receiptSum() | number : '1.0-0' }} @if (close.otherCharges().length) {
-          <br />Otros {{ close.otherSum() < 0 ? '-' : '' }}${{
+          · Otros {{ close.otherSum() < 0 ? '-' : '' }}${{
             abs(close.otherSum()) | number : '1.0-0'
           }}
           }
@@ -213,8 +246,9 @@
           <div class="flex items-start justify-between gap-2">
             <div class="flex-1 min-w-0">
               <p class="font-medium text-text-primary truncate">{{ lineName(d) }}</p>
+              @if (d.rawText && d.rawText !== lineName(d)) {
               <p class="text-xs text-text-muted truncate">{{ d.rawText }}</p>
-              @if (d.target?.wasPending) {
+              } @if (d.target?.wasPending) {
               <p class="text-xs font-semibold text-brand" data-testid="estaba-pendiente">
                 Estaba pendiente: queda comprado
               </p>
@@ -318,45 +352,8 @@
         <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
         }
       </section>
-      } @if (groups().matched.length) {
-      <section class="flex flex-col gap-2">
-        <h3 class="text-sm font-bold text-text-primary">Coinciden</h3>
-        @for (d of groups().matched; track d.index) {
-        <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
-        }
-      </section>
-      } @if (groups().extras.length) {
-      <section class="flex flex-col gap-2">
-        <h3 class="text-sm font-bold text-text-primary">No estaban en la lista</h3>
-        <p class="text-xs text-text-muted">
-          Suman al gasto. Marca "Guardar en catálogo" solo lo que vuelvas a comprar.
-        </p>
-        @for (d of groups().extras; track d.index) {
-        <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
-        }
-      </section>
-      } @if (close.otherCharges().length) {
-      <section class="flex flex-col gap-2" data-testid="otros-cargos">
-        <h3 class="text-sm font-bold text-text-primary">Otros cargos</h3>
-        @for (c of close.otherCharges(); track c.index) {
-        <div
-          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-xl"
-        >
-          <div class="flex-1 min-w-0">
-            <p class="text-text-primary truncate">
-              @switch (c.kind) { @case ('bag') { Bolsa } @case ('deposit') { Envase } @case
-              ('discount') { Descuento } @default { No suma al total } }
-            </p>
-            <p class="text-xs text-text-muted truncate">{{ c.rawText }}</p>
-          </div>
-          <span class="font-bold text-text-primary"
-            >{{ c.amount < 0 ? '-' : '' }}${{ abs(c.amount) | number : '1.0-0' }}</span
-          >
-        </div>
-        }
-      </section>
       } @if (close.missing().length) {
-      <section class="flex flex-col gap-2">
+      <section class="flex flex-col gap-2" data-testid="no-lo-compraste">
         <h3 class="text-sm font-bold text-text-primary">¿No lo compraste?</h3>
         <p class="text-xs text-text-muted">
           Lo marcaste pero no aparece en la boleta. "No lo compré" lo deja para la próxima lista.
@@ -399,6 +396,59 @@
         </div>
         }
       </section>
+      } @if (groups().matched.length) {
+      <section class="flex flex-col gap-2">
+        <h3 class="text-sm font-bold text-text-primary">Coinciden</h3>
+        @for (d of groups().matched; track d.index) {
+        <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
+        }
+      </section>
+      } @if (groups().extras.length) {
+      <section class="flex flex-col gap-2">
+        <h3 class="text-sm font-bold text-text-primary">No estaban en la lista</h3>
+        <p class="text-xs text-text-muted">
+          Suman al gasto. Guarda en el catálogo lo que vuelvas a comprar.
+        </p>
+        <div class="flex gap-2">
+          <button
+            class="px-3 py-1 rounded-full text-sm border border-border-default text-text-primary"
+            data-llm-action="guardar-todos-en-catalogo"
+            (click)="close.saveAllToCatalog(true)"
+          >
+            Guardar todos en el catálogo
+          </button>
+          <button
+            class="px-3 py-1 rounded-full text-sm border border-border-default text-text-muted"
+            data-llm-action="no-guardar-en-catalogo"
+            (click)="close.saveAllToCatalog(false)"
+          >
+            Ninguno
+          </button>
+        </div>
+        @for (d of groups().extras; track d.index) {
+        <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
+        }
+      </section>
+      } @if (close.otherCharges().length) {
+      <section class="flex flex-col gap-2" data-testid="otros-cargos">
+        <h3 class="text-sm font-bold text-text-primary">Otros cargos</h3>
+        @for (c of close.otherCharges(); track c.index) {
+        <div
+          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-xl"
+        >
+          <div class="flex-1 min-w-0">
+            <p class="text-text-primary truncate">
+              @switch (c.kind) { @case ('bag') { Bolsa } @case ('deposit') { Envase } @case
+              ('discount') { Descuento } @default { No suma al total } }
+            </p>
+            <p class="text-xs text-text-muted truncate">{{ c.rawText }}</p>
+          </div>
+          <span class="font-bold text-text-primary"
+            >{{ c.amount < 0 ? '-' : '' }}${{ abs(c.amount) | number : '1.0-0' }}</span
+          >
+        </div>
+        }
+      </section>
       } @if (close.canAddReceipt()) {
       <button
         class="w-full py-3 rounded-xl border border-dashed border-border-default text-text-primary font-semibold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
@@ -419,29 +469,37 @@
       />
       }
 
-      <button
-        class="btn-primary w-full"
-        data-llm-action="cerrar-compra-con-boleta"
-        [disabled]="!close.canConfirm() || close.isSaving()"
-        (click)="confirm()"
+      <!-- Fijo abajo (sobre la barra en la pestaña): siempre se ve qué falta para cerrar (fix-049) -->
+      <ng-container *ngTemplateOutlet="carry" />
+      <div
+        class="flex flex-col gap-2 bg-base pt-2 pb-2 border-t border-border-subtle"
+        [class.sticky-above-chrome]="inTab"
+        [class.sticky-bottom-edge]="!inTab"
+        data-testid="pie-cierre"
       >
-        @if (close.isSaving()) {
-        <app-icon
-          name="loader-2"
-          [size]="18"
-          class="animate-spin"
-          [attr.aria-label]="'Guardando'"
-        />
-        Guardando... } @else {
-        <app-icon name="check" [size]="18" [attr.aria-label]="'Cerrar'" /> Cerrar compra }
-      </button>
-      @if (!close.canConfirm()) {
-      <p class="text-xs text-text-muted text-center">
-        @if (close.missingUnchosen()) { Elige qué pasó con lo que no salió en la boleta. } @else {
-        Elige una opción en cada "¿Es este?". }
-      </p>
-      } } @if (close.error()) {
-      <app-alert-card severity="error" [title]="close.error()!" />
+        @if (!close.canConfirm()) {
+        <p class="text-xs text-text-muted text-center">
+          @if (close.missingUnchosen()) { Elige qué pasó con lo que no salió en la boleta. } @else {
+          Elige una opción en cada "¿Es este?". }
+        </p>
+        }
+        <button
+          class="btn-primary w-full"
+          data-llm-action="cerrar-compra-con-boleta"
+          [disabled]="!close.canConfirm() || close.isSaving()"
+          (click)="confirm()"
+        >
+          @if (close.isSaving()) {
+          <app-icon
+            name="loader-2"
+            [size]="18"
+            class="animate-spin"
+            [attr.aria-label]="'Guardando'"
+          />
+          Guardando... } @else {
+          <app-icon name="check" [size]="18" [attr.aria-label]="'Cerrar'" /> Cerrar compra }
+        </button>
+      </div>
       } }
     </div>
     }
