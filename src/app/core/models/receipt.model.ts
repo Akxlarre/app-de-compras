@@ -78,6 +78,8 @@ export interface MatchCandidate {
   itemId: string | null;
   name: string;
   score: number;
+  /** El ítem estaba pendiente (sin marcar) en la lista: al cerrar queda comprado (spec 0015). */
+  wasPending?: boolean;
 }
 
 /**

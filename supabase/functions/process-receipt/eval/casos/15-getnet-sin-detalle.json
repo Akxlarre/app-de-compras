@@ -1,0 +1,15 @@
+{
+  "caso": "15-getnet-sin-detalle",
+  "foto": "15-getnet-sin-detalle.jpg",
+  "origen": "dueño",
+  "store": "El Nene Jr SPA",
+  "date": "2026-10-05",
+  "total": 22800,
+  "items_count": null,
+  "lines": [],
+  "notas": [
+    "Voucher de tarjeta Getnet \"VÁLIDO COMO BOLETA\" de la feria (frutas y verduras), compra del dueño (2026-10-05 18:21:42).",
+    "NO tiene detalle: solo Monto/Total $22.800. lines debe venir vacío; no inventar productos.",
+    "Caso nuevo para la app: una boleta sin líneas solo aporta tienda, fecha y total (spec 0015)."
+  ]
+}

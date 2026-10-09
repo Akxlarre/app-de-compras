@@ -1,7 +1,7 @@
 > id: 0015-cierre-boleta-confiable
 > refs: `docs/RECORRIDO-UX.md` §2 Boletas (B2–B6, G2) y orden propuesto (paso 2).
 > Antecedentes: 0012 (modelo de compra), 0013 (pulido), fix-048 (B1, ya resuelto).
-> status: draft — falta que el dueño confirme las decisiones D1–D4
+> status: approved (D1–D5 recomendadas, "continuemos" 2026-10-09) — D6 pendiente del dueño
 > created: 2026-10-02
 
 ## Problema
@@ -18,6 +18,25 @@ Caso real (staging, cuenta `test5`, boleta del 30/09 18:42 cerrada el 1/10, tota
 | **B5** | La compra dice "jue 1 oct" y el gasto cae en octubre. | `apply_receipt` / `attach_receipt` dejan `completed_at = now()`. `create_receipt_purchase` sí usa la fecha de la boleta. |
 | **B6** | "$9.288 · Suma de las líneas $9.088" sin explicación. | La bolsa ($200) se lee (`kind: 'bag'`) pero no se muestra en ninguna parte. Lo mismo pasa con descuentos y envases. |
 
+### Evidencia: compra real del dueño (2026-10-05, 4 boletas, Concepción)
+Casos `12`–`15` de `supabase/functions/process-receipt/eval/casos/` (las fotos son locales,
+`eval/fotos/` está en `.gitignore`). Corridos en staging el 2026-10-09:
+
+| Caso | Boleta | OCR | Qué revela |
+|---|---|---|---|
+| 12 | Del Pedregal (congelados), 13 líneas, $41.060 | 13/13, cuadra, 64 s | La impresora se come letras ("PALM TOS", "HAMB RGUESA"): el cruce necesita tolerar nombres incompletos (alias). |
+| 13 | Perfumería, 5 líneas, $16.000 | 5/5, cuadra, 41 s | — |
+| 14 | Aroca (abarrotes), 33 líneas, $58.900 | 33/33, cuadra, 79 s | Champiñones y duraznos en dos líneas cada uno (deben sumar al mismo ítem). Sin línea TOTAL. |
+| 15 | Voucher Getnet de la feria, **sin detalle**, $22.800 | 0 líneas, total ok, 8 s | **B8.** |
+
+El OCR lee bien. Lo que falla está en la app:
+
+| # | Qué pasa | Por qué |
+|---|---|---|
+| **B8** | Con una boleta sin detalle (voucher de tarjeta, feria) **no se puede cerrar**: la pantalla vuelve a pedir la foto. | `purchase-close.page.html` muestra la cámara mientras `decisions().length === 0`, y además el aviso "la suma no cuadra" (0 ≠ total). |
+| **B9** | Una salida de compras en **varias tiendas** (4 boletas en 2,5 h) no cabe: una compra admite **una** boleta (`receipts.list_id` único). Con la primera se cierra la lista; lo comprado en las otras tiendas queda pendiente o va como "otra compra" sin cruzarse con la lista. | Modelo de 0012. |
+| **B10** | Leer una boleta larga tarda 40–80 s con "Leyendo la boleta..." sin más información. | Latencia del modelo. Fuera de alcance de esta spec (anotar en RECORRIDO-UX). |
+
 ## Decisiones (el dueño debe confirmar o cambiar)
 - **D1. Dónde se guardan todas las líneas (G2).** Recomendado: tabla nueva
   `shop.purchase_lines` (una fila por línea de la boleta, con o sin producto). Así el detalle y el
@@ -33,6 +52,15 @@ Caso real (staging, cuenta `test5`, boleta del 30/09 18:42 cerrada el 1/10, tota
 - **D4. Fecha (B5).** Recomendado: la compra toma la fecha y hora de la boleta si es válida, no es
   futura y es del último año (misma regla que `create_receipt_purchase`). Si no, la del cierre.
   Vale también para "Agregar boleta" desde el Historial.
+- **D5. Boleta sin detalle (B8).** Recomendado: si la boleta trae total y ninguna línea, el cierre
+  dice "Esta boleta no trae el detalle" y muestra tienda, fecha y total. Se cierra con ese total
+  (`total_source = receipt`) y lo marcado queda comprado sin precio (opcional: escribir precios
+  como en el cierre sin boleta). Sin aviso de "no cuadra".
+- **D6. Varias boletas en una compra (B9). PENDIENTE DEL DUEÑO.** Recomendado: en el cierre,
+  "Agregar otra boleta" después de leer una. Cada boleta se cruza con lo que aún no se asignó, el
+  total de la compra es la suma y cada boleta guarda su tienda. Requiere quitar el único de
+  `receipts.list_id`. Alternativa: cada boleta es su propia compra (como hoy con "Es otra compra"),
+  pero cruzándose con la lista activa sin cerrarla. **No bloquea T1–T3; sí T4 en adelante.**
 
 ## Fuera de alcance
 - B7 (textos de la compra sin lista) → spec "pestaña Compras".
@@ -79,6 +107,14 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
   monto (los descuentos en negativo). No se pueden asignar a productos.
 - [ ] AC14. El resumen muestra "Productos $X · Otros $Y · Total $Z". El aviso de "la suma no
   cuadra" solo aparece si productos + otros ≠ total.
+
+**B8 — boleta sin detalle** (D5)
+- [ ] AC17. Con una boleta de 0 líneas y total, el cierre muestra "Esta boleta no trae el detalle"
+  con tienda, fecha y total, sin aviso de "no cuadra", y permite cerrar.
+- [ ] AC18. Al cerrar, la compra queda con `total_paid` = total de la boleta, `total_source =
+  receipt`, la boleta guardada (tienda, fecha, foto) y lo marcado comprado.
+
+**B9 — varias boletas** (D6, se redacta cuando el dueño decida)
 
 **General**
 - [ ] AC15. `npm run test:ci` y `npm run lint:arch` pasan. Hay tests de regresión para B2–B6.

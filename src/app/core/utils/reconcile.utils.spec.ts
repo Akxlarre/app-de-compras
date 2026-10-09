@@ -138,15 +138,103 @@ describe('reconcileReceipt', () => {
     });
   });
 
-  it('cada ítem de la lista se usa una sola vez', () => {
+  it('cada ítem de la lista se usa una sola vez (dos líneas distintas no se lo reparten)', () => {
     const r = reconcileReceipt(
-      [line({ raw_text: 'LECHE' }), line({ raw_text: 'LECHE' })],
+      [line({ raw_text: 'LECHE ENTERA' }), line({ raw_text: 'LECHE DESCREMADA' })],
       [leche],
       catalogo,
       []
     );
 
     expect(r.lines.map((l) => l.match?.itemId ?? null)).toEqual(['i-leche', null]);
+  });
+
+  it('la misma línea repetida en la boleta va al mismo ítem (spec 0015, Aroca)', () => {
+    const r = reconcileReceipt(
+      [line({ raw_text: 'LECHE' }), line({ raw_text: 'PAN' }), line({ raw_text: ' leche ' })],
+      [leche, pan],
+      catalogo,
+      []
+    );
+
+    expect(r.lines.map((l) => [l.status, l.match?.itemId])).toEqual([
+      ['matched', 'i-leche'],
+      ['matched', 'i-pan'],
+      ['matched', 'i-leche'],
+    ]);
+  });
+
+  describe('pendientes de la lista (spec 0015, B2)', () => {
+    it('un pendiente que sale en la boleta coincide y se sabe que estaba pendiente', () => {
+      const r = reconcileReceipt(
+        [line({ raw_text: 'ARROZ GRADO 1' })],
+        [leche],
+        catalogo,
+        [],
+        [arroz]
+      );
+
+      expect(r.lines[0].status).toBe('matched');
+      expect(r.lines[0].match).toMatchObject({ itemId: 'i-arroz', wasPending: true });
+    });
+
+    it('un marcado coincide sin la marca de pendiente', () => {
+      const r = reconcileReceipt([line({ raw_text: 'LECHE' })], [leche], catalogo, [], [arroz]);
+
+      expect(r.lines[0].match?.wasPending).toBeUndefined();
+    });
+
+    it('un pendiente que no sale no es "¿no lo compraste?" (solo los marcados)', () => {
+      const r = reconcileReceipt([line({ raw_text: 'PAN' })], [leche], catalogo, [], [arroz, pan]);
+
+      expect(r.missing).toEqual([leche]);
+    });
+
+    it('si una línea calza igual con un marcado y con un pendiente, gana el marcado', () => {
+      const lecheOtra = item('i-leche-2', 'p-leche-2', 'Leche');
+      const r = reconcileReceipt([line({ raw_text: 'LECHE' })], [leche], catalogo, [], [lecheOtra]);
+
+      expect(r.lines[0].match?.itemId).toBe('i-leche');
+    });
+
+    it('el caso real: "Arroz" pendiente ↔ "ARROZ G1 GRANO LARGO 1KG" se ofrece en "¿Es este?"', () => {
+      const arrozCorto = item('i-arroz-c', 'p-arroz-c', 'Arroz');
+      const r = reconcileReceipt(
+        [line({ raw_text: 'ARROZ G1 GRANO LARGO 1KG' })],
+        [leche],
+        [],
+        [],
+        [arrozCorto]
+      );
+
+      expect(r.lines[0].status).toBe('candidate');
+      expect(r.lines[0].candidates[0]).toMatchObject({ itemId: 'i-arroz-c', wasPending: true });
+    });
+  });
+
+  describe('nombre corto contenido en una línea larga (spec 0015, AC3)', () => {
+    it('se ofrece como candidato del catálogo, sin coincidir solo', () => {
+      const r = reconcileReceipt(
+        [line({ raw_text: 'COLUN LECHE SIN LACTOSA SEMIDES 1L' })],
+        [],
+        [{ productId: 'p-leche', name: 'Leche' }],
+        []
+      );
+
+      expect(r.lines[0].status).toBe('candidate');
+      expect(r.lines[0].candidates.map((c) => c.productId)).toEqual(['p-leche']);
+    });
+
+    it('compara palabras enteras: "Sal" no está contenido en "SALSA DORASOL"', () => {
+      const r = reconcileReceipt(
+        [line({ raw_text: 'SALSA DORASOL 160G 4X1000' })],
+        [],
+        [{ productId: 'p-sal', name: 'Sal' }],
+        []
+      );
+
+      expect(r.lines[0].status).toBe('extra');
+    });
   });
 
   it('los ítems marcados sin línea en la boleta quedan como "¿no lo compraste?"', () => {

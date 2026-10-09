@@ -1,0 +1,67 @@
+{
+  "caso": "13-perfumeria-concepcion",
+  "foto": "13-perfumeria-concepcion.jpg",
+  "origen": "dueño",
+  "store": "Carlos Alberto Ramírez Iturra",
+  "date": "2026-10-05",
+  "total": 16000,
+  "items_count": 5,
+  "lines": [
+    {
+      "raw_text": "DESODORANTE - DOVE - 45GR - ORIGINAL - BARRA - WOMAN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2550,
+      "line_total": 2550,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "DESODORANTE - DOVE - 45GR - INVISIBLE - BARRA - MEN",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 2550,
+      "line_total": 2550,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "ACONDICIONADOR - FAMILAND - 750ML - CENTUREA CANOSO - BOTELLA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1950,
+      "line_total": 1950,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "SHAMPOO - FAMILAND - 750 ML - CENTAUREA CANOSO",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 1950,
+      "line_total": 1950,
+      "applies_to": null,
+      "legible": true
+    },
+    {
+      "raw_text": "PAPEL HIGIENICO - SWAN - 24X20MT - DOBLE HOJA",
+      "kind": "product",
+      "quantity": 1,
+      "unit": "un",
+      "unit_price": 7000,
+      "line_total": 7000,
+      "applies_to": null,
+      "legible": true
+    }
+  ],
+  "notas": [
+    "Perfumería mayorista, compra del dueño (2026-10-05 16:00:18). Columnas Cód Prod P.Unit Cant Total.",
+    "El código (8+ dígitos) va pegado al nombre en varias líneas (\"78049\" \"45063\" \"860\" + \"ACONDICIONAD\" \"OR - FAMILAND\"): no es parte del nombre ni del monto.",
+    "El orden es P.Unit antes que Cant. \"24X20MT\" es descripción, no cantidad.",
+    "Los datos del cliente (RUT 66666666-6, \"Cliente Boleta\", Dirección OSORNO) no son la tienda. SUBTOTAL, NETO, EXENTO, IVA, TOTAL y TARJETA DEBITO no son líneas."
+  ]
+}

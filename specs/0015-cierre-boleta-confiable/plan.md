@@ -1,5 +1,5 @@
 > spec: 0015-cierre-boleta-confiable
-> status: draft — se aprueba junto con la spec (decisiones D1–D4)
+> status: approved (T1–T3 sin bloqueo; T4+ esperan D6)
 > created: 2026-10-02
 
 # Plan
@@ -61,6 +61,15 @@ purchase-close.page (features/shopping/purchase-close/)
 - `purchasedAt`: fecha **y hora** de la boleta (`receipt.date` + `receipt.time` si el OCR la trae;
   revisar `OcrReceipt`). Validar: no futura, no más de 365 días → si no, `null`.
 - Tests en `purchase-close.utils.spec.ts`.
+
+### T3b. Boleta sin detalle (B8 · AC17, AC18)
+- `validateReceipt`: con 0 líneas, `totalMatches = null` (no hay nada que comparar).
+- Facade: `hasNoDetail = computed(receipt con total y 0 líneas)`. `canConfirm` = true en ese caso.
+- `buildApplyReceipt`: con 0 líneas, los marcados van en `items` sin precio (quedan comprados) y
+  `total` = el de la boleta. Verificar que las RPCs aceptan `unit_price` null.
+- Página: la cámara se muestra solo si no hay `receipt()`, no por `decisions().length === 0`.
+  Bloque "Esta boleta no trae el detalle" (tienda, fecha, total) + botón "Cerrar compra".
+- Fixture: caso `15-getnet-sin-detalle` (eval) como OcrReceipt de test.
 
 ### T4. BD en `plataforma-db` (B2, B3/G2, B5 · AC2, AC5, AC11) — según D1
 - Tabla `shop.purchase_lines`: `id`, `list_id` → `shopping_lists` (on delete cascade), `receipt_id`
