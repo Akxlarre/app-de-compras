@@ -258,7 +258,7 @@ export class PurchaseCloseFacade {
       this.decisions.set([]);
       this.parts.set([]);
     }
-    this.setPreview(files[0]);
+    this.previewUrl.set(null);
 
     try {
       const toReconcile = (i: PopulatedListItem) => ({
@@ -281,6 +281,9 @@ export class PurchaseCloseFacade {
       const images = await Promise.all(
         files.map(async (f) => ({ base64: await toBase64(f), mimeType: f.type || 'image/jpeg' }))
       );
+      if (stale()) return;
+      // data: y no blob: (la CSP de la app solo deja imágenes 'self', data: y https:).
+      this.previewUrl.set(`data:${images[0].mimeType};base64,${images[0].base64}`);
       const familyId = await this.family.getOrCreateFamilyId();
       const [receipt, aliases, catalog] = await Promise.all([
         this.receipts.extractReceipt(
@@ -345,12 +348,6 @@ export class PurchaseCloseFacade {
         () => this.nav.navigateForward('/app/close')
       );
     }
-  }
-
-  private setPreview(file: File | undefined): void {
-    const previous = this.previewUrl();
-    if (previous) URL.revokeObjectURL?.(previous);
-    this.previewUrl.set(file && URL.createObjectURL ? URL.createObjectURL(file) : null);
   }
 
   updateDecision(index: number, patch: Partial<LineDecision>): void {
@@ -427,7 +424,7 @@ export class PurchaseCloseFacade {
 
   reset(): void {
     this.session++;
-    this.setPreview(undefined);
+    this.previewUrl.set(null);
     this.origin.set('active');
     this.list.set(null);
     this.mode.set(null);

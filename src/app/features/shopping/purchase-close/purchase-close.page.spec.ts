@@ -113,7 +113,7 @@ describe('PurchaseClosePage', () => {
     const active = { id: 'l1', list_items: [{ id: 'i1', is_checked: true }] };
     lists.initialize.mockImplementation(async () => lists.data.set(active));
 
-    await page.ngOnInit();
+    await page.ionViewWillEnter();
 
     expect(close.start).toHaveBeenCalledWith(active, true, 'receipt', 'active', 'purchases');
   });
@@ -122,7 +122,7 @@ describe('PurchaseClosePage', () => {
     lists.initialize.mockImplementation(async () =>
       lists.data.set({ id: 'l1', list_items: [{ id: 'i1', is_checked: false }] })
     );
-    await page.ngOnInit();
+    await page.ionViewWillEnter();
     expect(close.startNew).toHaveBeenCalledWith('purchases');
     expect(close.start).not.toHaveBeenCalled();
   });
@@ -140,10 +140,12 @@ describe('PurchaseClosePage', () => {
   });
 
   describe('a pantalla completa y en segundo plano (spec 0016)', () => {
-    it('avisa al facade que el cierre está a la vista mientras la página vive (D6)', async () => {
+    it('avisa al facade si el cierre está a la vista, también con la página en caché (D6)', async () => {
       close.list.set({ id: 'l1' });
-      await page.ngOnInit();
+      await page.ionViewWillEnter();
       expect(close.setVisible).toHaveBeenLastCalledWith(true);
+      page.ionViewWillLeave();
+      expect(close.setVisible).toHaveBeenLastCalledWith(false);
     });
 
     it('"Seguir en la app" vuelve al origen sin cancelar la lectura (AC14)', () => {
@@ -256,7 +258,7 @@ describe('PurchaseClosePage', () => {
 
   it('si ya viene un cierre desde Finalizar no lo reinicia', async () => {
     close.list.set({ id: 'l1' });
-    await page.ngOnInit();
+    await page.ionViewWillEnter();
     expect(close.start).not.toHaveBeenCalled();
   });
 

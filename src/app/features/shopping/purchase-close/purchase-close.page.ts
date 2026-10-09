@@ -92,9 +92,17 @@ export class PurchaseClosePage implements OnInit {
   /** Boleta con la tienda y la fecha en edición (AC12). */
   readonly editingReceipt = signal<number | null>(null);
 
-  async ngOnInit(): Promise<void> {
-    this.close.setVisible(true);
+  ngOnInit(): void {
     this.destroyRef.onDestroy(() => this.close.setVisible(false));
+  }
+
+  /** Ionic deja la página en caché al volver atrás: la visibilidad va por entrar y salir (D6). */
+  ionViewWillLeave(): void {
+    this.close.setVisible(false);
+  }
+
+  async ionViewWillEnter(): Promise<void> {
+    this.close.setVisible(true);
     // Un cierre en curso (desde Finalizar, Compras o una lectura en segundo plano) no se reinicia.
     if (this.close.list()) return;
     // Sin cierre (se abrió la URL directo): la boleta es de la compra activa si hay algo marcado;

@@ -162,6 +162,18 @@ describe('PurchaseCloseFacade', () => {
       );
     });
 
+    it('mientras lee muestra la foto como data: (la CSP no deja blob:)', async () => {
+      facade.start(list, true, 'receipt');
+      let release!: (v: unknown) => void;
+      receipts['extractReceipt'].mockReturnValue(new Promise((r) => (release = r)));
+      const reading = facade.scan([file]);
+      await vi.waitFor(() => expect(facade.previewUrl()).toMatch(/^data:image\/jpeg;base64,/));
+      release(ok);
+      await reading;
+      facade.reset();
+      expect(facade.previewUrl()).toBeNull();
+    });
+
     it('una lectura de un cierre cancelado no pisa al siguiente ni avisa', async () => {
       facade.start(list, true, 'receipt');
       receipts['extractReceipt'].mockResolvedValue(ok);
