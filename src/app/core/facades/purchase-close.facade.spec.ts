@@ -344,6 +344,68 @@ describe('PurchaseCloseFacade', () => {
     });
   });
 
+  describe('varias boletas en una compra (spec 0015, D6)', () => {
+    const file2 = new File(['foto2'], 'boleta2.jpg', { type: 'image/jpeg' });
+
+    beforeEach(async () => {
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValueOnce({
+        store: 'Aroca',
+        date: '2026-10-05',
+        total: 2200,
+        lines: [line({ raw_text: 'LECHE', quantity: 2, unit_price: 1100, line_total: 2200 })],
+      });
+      await facade.scan([file]);
+      receipts['extractReceipt'].mockResolvedValueOnce({
+        store: 'Pedregal',
+        date: '2026-10-05',
+        total: 1600,
+        lines: [
+          line({ raw_text: 'PAN', unit_price: 900, line_total: 900 }),
+          line({ raw_text: 'TE VERDE', unit_price: 700, line_total: 700 }),
+        ],
+      });
+      await facade.addReceipt([file2]);
+    });
+
+    it('la segunda boleta se suma: tiendas, total y líneas seguidas', () => {
+      expect(facade.receiptCount()).toBe(2);
+      expect(facade.receipt()).toMatchObject({ store: 'Aroca · Pedregal', total: 3800 });
+      expect(facade.decisions().map((d) => [d.index, d.rawText])).toEqual([
+        [0, 'LECHE'],
+        [1, 'PAN'],
+        [2, 'TE VERDE'],
+      ]);
+    });
+
+    it('lo que salió en otra tienda ya no se pregunta en "¿No lo compraste?"', () => {
+      expect(facade.decisions()[1].target).toMatchObject({ kind: 'item', itemId: 'i-pan' });
+      expect(facade.missing()).toEqual([]);
+    });
+
+    it('al cerrar va una boleta principal y las demás en "others", con sus líneas y sus fotos', async () => {
+      facade.updateDecision(2, { saveToCatalog: true, name: 'Té verde' });
+      expect(await facade.confirmReceipt()).toBe(true);
+
+      expect(receipts['uploadImage']).toHaveBeenCalledTimes(2);
+      const input = receipts['applyReceipt'].mock.calls[0][0];
+      expect(input).toMatchObject({ store: 'Aroca', total: 2200 });
+      expect(input.lines.map((l: { index: number }) => l.index)).toEqual([0]);
+      expect(input.others).toHaveLength(1);
+      expect(input.others[0]).toMatchObject({ store: 'Pedregal', total: 1600 });
+      expect(input.others[0].lines.map((l: { index: number }) => l.index)).toEqual([0, 1]);
+      expect(input.extras).toEqual([
+        expect.objectContaining({ name: 'Té verde', receiptIndex: 1, lineIndex: 1 }),
+      ]);
+    });
+
+    it('solo al cerrar la lista activa se pueden agregar boletas', () => {
+      expect(facade.canAddReceipt()).toBe(true);
+      facade.kind.set('completed');
+      expect(facade.canAddReceipt()).toBe(false);
+    });
+  });
+
   describe('otros cargos (spec 0015, B6)', () => {
     it('bolsas, envases y descuentos se separan de los productos y explican el total', async () => {
       facade.start(list, true, 'receipt');

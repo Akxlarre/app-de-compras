@@ -74,6 +74,19 @@ describe('summarizePurchase con las líneas de la boleta (spec 0015, G2)', () =>
     expect(s.total).toBe(2120);
   });
 
+  it('con varias boletas (una salida por varias tiendas) muestra todas las tiendas (D6)', () => {
+    const s = summarizePurchase({
+      ...conLineas(),
+      receipts: [
+        { id: 'r1', image_url: 'fam/a.jpg', store: 'Aroca' },
+        { id: 'r2', image_url: null, store: 'Pedregal' },
+      ],
+    } as unknown as ActiveShoppingList);
+
+    expect(s.store).toBe('Aroca · Pedregal');
+    expect(s.receiptImagePath).toBe('fam/a.jpg');
+  });
+
   it('sin líneas (sin boleta o compra antigua) se arma como antes, desde lo marcado', () => {
     const s = summarizePurchase(
       completed([

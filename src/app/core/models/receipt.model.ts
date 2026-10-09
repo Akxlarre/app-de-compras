@@ -190,6 +190,20 @@ export interface ReceiptExtraInput {
   quantity: number;
   /** Línea de la boleta que lo trae: enlaza la línea guardada con el producto que se crea. */
   lineIndex: number | null;
+  /** Con varias boletas (spec 0015, D6): cuál de ellas (0 = la principal). */
+  receiptIndex?: number;
+}
+
+/** Una boleta más de la misma salida (`p_receipt.others`, spec 0015 D6). */
+export interface ReceiptPartInput {
+  store: string | null;
+  /** YYYY-MM-DD */
+  purchasedAt: string | null;
+  total: number | null;
+  imagePath: string | null;
+  ocrResult: OcrReceipt | null;
+  ocrCheck: ReceiptCheck | ReceiptValidation | null;
+  lines: ReceiptLineInput[];
 }
 
 /** Una línea de la boleta tal como queda en la compra (`shop.purchase_lines`, spec 0015 G2). */
@@ -221,6 +235,8 @@ export interface ApplyReceiptInput {
   extras: ReceiptExtraInput[];
   /** Todas las líneas de la boleta (spec 0015 G2). */
   lines: ReceiptLineInput[];
+  /** Las demás boletas de la misma salida (spec 0015 D6); solo al cerrar la lista activa. */
+  others?: ReceiptPartInput[];
   /** "¿No lo compraste?": ítems marcados que vuelven a pendiente. */
   uncheckItemIds: string[];
 }

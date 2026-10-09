@@ -18,6 +18,12 @@ import { validateReceipt } from '@core/utils/receipt.utils';
 import { MutationError, toMutationError } from '@core/utils/mutation-error.utils';
 import { reconcileReceipt } from '@core/utils/reconcile.utils';
 import {
+  combineReceipts,
+  combineValidations,
+  partOffsets,
+  splitByReceipt,
+} from '@core/utils/receipt-parts.utils';
+import {
   buildApplyReceipt,
   canConfirmReceipt,
   initialDecisions,
@@ -130,7 +136,13 @@ export class PurchaseCloseFacade {
       .filter((c) => c.kind !== 'other')
       .reduce((s, c) => s + c.amount, 0)
   );
-  private files: File[] = [];
+  /** Las boletas leídas de esta salida, en orden (spec 0015, D6). */
+  private readonly parts = signal<
+    { receipt: OcrReceipt; validation: ReceiptValidation; files: File[] }[]
+  >([]);
+  readonly receiptCount = computed(() => this.parts().length);
+  /** Otra boleta solo al cerrar la lista activa: "Agregar boleta" del Historial es de una. */
+  readonly canAddReceipt = computed(() => this.kind() === 'active' && this.parts().length > 0);
 
   constructor() {
     inject(SessionScopeService).register(() => this.reset());
@@ -179,13 +191,28 @@ export class PurchaseCloseFacade {
   }
 
   /** Lee la boleta (una o más fotos) y la concilia con la compra, el catálogo y los alias. */
-  async scan(files: File[]): Promise<void> {
+  scan(files: File[]): Promise<void> {
+    return this.read(files, false);
+  }
+
+  /**
+   * Otra boleta de la misma salida (otra tienda, spec 0015 D6): se cruza con lo que todavía no
+   * apareció en las anteriores y sus líneas siguen a continuación.
+   */
+  addReceipt(files: File[]): Promise<void> {
+    return this.read(files, true);
+  }
+
+  private async read(files: File[], append: boolean): Promise<void> {
     const list = this.list();
     if (!list || !files.length) return;
+    const previous = append ? this.decisions() : [];
     this.isScanning.set(true);
     this.error.set(null);
-    this.decisions.set([]);
-    this.files = files;
+    if (!append) {
+      this.decisions.set([]);
+      this.parts.set([]);
+    }
 
     try {
       const toReconcile = (i: PopulatedListItem) => ({
@@ -194,11 +221,16 @@ export class PurchaseCloseFacade {
         name: i.product?.name ?? '',
         quantity: i.quantity,
       });
-      const checked = this.checkedItems().map(toReconcile);
+      const seen = new Set(
+        previous.flatMap((d) => (d.target?.kind === 'item' ? [d.target.itemId] : []))
+      );
+      const checked = this.checkedItems()
+        .filter((i) => !seen.has(i.id))
+        .map(toReconcile);
       // Solo la lista activa tiene pendientes que la boleta pueda dar por comprados.
       const pending =
         this.kind() === 'active'
-          ? list.list_items.filter((i) => !i.is_checked).map(toReconcile)
+          ? list.list_items.filter((i) => !i.is_checked && !seen.has(i.id)).map(toReconcile)
           : [];
       const images = await Promise.all(
         files.map(async (f) => ({ base64: await toBase64(f), mimeType: f.type || 'image/jpeg' }))
@@ -221,19 +253,34 @@ export class PurchaseCloseFacade {
         aliases,
         pending
       );
-      this.receipt.set(receipt);
-      this.validation.set(validation);
-      const decisions = initialDecisions(result, receipt, validation);
+      const offset = this.parts().reduce((n, p) => n + p.receipt.lines.length, 0);
+      const parts = [...this.parts(), { receipt, validation, files }];
+      this.parts.set(parts);
+      this.receipt.set(combineReceipts(parts.map((p) => p.receipt)));
+      this.validation.set(
+        combineValidations(
+          parts.map((p) => p.validation),
+          partOffsets(parts.map((p) => p.receipt))
+        )
+      );
+      const decisions = initialDecisions(result, receipt, validation).map((d) => ({
+        ...d,
+        index: d.index + offset,
+      }));
       // Sin lista, lo que no se reconoce entra al catálogo (si no, la compra quedaría vacía).
-      this.decisions.set(
-        this.kind() === 'new'
+      this.decisions.set([
+        ...previous,
+        ...(this.kind() === 'new'
           ? decisions.map((d) => (d.target?.kind === 'new' ? { ...d, saveToCatalog: true } : d))
-          : decisions
-      );
+          : decisions),
+      ]);
+      // "¿No lo compraste?" sale de la primera boleta; lo que aparezca en otra deja de preguntarse.
       // Sin detalle no hay con qué saber qué faltó: lo marcado se da por comprado.
-      this.unmatched.set(
-        receipt.lines.length ? result.missing.map((item) => ({ item, bought: null })) : []
-      );
+      if (!append) {
+        this.unmatched.set(
+          receipt.lines.length ? result.missing.map((item) => ({ item, bought: null })) : []
+        );
+      }
     } catch (e) {
       console.error('Error OCR:', e);
       this.error.set(
@@ -271,21 +318,37 @@ export class PurchaseCloseFacade {
 
     return this.save(async () => {
       const familyId = await this.family.getOrCreateFamilyId();
-      let imagePath: string | null = null;
-      try {
-        if (this.files[0]) imagePath = await this.receipts.uploadImage(familyId, this.files[0]);
-      } catch (e) {
-        console.error('No se pudo guardar la foto de la boleta:', e);
-      }
-      const input = buildApplyReceipt({
+      const imagePaths = await Promise.all(
+        this.parts().map(async (p) => {
+          try {
+            return p.files[0] ? await this.receipts.uploadImage(familyId, p.files[0]) : null;
+          } catch (e) {
+            console.error('No se pudo guardar la foto de la boleta:', e);
+            return null;
+          }
+        })
+      );
+      const combined = buildApplyReceipt({
         listId: list.id,
         carryPending: this.carryPending(),
         receipt,
         validation,
-        imagePath,
+        imagePath: imagePaths[0] ?? null,
         decisions: this.decisions(),
         missing: this.missing(),
       });
+      const parts = this.parts();
+      const input =
+        parts.length > 1
+          ? splitByReceipt(
+              combined,
+              parts.map((p, i) => ({
+                receipt: p.receipt,
+                validation: p.validation,
+                imagePath: imagePaths[i],
+              }))
+            )
+          : combined;
       const kind = this.kind();
       if (kind === 'completed') await this.receipts.attachReceipt(input);
       else if (kind === 'new') await this.receipts.createReceiptPurchase(input);
@@ -306,8 +369,8 @@ export class PurchaseCloseFacade {
     this.receipt.set(null);
     this.validation.set(null);
     this.decisions.set([]);
+    this.parts.set([]);
     this.unmatched.set([]);
-    this.files = [];
   }
 
   private async save(op: () => Promise<void>): Promise<boolean> {

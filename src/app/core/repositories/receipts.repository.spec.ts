@@ -155,6 +155,83 @@ describe('ReceiptsRepository', () => {
     });
   });
 
+  it('con varias boletas manda las demás en p_receipt.others y el extra con su boleta (spec 0015 D6)', async () => {
+    mock.shop.rpc.mockResolvedValue({ data: 'r1', error: null });
+    await repo.applyReceipt({
+      listId: 'l1',
+      carryPending: true,
+      store: 'Aroca',
+      purchasedAt: '2026-10-05',
+      total: 2200,
+      imagePath: null,
+      ocrResult: null,
+      ocrCheck: null,
+      items: [],
+      extras: [
+        {
+          productId: null,
+          rawText: 'TE',
+          name: 'Té',
+          unitPrice: 700,
+          quantity: 1,
+          lineIndex: 0,
+          receiptIndex: 1,
+        },
+      ],
+      lines: [],
+      others: [
+        {
+          store: 'Pedregal',
+          purchasedAt: null,
+          total: 700,
+          imagePath: 'fam/p.jpg',
+          ocrResult: null,
+          ocrCheck: null,
+          lines: [
+            {
+              index: 0,
+              rawText: 'TE',
+              name: 'Té',
+              kind: 'product',
+              quantity: 1,
+              unitPrice: 700,
+              amount: 700,
+              itemId: null,
+              productId: null,
+            },
+          ],
+        },
+      ],
+      uncheckItemIds: [],
+    });
+
+    const args = mock.shop.rpc.mock.calls[0][1];
+    expect(args.p_receipt.others).toEqual([
+      {
+        store: 'Pedregal',
+        purchased_at: null,
+        total: 700,
+        image_path: 'fam/p.jpg',
+        ocr_result: null,
+        ocr_check: null,
+        lines: [
+          {
+            index: 0,
+            raw_text: 'TE',
+            name: 'Té',
+            kind: 'product',
+            quantity: 1,
+            unit_price: 700,
+            amount: 700,
+            item_id: null,
+            product_id: null,
+          },
+        ],
+      },
+    ]);
+    expect(args.p_extras[0]).toMatchObject({ line_index: 0, receipt_index: 1 });
+  });
+
   describe('boleta sobre compras cerradas (spec 0009)', () => {
     const input = {
       listId: 'l1',

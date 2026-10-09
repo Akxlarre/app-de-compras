@@ -7,10 +7,10 @@ import type {
 } from '@core/models/purchase-history.model';
 import { disambiguateTitles, purchaseTitle } from './purchase-name.utils';
 
-/** La boleta de la compra (PostgREST la devuelve como objeto o como arreglo de uno). */
-function receiptOf(list: ActiveShoppingList): ListReceipt | null {
+/** Las boletas de la compra: varias si la salida fue por varias tiendas (spec 0015 D6). */
+function receiptsOf(list: ActiveShoppingList): ListReceipt[] {
   const r = list.receipts;
-  return (Array.isArray(r) ? r[0] : r) ?? null;
+  return Array.isArray(r) ? r : r ? [r] : [];
 }
 
 /**
@@ -50,7 +50,11 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
   const estimatedTotal =
     items.reduce((sum, item) => sum + item.subtotal, 0) +
     charges.filter((c) => c.kind !== 'other').reduce((sum, c) => sum + c.amount, 0);
-  const receipt = receiptOf(list);
+  const receipts = receiptsOf(list);
+  const stores = receipts
+    .map((r) => r.store)
+    .filter(Boolean)
+    .join(' · ');
   const paid = list.total_paid == null ? null : Number(list.total_paid);
 
   return {
@@ -62,9 +66,9 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
     total: paid ?? estimatedTotal,
     estimatedTotal,
     totalSource: paid == null ? 'estimated' : list.total_source ?? 'estimated',
-    hasReceipt: receipt !== null,
-    receiptImagePath: receipt?.image_url ?? null,
-    store: receipt?.store ?? null,
+    hasReceipt: receipts.length > 0,
+    receiptImagePath: receipts.find((r) => r.image_url)?.image_url ?? null,
+    store: stores || null,
     items,
     charges,
     source: list,

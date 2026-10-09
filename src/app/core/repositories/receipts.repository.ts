@@ -1,6 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import type { ApplyReceiptInput, OcrReceipt, ReceiptAlias } from '@core/models/receipt.model';
+import type {
+  ApplyReceiptInput,
+  OcrReceipt,
+  ReceiptAlias,
+  ReceiptLineInput,
+  ReceiptPartInput,
+} from '@core/models/receipt.model';
 import { parseOcrReceipt } from '@core/utils/receipt.utils';
 
 /** Foto de una boleta en base64 **sin** el prefijo `data:…;base64,`. */
@@ -134,14 +140,8 @@ export class ReceiptsRepository {
 
 const SIGNED_URL_SECONDS = 3600;
 
-const receiptPayload = (input: ApplyReceiptInput) => ({
-  store: input.store,
-  purchased_at: input.purchasedAt,
-  total: input.total,
-  image_path: input.imagePath,
-  ocr_result: input.ocrResult,
-  ocr_check: input.ocrCheck,
-  lines: input.lines.map((l) => ({
+const linesPayload = (lines: ReceiptLineInput[]) =>
+  lines.map((l) => ({
     index: l.index,
     raw_text: l.rawText,
     name: l.name,
@@ -151,7 +151,22 @@ const receiptPayload = (input: ApplyReceiptInput) => ({
     amount: l.amount,
     item_id: l.itemId,
     product_id: l.productId,
-  })),
+  }));
+
+const partPayload = (p: ReceiptPartInput) => ({
+  store: p.store,
+  purchased_at: p.purchasedAt,
+  total: p.total,
+  image_path: p.imagePath,
+  ocr_result: p.ocrResult,
+  ocr_check: p.ocrCheck,
+  lines: linesPayload(p.lines),
+});
+
+/** La boleta principal y, si la salida tuvo varias tiendas, las demás en `others` (spec 0015 D6). */
+const receiptPayload = (input: ApplyReceiptInput) => ({
+  ...partPayload(input),
+  ...(input.others?.length ? { others: input.others.map(partPayload) } : {}),
 });
 
 const itemsPayload = (input: ApplyReceiptInput) => [
@@ -173,4 +188,5 @@ const extrasPayload = (input: ApplyReceiptInput) =>
     unit_price: e.unitPrice,
     quantity: e.quantity,
     line_index: e.lineIndex,
+    ...(e.receiptIndex != null ? { receipt_index: e.receiptIndex } : {}),
   }));

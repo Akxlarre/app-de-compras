@@ -171,7 +171,10 @@
         class="flex items-center justify-between p-4 bg-surface border border-border-default rounded-2xl"
       >
         <div>
-          <p class="text-sm text-text-muted">{{ close.receipt()?.store || 'Boleta' }}</p>
+          <p class="text-sm text-text-muted">
+            @if (close.receiptCount() > 1) { {{ close.receiptCount() }} boletas · }
+            {{ close.receipt()?.store || 'Boleta' }}
+          </p>
           <p class="text-2xl font-black text-text-primary">
             ${{ close.receipt()?.total ?? close.receiptSum() | number : '1.0-0' }}
           </p>
@@ -396,6 +399,24 @@
         </div>
         }
       </section>
+      } @if (close.canAddReceipt()) {
+      <button
+        class="w-full py-3 rounded-xl border border-dashed border-border-default text-text-primary font-semibold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+        data-llm-action="agregar-otra-boleta"
+        (click)="moreFiles.click()"
+      >
+        <app-icon name="camera" [size]="18" [attr.aria-label]="'Cámara'" />
+        Agregar otra boleta (otra tienda)
+      </button>
+      <input
+        #moreFiles
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        class="hidden"
+        (change)="onMoreFiles($event)"
+      />
       }
 
       <button
