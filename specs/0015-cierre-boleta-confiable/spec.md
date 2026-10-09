@@ -71,13 +71,13 @@ El OCR lee bien. Lo que falla está en la app:
 Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
 
 **B2 — pendientes**
-- [ ] AC1. Un producto pendiente de la lista que aparece en la boleta sale en "Coinciden" (o en
+- [x] AC1. Un producto pendiente de la lista que aparece en la boleta sale en "Coinciden" (o en
   "¿Es este?" si hay duda) con la nota "estaba pendiente", no en "No estaban en la lista".
 - [ ] AC2. Al cerrar, ese producto queda comprado con el precio y la cantidad de la boleta, no pasa
   a la próxima lista y su `last_purchased_at` se actualiza.
-- [ ] AC3. Un nombre corto del catálogo o de la lista contenido en una línea larga se ofrece como
+- [x] AC3. Un nombre corto del catálogo o de la lista contenido en una línea larga se ofrece como
   candidato ("Arroz" ↔ "Arroz G1 grano largo 1kg"; "Leche" ↔ "LECHE ENT COLUN 1L").
-- [ ] AC4. Lo marcado sigue teniendo prioridad: si una línea calza igual de bien con un marcado y con
+- [x] AC4. Lo marcado sigue teniendo prioridad: si una línea calza igual de bien con un marcado y con
   un pendiente, gana el marcado.
 
 **B3 / G2 — todas las líneas**
@@ -92,9 +92,9 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
 - [ ] AC8. Las compras cerradas sin boleta y las anteriores a esta spec se ven igual que hoy.
 
 **B4 — "¿No lo compraste?"**
-- [ ] AC9. Nada viene elegido. "Cerrar compra" queda deshabilitado con el aviso "Elige qué pasó con
+- [x] AC9. Nada viene elegido. "Cerrar compra" queda deshabilitado con el aviso "Elige qué pasó con
   lo que no salió en la boleta" hasta elegir en todos.
-- [ ] AC10. "No lo compré" → el producto vuelve a pendiente (pasa a la próxima lista si "Pasar los
+- [x] AC10. "No lo compré" → el producto vuelve a pendiente (pasa a la próxima lista si "Pasar los
   pendientes" está activo). "Lo compré" → queda comprado sin cambiar `products.last_price`.
 
 **B5 — fecha**
@@ -103,13 +103,13 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
 - [ ] AC12. Sin fecha, con fecha futura o de hace más de un año, se usa la fecha del cierre.
 
 **B6 — otras líneas**
-- [ ] AC13. Bolsas, descuentos, envases y otros cargos salen en una sección "Otros cargos" con su
+- [x] AC13. Bolsas, descuentos, envases y otros cargos salen en una sección "Otros cargos" con su
   monto (los descuentos en negativo). No se pueden asignar a productos.
-- [ ] AC14. El resumen muestra "Productos $X · Otros $Y · Total $Z". El aviso de "la suma no
+- [x] AC14. El resumen muestra "Productos $X · Otros $Y · Total $Z". El aviso de "la suma no
   cuadra" solo aparece si productos + otros ≠ total.
 
 **B8 — boleta sin detalle** (D5)
-- [ ] AC17. Con una boleta de 0 líneas y total, el cierre muestra "Esta boleta no trae el detalle"
+- [x] AC17. Con una boleta de 0 líneas y total, el cierre muestra "Esta boleta no trae el detalle"
   con tienda, fecha y total, sin aviso de "no cuadra", y permite cerrar.
 - [ ] AC18. Al cerrar, la compra queda con `total_paid` = total de la boleta, `total_source =
   receipt`, la boleta guardada (tienda, fecha, foto) y lo marcado comprado.
@@ -120,3 +120,36 @@ Todos con las decisiones recomendadas; si el dueño cambia una, se ajusta el AC.
 - [ ] AC15. `npm run test:ci` y `npm run lint:arch` pasan. Hay tests de regresión para B2–B6.
 - [ ] AC16. Verificado en staging (375×667) con una boleta real que tenga un pendiente, un marcado
   que no sale, una bolsa y fecha de otro día.
+
+## Avance (2026-10-09)
+
+**Hecho en la app** (rama `main-emk2r6`):
+- T1: cruce con pendientes (marcados ganan el empate), nombre corto contenido en una línea larga →
+  candidato (palabras enteras: "Sal" no calza con "SALSA"), línea repetida → mismo ítem.
+- T2: "¿No lo compraste?" viene sin elegir, con botones "No lo compré" / "Lo compré". No se
+  pregunta por un marcado que se eligió en un "¿Es este?" ni por uno ofrecido en un "¿Es este?"
+  sin responder (si se responde "Otro", vuelve). Encontrado con la boleta de la perfumería: antes
+  se podía desmarcar algo que sí estaba en la boleta.
+- T3b: voucher sin detalle → "Esta boleta no trae el detalle", sin aviso de "no cuadra", se cierra
+  con el total.
+- B6: sección "Otros cargos" (bolsa, envase, descuento a la compra; un descuento a un producto ya va
+  en su precio) y resumen "Productos $X · Otros $Y".
+
+**Hecho en `plataforma-db`** (rama `feat/shop-receipt-reliable`, commit `e2762f8`, **sin PR ni
+despliegue**): migración `20261009010000_shop_receipt_pending_and_date` + test pgTAP
+`shop_receipt_reliable` (10 tests). Cubre AC2, AC11 y AC12. Los 177 tests `shop_*` pasan en local.
+Al mergear a `main`, se despliega solo a staging.
+
+**Pendiente:** T4/T5/T7 (todas las líneas en la compra y en el Historial: AC5–AC8), cierre en
+staging con la migración aplicada (AC2, AC11, AC12, AC16, AC18) y la decisión D6.
+
+**Verificación:**
+- `npm run test:ci`: todo pasa. `npm run lint:arch` y `ng build` limpios.
+- Navegador a 375×667 contra staging (cuenta `test5`), con el OCR simulado con la transcripción real
+  de las boletas (casos 13, 15, 03 del eval): desde Chromium, el proxy de la sesión corta
+  `process-receipt` a los 30 s, aunque desde Node la misma foto se lee bien.
+  - Perfumería (Desodorante pendiente, Pan marcado que no sale): Desodorante sale con
+    "Estaba pendiente: queda comprado"; tras elegir en "¿Es este?", solo Pan queda en
+    "¿No lo compraste?"; "Cerrar compra" se habilita al elegir "No lo compré".
+  - Voucher Getnet: "Esta boleta no trae el detalle", $22.800, "Cerrar compra" habilitado.
+  - Líder Calama: "Otros cargos · Descuento RF CANJE PESOS MCL -$50.591", sin aviso de "no cuadra".

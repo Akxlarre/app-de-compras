@@ -106,7 +106,7 @@ export interface ReconciliationResult {
 /** A qué va una línea de la boleta al cerrar la compra. */
 export type LineTarget =
   /** Un ítem de la compra. */
-  | { kind: 'item'; itemId: string; productId: string; name: string }
+  | { kind: 'item'; itemId: string; productId: string; name: string; wasPending?: boolean }
   /** Un producto del catálogo que no estaba en la lista. */
   | { kind: 'product'; productId: string; name: string }
   /** Algo nuevo: suma al gasto; entra al catálogo solo si `saveToCatalog`. */
@@ -134,11 +134,20 @@ export interface LineDecision {
   ocr: { quantity: number; unitPrice: number; target: string | null };
 }
 
+/** Línea de la boleta que no es un producto: bolsa, envase, descuento a la compra u otro (spec 0015). */
+export interface OtherCharge {
+  index: number;
+  rawText: string | null;
+  kind: Exclude<OcrLineKind, 'product'>;
+  /** Negativo en los descuentos. */
+  amount: number;
+}
+
 /** Ítem marcado que no aparece en la boleta: "¿no lo compraste?". */
 export interface MissingDecision {
   item: ReconcileListItem;
-  /** false: vuelve a pendiente. Por defecto true (la boleta no desmarca sin preguntar). */
-  bought: boolean;
+  /** false: vuelve a pendiente; true: se compró igual; null: sin elegir, no deja cerrar (spec 0015). */
+  bought: boolean | null;
 }
 
 export interface ReceiptCorrection {

@@ -11,6 +11,7 @@ import type {
   MatchCandidate,
   MissingDecision,
   OcrReceipt,
+  OtherCharge,
   ReceiptValidation,
 } from '@core/models/receipt.model';
 import { validateReceipt } from '@core/utils/receipt.utils';
@@ -85,12 +86,49 @@ export class PurchaseCloseFacade {
   readonly receipt = signal<OcrReceipt | null>(null);
   readonly validation = signal<ReceiptValidation | null>(null);
   readonly decisions = signal<LineDecision[]>([]);
-  readonly missing = signal<MissingDecision[]>([]);
+  private readonly unmatched = signal<MissingDecision[]>([]);
+  /**
+   * Marcados sin línea en la boleta. No se pregunta por uno elegido en una línea, ni por uno ofrecido
+   * en un "¿Es este?" sin responder (si se responde "Otro", vuelve).
+   */
+  readonly missing = computed(() => {
+    const inReceipt = new Set(
+      this.decisions().flatMap((d) => {
+        if (d.target?.kind === 'item') return [d.target.itemId];
+        return d.target === null ? d.candidates.flatMap((c) => (c.itemId ? [c.itemId] : [])) : [];
+      })
+    );
+    return this.unmatched().filter((m) => !inReceipt.has(m.item.itemId));
+  });
+  /** Voucher de tarjeta: trae total pero no el detalle (spec 0015, B8). */
+  readonly hasNoDetail = computed(() => {
+    const r = this.receipt();
+    return !!r && r.total != null && r.lines.length === 0;
+  });
+  readonly missingUnchosen = computed(() => this.missing().some((m) => m.bought === null));
   readonly canConfirm = computed(
-    () => this.decisions().length > 0 && canConfirmReceipt(this.decisions())
+    () =>
+      (this.hasNoDetail() ||
+        (this.decisions().length > 0 && canConfirmReceipt(this.decisions()))) &&
+      !this.missingUnchosen()
   );
   readonly receiptSum = computed(() =>
     this.decisions().reduce((s, d) => s + Math.round(d.quantity * d.unitPrice), 0)
+  );
+  /** Lo que no es producto. Un descuento a un producto ya va en su precio, no se repite aquí. */
+  readonly otherCharges = computed<OtherCharge[]>(() =>
+    (this.receipt()?.lines ?? []).flatMap((l, index) => {
+      if (!l.legible || l.kind === 'product' || l.line_total == null) return [];
+      if (l.kind === 'discount' && l.applies_to != null) return [];
+      const amount = l.kind === 'discount' ? -Math.abs(l.line_total) : l.line_total;
+      return [{ index, rawText: l.raw_text, kind: l.kind, amount }];
+    })
+  );
+  /** Lo que suman al total los otros cargos (`other`, como redondeos o donaciones, no suma). */
+  readonly otherSum = computed(() =>
+    this.otherCharges()
+      .filter((c) => c.kind !== 'other')
+      .reduce((s, c) => s + c.amount, 0)
   );
   private files: File[] = [];
 
@@ -150,12 +188,18 @@ export class PurchaseCloseFacade {
     this.files = files;
 
     try {
-      const checked = this.checkedItems().map((i) => ({
+      const toReconcile = (i: PopulatedListItem) => ({
         itemId: i.id,
         productId: i.product?.id ?? i.product_id ?? '',
         name: i.product?.name ?? '',
         quantity: i.quantity,
-      }));
+      });
+      const checked = this.checkedItems().map(toReconcile);
+      // Solo la lista activa tiene pendientes que la boleta pueda dar por comprados.
+      const pending =
+        this.kind() === 'active'
+          ? list.list_items.filter((i) => !i.is_checked).map(toReconcile)
+          : [];
       const images = await Promise.all(
         files.map(async (f) => ({ base64: await toBase64(f), mimeType: f.type || 'image/jpeg' }))
       );
@@ -174,7 +218,8 @@ export class PurchaseCloseFacade {
         receipt.lines,
         checked,
         catalog.map((p) => ({ productId: p.id, name: p.name })),
-        aliases
+        aliases,
+        pending
       );
       this.receipt.set(receipt);
       this.validation.set(validation);
@@ -185,7 +230,10 @@ export class PurchaseCloseFacade {
           ? decisions.map((d) => (d.target?.kind === 'new' ? { ...d, saveToCatalog: true } : d))
           : decisions
       );
-      this.missing.set(result.missing.map((item) => ({ item, bought: true })));
+      // Sin detalle no hay con qué saber qué faltó: lo marcado se da por comprado.
+      this.unmatched.set(
+        receipt.lines.length ? result.missing.map((item) => ({ item, bought: null })) : []
+      );
     } catch (e) {
       console.error('Error OCR:', e);
       this.error.set(
@@ -211,7 +259,7 @@ export class PurchaseCloseFacade {
   }
 
   setMissingBought(itemId: string, bought: boolean): void {
-    this.missing.update((ms) => ms.map((m) => (m.item.itemId === itemId ? { ...m, bought } : m)));
+    this.unmatched.update((ms) => ms.map((m) => (m.item.itemId === itemId ? { ...m, bought } : m)));
   }
 
   /** Cierra con la boleta. La foto se guarda si se puede; si no, la compra se cierra igual. */
@@ -258,7 +306,7 @@ export class PurchaseCloseFacade {
     this.receipt.set(null);
     this.validation.set(null);
     this.decisions.set([]);
-    this.missing.set([]);
+    this.unmatched.set([]);
     this.files = [];
   }
 

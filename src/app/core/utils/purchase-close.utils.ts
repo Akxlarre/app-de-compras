@@ -33,9 +33,9 @@ export function lineAmounts(
 }
 
 export function targetFromCandidate(c: MatchCandidate): LineTarget {
-  return c.itemId
-    ? { kind: 'item', itemId: c.itemId, productId: c.productId, name: c.name }
-    : { kind: 'product', productId: c.productId, name: c.name };
+  if (!c.itemId) return { kind: 'product', productId: c.productId, name: c.name };
+  const t: LineTarget = { kind: 'item', itemId: c.itemId, productId: c.productId, name: c.name };
+  return c.wasPending ? { ...t, wasPending: true } : t;
 }
 
 /** Clave de un destino para comparar lo que propuso la lectura con lo que eligió el usuario. */
@@ -162,6 +162,6 @@ export function buildApplyReceipt(args: {
     ocrCheck: { ...validation, corrections: corrections(decisions) },
     items,
     extras,
-    uncheckItemIds: args.missing.filter((m) => !m.bought).map((m) => m.item.itemId),
+    uncheckItemIds: args.missing.filter((m) => m.bought === false).map((m) => m.item.itemId),
   };
 }

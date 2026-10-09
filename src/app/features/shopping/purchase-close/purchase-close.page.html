@@ -136,7 +136,7 @@
         <h3 class="text-xl font-bold text-text-primary mb-2">Leyendo la boleta...</h3>
         <p class="text-sm text-text-muted">La cruzamos con lo que marcaste en la lista.</p>
       </div>
-      } @else if (close.decisions().length === 0) {
+      } @else if (close.decisions().length === 0 && !close.hasNoDetail()) {
       <button
         class="w-full aspect-[3/4] max-h-[420px] border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-surface p-6 text-center active:scale-[0.99] transition-transform"
         (click)="fileInput.click()"
@@ -176,12 +176,26 @@
             ${{ close.receipt()?.total ?? close.receiptSum() | number : '1.0-0' }}
           </p>
         </div>
-        <p class="text-xs text-text-muted text-right">
-          Suma de las líneas<br />${{ close.receiptSum() | number : '1.0-0' }}
+        @if (!close.hasNoDetail()) {
+        <p class="text-xs text-text-muted text-right" data-testid="resumen-boleta">
+          Productos ${{ close.receiptSum() | number : '1.0-0' }} @if (close.otherCharges().length) {
+          <br />Otros {{ close.otherSum() < 0 ? '-' : '' }}${{
+            abs(close.otherSum()) | number : '1.0-0'
+          }}
+          }
         </p>
+        }
       </div>
 
-      @if (close.validation()?.totalMatches === false) {
+      @if (close.hasNoDetail()) {
+      <app-alert-card
+        severity="info"
+        title="Esta boleta no trae el detalle"
+        data-testid="sin-detalle"
+      >
+        Se guarda el total de la boleta y lo que marcaste en la lista queda comprado.
+      </app-alert-card>
+      } @if (close.validation()?.totalMatches === false) {
       <app-alert-card severity="warning" title="La suma no cuadra con el total de la boleta">
         Revisa las líneas marcadas: puede haber un precio o una cantidad mal leída.
       </app-alert-card>
@@ -197,6 +211,11 @@
             <div class="flex-1 min-w-0">
               <p class="font-medium text-text-primary truncate">{{ lineName(d) }}</p>
               <p class="text-xs text-text-muted truncate">{{ d.rawText }}</p>
+              @if (d.target?.wasPending) {
+              <p class="text-xs font-semibold text-brand" data-testid="estaba-pendiente">
+                Estaba pendiente: queda comprado
+              </p>
+              }
             </div>
             @if (d.doubt) {
             <app-icon
@@ -313,25 +332,68 @@
         <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
         }
       </section>
+      } @if (close.otherCharges().length) {
+      <section class="flex flex-col gap-2" data-testid="otros-cargos">
+        <h3 class="text-sm font-bold text-text-primary">Otros cargos</h3>
+        @for (c of close.otherCharges(); track c.index) {
+        <div
+          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-xl"
+        >
+          <div class="flex-1 min-w-0">
+            <p class="text-text-primary truncate">
+              @switch (c.kind) { @case ('bag') { Bolsa } @case ('deposit') { Envase } @case
+              ('discount') { Descuento } @default { No suma al total } }
+            </p>
+            <p class="text-xs text-text-muted truncate">{{ c.rawText }}</p>
+          </div>
+          <span class="font-bold text-text-primary"
+            >{{ c.amount < 0 ? '-' : '' }}${{ abs(c.amount) | number : '1.0-0' }}</span
+          >
+        </div>
+        }
+      </section>
       } @if (close.missing().length) {
       <section class="flex flex-col gap-2">
         <h3 class="text-sm font-bold text-text-primary">¿No lo compraste?</h3>
-        <p class="text-xs text-text-muted">Lo marcaste pero no aparece en la boleta.</p>
+        <p class="text-xs text-text-muted">
+          Lo marcaste pero no aparece en la boleta. "No lo compré" lo deja para la próxima lista.
+        </p>
         @for (m of close.missing(); track m.item.itemId) {
-        <label
-          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-xl"
+        <div
+          class="flex flex-col gap-2 p-3 bg-surface border rounded-xl"
+          [class.border-border-default]="m.bought !== null"
+          [class.border-warning]="m.bought === null"
         >
           <span class="text-text-primary">{{ m.item.name }}</span>
-          <span class="flex items-center gap-2 text-sm text-text-muted">
-            Lo compré
-            <input
-              type="checkbox"
-              class="w-5 h-5 accent-brand"
-              [checked]="m.bought"
-              (change)="close.setMissingBought(m.item.itemId, $any($event.target).checked)"
-            />
-          </span>
-        </label>
+          <div class="flex gap-2">
+            <button
+              class="px-3 py-1 rounded-full text-sm border"
+              [class.bg-brand]="m.bought === false"
+              [class.text-brand-contrast]="m.bought === false"
+              [class.border-brand]="m.bought === false"
+              [class.border-border-default]="m.bought !== false"
+              [class.text-text-primary]="m.bought !== false"
+              [attr.aria-pressed]="m.bought === false"
+              data-llm-action="no-lo-compre"
+              (click)="close.setMissingBought(m.item.itemId, false)"
+            >
+              No lo compré
+            </button>
+            <button
+              class="px-3 py-1 rounded-full text-sm border"
+              [class.bg-brand]="m.bought === true"
+              [class.text-brand-contrast]="m.bought === true"
+              [class.border-brand]="m.bought === true"
+              [class.border-border-default]="m.bought !== true"
+              [class.text-text-primary]="m.bought !== true"
+              [attr.aria-pressed]="m.bought === true"
+              data-llm-action="lo-compre"
+              (click)="close.setMissingBought(m.item.itemId, true)"
+            >
+              Lo compré
+            </button>
+          </div>
+        </div>
         }
       </section>
       }
@@ -353,7 +415,10 @@
         <app-icon name="check" [size]="18" [attr.aria-label]="'Cerrar'" /> Cerrar compra }
       </button>
       @if (!close.canConfirm()) {
-      <p class="text-xs text-text-muted text-center">Elige una opción en cada "¿Es este?".</p>
+      <p class="text-xs text-text-muted text-center">
+        @if (close.missingUnchosen()) { Elige qué pasó con lo que no salió en la boleta. } @else {
+        Elige una opción en cada "¿Es este?". }
+      </p>
       } } @if (close.error()) {
       <app-alert-card severity="error" [title]="close.error()!" />
       } }
