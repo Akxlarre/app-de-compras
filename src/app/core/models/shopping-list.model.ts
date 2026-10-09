@@ -1,5 +1,5 @@
 import type { Product } from './product.model';
-import type { TotalSource } from './receipt.model';
+import type { OcrLineKind, TotalSource } from './receipt.model';
 
 export type ShoppingListStatus = 'active' | 'completed' | 'archived' | 'template';
 
@@ -42,9 +42,23 @@ export interface PopulatedListItem extends ListItem {
   product?: Partial<Product>;
 }
 
+/** Una línea de la boleta guardada en la compra (`shop.purchase_lines`, spec 0015). */
+export interface PurchaseLine {
+  line_index: number;
+  raw_text: string | null;
+  name: string | null;
+  kind: OcrLineKind;
+  quantity: number | null;
+  unit_price: number | null;
+  amount: number;
+  product: Pick<Product, 'name'> | null;
+}
+
 /** Lista con sus ítems poblados: la forma que consume la UI. */
 export interface ActiveShoppingList extends ShoppingList {
   list_items: PopulatedListItem[];
   /** Una boleta por compra: PostgREST la devuelve como objeto (FK única) o como arreglo. */
   receipts?: ListReceipt | ListReceipt[] | null;
+  /** Solo en el Historial; vacío si la compra no tiene boleta o es anterior a la spec 0015. */
+  purchase_lines?: PurchaseLine[];
 }

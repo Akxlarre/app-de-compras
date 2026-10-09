@@ -141,6 +141,17 @@ const receiptPayload = (input: ApplyReceiptInput) => ({
   image_path: input.imagePath,
   ocr_result: input.ocrResult,
   ocr_check: input.ocrCheck,
+  lines: input.lines.map((l) => ({
+    index: l.index,
+    raw_text: l.rawText,
+    name: l.name,
+    kind: l.kind,
+    quantity: l.quantity,
+    unit_price: l.unitPrice,
+    amount: l.amount,
+    item_id: l.itemId,
+    product_id: l.productId,
+  })),
 });
 
 const itemsPayload = (input: ApplyReceiptInput) => [
@@ -161,4 +172,5 @@ const extrasPayload = (input: ApplyReceiptInput) =>
     name: e.name,
     unit_price: e.unitPrice,
     quantity: e.quantity,
+    line_index: e.lineIndex,
   }));

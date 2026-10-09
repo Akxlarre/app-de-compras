@@ -140,8 +140,18 @@ despliegue**): migración `20261009010000_shop_receipt_pending_and_date` + test 
 `shop_receipt_reliable` (10 tests). Cubre AC2, AC11 y AC12. Los 177 tests `shop_*` pasan en local.
 Al mergear a `main`, se despliega solo a staging.
 
-**Pendiente:** T4/T5/T7 (todas las líneas en la compra y en el Historial: AC5–AC8), cierre en
-staging con la migración aplicada (AC2, AC11, AC12, AC16, AC18) y la decisión D6.
+**G2 (T3/T4/T5/T7, AC5–AC8), en código:** tabla `shop.purchase_lines` + `save_purchase_lines`,
+llamada desde `apply_receipt` / `attach_receipt` (y por lo tanto `create_receipt_purchase`). Las
+líneas viajan en `p_receipt.lines` (sin cambiar la firma de las RPC: la app antigua sigue
+funcionando y no guarda líneas); los extras llevan `line_index` para enlazar el producto creado.
+La app manda todas las líneas (`buildApplyReceipt().lines`: un descuento a un producto ya va en su
+precio, así que las líneas suman la boleta) y el Historial arma el detalle desde ellas (productos
+sin catálogo con su texto de boleta; bolsas y descuentos aparte). Sin líneas, el detalle se arma
+como antes desde lo marcado (AC8). pgTAP `shop_receipt_reliable` (16) + 605 tests de la app.
+
+**Pendiente:** aplicar la migración en staging (PR en plataforma-db, a decidir por el dueño) y
+cerrar ahí de punta a punta (AC2, AC5–AC7, AC11, AC12, AC16, AC18); la decisión D6. Orden de
+despliegue en `docs/PENDIENTES.md`: la migración antes que la app.
 
 **Verificación:**
 - `npm run test:ci`: todo pasa. `npm run lint:arch` y `ng build` limpios.

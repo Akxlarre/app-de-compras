@@ -231,6 +231,7 @@ describe('PurchaseCloseFacade', () => {
               name: 'Café molido',
               unitPrice: 3990,
               quantity: 1,
+              lineIndex: 1,
             },
           ],
           uncheckItemIds: ['i-pan'],
@@ -252,6 +253,7 @@ describe('PurchaseCloseFacade', () => {
           name: 'Café JV',
           unitPrice: 3990,
           quantity: 1,
+          lineIndex: 1,
         },
       ]);
     });
@@ -483,13 +485,21 @@ describe('PurchaseCloseFacade', () => {
 
       const input = receipts['createReceiptPurchase'].mock.calls[0][0];
       expect(input.extras).toEqual([
-        { productId: 'p-leche', rawText: 'LECHE', name: 'Leche', unitPrice: 1000, quantity: 1 },
+        {
+          productId: 'p-leche',
+          rawText: 'LECHE',
+          name: 'Leche',
+          unitPrice: 1000,
+          quantity: 1,
+          lineIndex: 0,
+        },
         {
           productId: 'p-cafe',
           rawText: 'CAFE JV',
           name: 'Café molido',
           unitPrice: 3990,
           quantity: 1,
+          lineIndex: 1,
         },
         {
           productId: null,
@@ -497,7 +507,14 @@ describe('PurchaseCloseFacade', () => {
           name: 'Bolsa basura',
           unitPrice: 200,
           quantity: 1,
+          lineIndex: 2,
         },
+      ]);
+      // Sin lista, la compra igual conserva todas sus líneas (spec 0015, AC7).
+      expect(input.lines.map((l: { rawText: string }) => l.rawText)).toEqual([
+        'LECHE',
+        'CAFE JV',
+        'BOLSA BASURA',
       ]);
       expect(input.total).toBe(5190);
       expect(receipts['applyReceipt']).not.toHaveBeenCalled();

@@ -136,7 +136,9 @@ export class ShoppingListsRepository {
   async findCompleted(familyId: string, limit = 50): Promise<ActiveShoppingList[]> {
     const { data, error } = await this.db
       .from('shopping_lists')
-      .select(`${WITH_ITEMS}, receipts(id, image_url, store)`)
+      .select(
+        `${WITH_ITEMS}, receipts(id, image_url, store), purchase_lines(line_index, raw_text, name, kind, quantity, unit_price, amount, product:products(name))`
+      )
       .eq('family_id', familyId)
       .eq('status', 'completed')
       .order('completed_at', { ascending: false, nullsFirst: false })

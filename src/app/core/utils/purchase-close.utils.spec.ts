@@ -266,14 +266,101 @@ describe('buildApplyReceipt', () => {
     const d = decided();
     d[2] = { ...d[2], saveToCatalog: true };
     expect(build(d).extras).toEqual([
-      { productId: 'p-cafe', rawText: 'CAFE JV', name: 'Café', unitPrice: 3990, quantity: 1 },
+      {
+        productId: 'p-cafe',
+        rawText: 'CAFE JV',
+        name: 'Café',
+        unitPrice: 3990,
+        quantity: 1,
+        lineIndex: 1,
+      },
       {
         productId: null,
         rawText: 'BOLSA BASURA',
         name: 'Bolsa basura',
         unitPrice: 450,
         quantity: 1,
+        lineIndex: 3,
       },
+    ]);
+  });
+
+  it('manda todas las líneas de la boleta, con su producto si lo tienen (spec 0015, G2)', () => {
+    const r = build(decided());
+
+    expect(r.lines).toEqual([
+      {
+        index: 0,
+        rawText: 'LCH ENT',
+        name: 'Leche',
+        kind: 'product',
+        quantity: 2,
+        unitPrice: 880,
+        amount: 1760,
+        itemId: 'i-leche',
+        productId: 'p-leche',
+      },
+      {
+        index: 1,
+        rawText: 'CAFE JV',
+        name: 'Café',
+        kind: 'product',
+        quantity: 1,
+        unitPrice: 3990,
+        amount: 3990,
+        itemId: null,
+        productId: 'p-cafe',
+      },
+      {
+        index: 3,
+        rawText: 'BOLSA BASURA',
+        name: 'Bolsa basura',
+        kind: 'product',
+        quantity: 1,
+        unitPrice: 450,
+        amount: 450,
+        itemId: null,
+        productId: null,
+      },
+      {
+        index: 4,
+        rawText: 'QUESO GAUDA',
+        name: 'Queso gauda',
+        kind: 'product',
+        quantity: 1,
+        unitPrice: 2890,
+        amount: 2890,
+        itemId: null,
+        productId: null,
+      },
+    ]);
+    // El descuento a la leche ya va en su precio: no se repite y las líneas suman la boleta.
+    expect(r.lines.reduce((s, l) => s + l.amount, 0)).toBe(validation.computedTotal);
+  });
+
+  it('bolsas y descuentos a la compra van como líneas sin producto', () => {
+    const r = buildApplyReceipt({
+      listId: 'l1',
+      carryPending: true,
+      receipt: {
+        store: null,
+        date: null,
+        total: 900,
+        lines: [
+          line({ kind: 'bag', raw_text: 'BOLSA', unit_price: 50, line_total: 50 }),
+          line({ kind: 'discount', raw_text: 'CANJE', unit_price: null, line_total: -150 }),
+          line({ raw_text: 'ILEGIBLE', legible: false, line_total: null }),
+        ],
+      },
+      validation: { computedTotal: -100, totalMatches: false, doubtfulLines: [] },
+      imagePath: null,
+      decisions: [],
+      missing: [],
+    });
+
+    expect(r.lines.map((l) => [l.index, l.kind, l.amount, l.productId])).toEqual([
+      [0, 'bag', 50, null],
+      [1, 'discount', -150, null],
     ]);
   });
 

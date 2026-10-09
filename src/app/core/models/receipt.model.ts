@@ -188,6 +188,23 @@ export interface ReceiptExtraInput {
   name: string;
   unitPrice: number;
   quantity: number;
+  /** Línea de la boleta que lo trae: enlaza la línea guardada con el producto que se crea. */
+  lineIndex: number | null;
+}
+
+/** Una línea de la boleta tal como queda en la compra (`shop.purchase_lines`, spec 0015 G2). */
+export interface ReceiptLineInput {
+  index: number;
+  rawText: string | null;
+  /** Nombre del producto asignado o, si no tiene, el que leyó el OCR. */
+  name: string | null;
+  kind: OcrLineKind;
+  quantity: number | null;
+  unitPrice: number | null;
+  /** Lo que suma a la compra (negativo en los descuentos). */
+  amount: number;
+  itemId: string | null;
+  productId: string | null;
 }
 
 export interface ApplyReceiptInput {
@@ -202,6 +219,8 @@ export interface ApplyReceiptInput {
   ocrCheck: ReceiptCheck | ReceiptValidation | null;
   items: ReceiptItemInput[];
   extras: ReceiptExtraInput[];
+  /** Todas las líneas de la boleta (spec 0015 G2). */
+  lines: ReceiptLineInput[];
   /** "¿No lo compraste?": ítems marcados que vuelven a pendiente. */
   uncheckItemIds: string[];
 }

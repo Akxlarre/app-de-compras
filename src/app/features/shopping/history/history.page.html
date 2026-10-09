@@ -99,6 +99,18 @@
             </li>
             } @empty {
             <li class="py-2 text-sm text-text-muted">No se marcó ningún producto.</li>
+            } @for (charge of purchase.charges; track $index) {
+            <li class="flex items-center gap-3 py-2 text-sm" data-testid="cargo-boleta">
+              <span class="flex-1 min-w-0 text-text-muted truncate">
+                @switch (charge.kind) { @case ('bag') { Bolsa } @case ('deposit') { Envase } @case
+                ('discount') { Descuento } @default { Otro } } · {{ charge.rawText }}
+              </span>
+              <span class="w-20 text-right font-semibold text-text-primary shrink-0"
+                >{{ charge.amount < 0 ? '-' : '' }}${{
+                  abs(charge.amount) | number : '1.0-0'
+                }}</span
+              >
+            </li>
             }
           </ul>
 

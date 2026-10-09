@@ -2,6 +2,7 @@ import type { ActiveShoppingList, ListReceipt } from '@core/models/shopping-list
 import type {
   MonthlySpending,
   PurchaseSummary,
+  PurchasedCharge,
   PurchasedItem,
 } from '@core/models/purchase-history.model';
 import { disambiguateTitles, purchaseTitle } from './purchase-name.utils';
@@ -18,20 +19,37 @@ function receiptOf(list: ActiveShoppingList): ListReceipt | null {
  * `total` es lo pagado de verdad (boleta o a mano) si se sabe; si no, la suma estimada.
  */
 export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
-  const items: PurchasedItem[] = (list.list_items ?? [])
-    .filter((item) => item.is_checked)
-    .map((item) => {
-      const quantity = Number(item.quantity ?? 1) || 1;
-      const unitPrice = item.unit_price == null ? null : Number(item.unit_price);
-      return {
-        name: item.product?.name ?? 'Producto sin nombre',
-        quantity,
-        unitPrice,
-        subtotal: quantity * (unitPrice ?? 0),
-      };
-    });
+  const lines = [...(list.purchase_lines ?? [])].sort((a, b) => a.line_index - b.line_index);
+  // Con las líneas de la boleta (spec 0015) el detalle es la boleta completa; si no, lo marcado.
+  const items: PurchasedItem[] = lines.length
+    ? lines
+        .filter((l) => l.kind === 'product')
+        .map((l) => ({
+          name: l.product?.name ?? l.name ?? l.raw_text ?? 'Producto sin nombre',
+          quantity: Number(l.quantity ?? 1) || 1,
+          unitPrice: l.unit_price == null ? null : Number(l.unit_price),
+          subtotal: Number(l.amount),
+        }))
+    : (list.list_items ?? [])
+        .filter((item) => item.is_checked)
+        .map((item) => {
+          const quantity = Number(item.quantity ?? 1) || 1;
+          const unitPrice = item.unit_price == null ? null : Number(item.unit_price);
+          return {
+            name: item.product?.name ?? 'Producto sin nombre',
+            quantity,
+            unitPrice,
+            subtotal: quantity * (unitPrice ?? 0),
+          };
+        });
+  const charges: PurchasedCharge[] = lines
+    .filter((l) => l.kind !== 'product')
+    .map((l) => ({ kind: l.kind, rawText: l.raw_text, amount: Number(l.amount) }));
 
-  const estimatedTotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+  // `other` (redondeo, donación) no suma al total, igual que en la revisión de la boleta.
+  const estimatedTotal =
+    items.reduce((sum, item) => sum + item.subtotal, 0) +
+    charges.filter((c) => c.kind !== 'other').reduce((sum, c) => sum + c.amount, 0);
   const receipt = receiptOf(list);
   const paid = list.total_paid == null ? null : Number(list.total_paid);
 
@@ -48,6 +66,7 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
     receiptImagePath: receipt?.image_url ?? null,
     store: receipt?.store ?? null,
     items,
+    charges,
     source: list,
   };
 }
