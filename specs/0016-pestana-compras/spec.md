@@ -1,7 +1,8 @@
 > id: 0016-pestana-compras
 > refs: `docs/RECORRIDO-UX.md` §6 (coherencia entre pestañas, N1–N4), §4 Historial (R1–R7) y §2
 > Boletas (G1, G3, G4); revisión con capturas del 2026-10-09; fix-049 (lo que quedó fuera).
-> status: approved (D1–D6 confirmadas el 2026-10-09)
+> status: done (D1–D6 confirmadas el 2026-10-09)
+> closed: 2026-10-09
 > created: 2026-10-09
 
 ## Problema
@@ -47,41 +48,65 @@ para registrar una compra hay varias puertas que hacen casi lo mismo:
 
 ## Criterios de aceptación
 **Pestañas y navegación (D1, D2)**
-- [ ] AC1. La barra tiene Mi Lista, Compras, Catálogo y Perfil. Compras se marca como activa en su
+- [x] AC1. La barra tiene Mi Lista, Compras, Catálogo y Perfil. Compras se marca como activa en su
   vista y en el detalle de una compra.
-- [ ] AC2. `/app/receipt` y `/app/history` llevan a Compras. Mi Lista ya no tiene el ícono de Historial.
-- [ ] AC3. En Compras, "Escanear boleta" abre el cierre de la lista activa si hay algo marcado (con
+- [x] AC2. `/app/receipt` y `/app/history` llevan a Compras. Mi Lista ya no tiene el ícono de Historial.
+- [x] AC3. En Compras, "Escanear boleta" abre el cierre de la lista activa si hay algo marcado (con
   "Es otra compra" disponible) y una compra sin lista si no hay nada marcado. Ya no existe el botón
   "Registrar una compra sin lista".
-- [ ] AC4. Compras vacía (sin compras) explica qué hacer y muestra "Escanear boleta" (R6).
+- [x] AC4. Compras vacía (sin compras) explica qué hacer y muestra "Escanear boleta" (R6).
 
 **Compras: gasto y lista (D4, G1, R3–R5)**
-- [ ] AC5. Arriba: "Gastado en <mes>", cuántas compras y cuántas estimadas, y la diferencia con el mes
+- [x] AC5. Arriba: "Gastado en <mes>", cuántas compras y cuántas estimadas, y la diferencia con el mes
   anterior ("$X más/menos que septiembre"). Flechas para ir a meses anteriores y volver.
-- [ ] AC6. Cada compra muestra la tienda (o las tiendas) en vez de repetir la fecha, el total y su
+- [x] AC6. Cada compra muestra la tienda (o las tiendas) en vez de repetir la fecha, el total y su
   origen. Una compra sin precios dice "Sin precios" en vez de "$0 Estimado" (R3, R4).
-- [ ] AC7. Al abrir una compra: la boleta (miniatura que se amplía), las líneas y otros cargos; las
+- [x] AC7. Al abrir una compra: la boleta (miniatura que se amplía), las líneas y otros cargos; las
   acciones útiles a la vista (Agregar boleta / Ingresar total) y Renombrar / Borrar en un menú ⋯ (R5).
 
 **Cierre a pantalla completa (D3)**
-- [ ] AC8. El cierre se abre sin la barra de pestañas, desde "Finalizar" y desde Compras, y al
+- [x] AC8. El cierre se abre sin la barra de pestañas, desde "Finalizar" y desde Compras, y al
   terminar o cancelar vuelve al lugar de donde vino.
-- [ ] AC9. Arriba van solo las decisiones ("¿Es este?", "¿No lo compraste?") con un contador
+- [x] AC9. Arriba van solo las decisiones ("¿Es este?", "¿No lo compraste?") con un contador
   ("2 por decidir"); los demás grupos van cerrados con su cantidad y total, y se abren al tocarlos.
-- [ ] AC10. Una misma línea repetida en la boleta se ve como una sola fila "× 2" (se sigue guardando
+- [x] AC10. Una misma línea repetida en la boleta se ve como una sola fila "× 2" (se sigue guardando
   cada línea por separado).
-- [ ] AC11. Cantidad y precio se ven como texto; se editan al tocar la fila.
-- [ ] AC12. Se pueden corregir la tienda y la fecha de cada boleta antes de cerrar (G4).
+- [x] AC11. Cantidad y precio se ven como texto; se editan al tocar la fila.
+- [x] AC12. Se pueden corregir la tienda y la fecha de cada boleta antes de cerrar (G4).
 
 **Leer la boleta (D5, D6)**
-- [ ] AC13. "Escanear boleta" ofrece "Tomar foto" y "Elegir de la galería" (G3).
-- [ ] AC14. Mientras lee se ve la miniatura de la foto, "Leyendo la boleta (puede tardar un minuto)" y
+- [x] AC13. "Escanear boleta" ofrece "Tomar foto" y "Elegir de la galería" (G3).
+- [x] AC14. Mientras lee se ve la miniatura de la foto, "Leyendo la boleta (puede tardar un minuto)" y
   "Puedes seguir usando la app".
-- [ ] AC15. Si se sale del cierre mientras lee, la lectura sigue; al terminar aparece "Tu boleta está
+- [x] AC15. Si se sale del cierre mientras lee, la lectura sigue; al terminar aparece "Tu boleta está
   lista" con "Ver", que vuelve al cierre con el resultado.
 
 **General**
-- [ ] AC16. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests para cada decisión
+- [x] AC16. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests para cada decisión
   nueva (navegación, meses, agrupar líneas, lectura en segundo plano).
-- [ ] AC17. Verificado en staging a 375×667 con la boleta de Aroca y la salida de 3 boletas del 05/10:
+- [x] AC17. Verificado en staging a 375×667 con la boleta de Aroca y la salida de 3 boletas del 05/10:
   el cierre completo cabe en menos de 3 pantallas con los grupos cerrados.
+
+## Verificación en staging (2026-10-09)
+375×667, cuenta `test5`, OCR simulado con los casos 14 (Aroca) y 15 (voucher) del eval (el proxy
+corta `process-receipt` a los 30 s). Capturas en el scratchpad de la sesión (`ux-0016/`).
+- AC1/AC2: barra "Mi Lista · Compras · Catálogo · Perfil"; `/app/history` y `/app/receipt` llegan a
+  `/app/purchases` con Compras marcada; también en el detalle `/app/purchases/:id`. Mi Lista sin reloj.
+- AC5/AC6: "Gastado en Octubre $122.760 · 1 compra"; la fila dice "Comercializadora Aroca · Del
+  Pedregal Concepción · El Nene Jr SPA" con "lun, 5 oct · 46 productos". Flecha a septiembre: $0.
+- AC7: detalle con las 3 fotos, 46 líneas y el menú ⋯ (Renombrar / Borrar compra).
+- AC13: "Escanear boleta" abre "Tomar foto / Elegir de la galería / Cancelar".
+- AC14/AC15: mientras lee, miniatura + "Leyendo la boleta (puede tardar un minuto)" + "Seguir en la
+  app"; ya en Compras aparece "Leyendo tu boleta… Ver" y, al terminar, el aviso "Tu boleta está lista
+  · VER", que vuelve al cierre con el resultado.
+- AC9/AC10/AC11/AC17: con Aroca, "2 por decidir" (Palmitos, Pan) arriba; "Coinciden 2 $5.680" y "No
+  estaban en la lista 29 $53.220" cerrados; el cierre completo mide 968 px = **1,45 pantallas** (antes
+  8,7). Abierto, 4 filas juntan líneas repetidas (× 3, × 2, × 2, × 2); cantidad y precio aparecen al
+  tocar la fila.
+- AC12: tienda "Aroca Concepción" y fecha 04/10 corregidas en el resumen. Con la segunda boleta: "2
+  boletas $81.700", "El Nene Jr SPA · 5 oct · sin detalle · $22.800".
+- AC8: Cancelar vuelve a Compras con la barra visible.
+- Encontrado y corregido en staging: (1) Ionic deja el cierre en caché al volver atrás (no se
+  destruye) y el aviso no salía → visibilidad con `ionViewWillEnter/WillLeave`; (2) la CSP bloquea
+  `blob:` → la miniatura va como `data:`.
+- AC16: `npm run test:ci` 661 pasan; `npm run lint:arch` 0 errores; `ng build` limpio.
