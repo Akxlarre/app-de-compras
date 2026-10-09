@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { summarizePurchase, spendingInMonth } from './purchase-history.utils';
+import {
+  summarizePurchase,
+  spendingInMonth,
+  monthComparison,
+  purchasesInMonth,
+  shiftMonth,
+} from './purchase-history.utils';
 import type { ActiveShoppingList } from '@core/models/shopping-list.model';
 import type { PurchaseSummary } from '@core/models/purchase-history.model';
 
@@ -85,6 +91,8 @@ describe('summarizePurchase con las líneas de la boleta (spec 0015, G2)', () =>
 
     expect(s.store).toBe('Aroca · Pedregal');
     expect(s.receiptImagePath).toBe('fam/a.jpg');
+    // Todas las fotos, para verlas en el detalle de la compra (0016 AC7).
+    expect(s.receiptImagePaths).toEqual(['fam/a.jpg']);
   });
 
   it('con varias boletas las líneas van boleta por boleta, no mezcladas', () => {
@@ -271,5 +279,51 @@ describe('spendingInMonth', () => {
 
   it('sin compras: 0', () => {
     expect(spendingInMonth([], new Date())).toEqual({ total: 0, count: 0, estimatedCount: 0 });
+  });
+});
+
+describe('meses (spec 0016 D4)', () => {
+  const purchase = (completedAt: Date, total: number, totalSource = 'receipt') =>
+    ({ id: completedAt.toISOString(), completedAt: completedAt.toISOString(), total, totalSource } as
+      PurchaseSummary);
+  const purchases = [
+    purchase(new Date(2026, 9, 5, 12), 122_760),
+    purchase(new Date(2026, 9, 1, 9), 3_000, 'estimated'),
+    purchase(new Date(2026, 8, 20, 12), 100_000),
+    purchase(new Date(2025, 11, 30, 12), 40_000),
+    purchase(new Date(2026, 0, 2, 12), 50_000),
+  ];
+
+  it('shiftMonth va al primer día del mes, también entre años', () => {
+    expect(shiftMonth(new Date(2026, 9, 25, 18), 0)).toEqual(new Date(2026, 9, 1));
+    expect(shiftMonth(new Date(2026, 0, 31), -1)).toEqual(new Date(2025, 11, 1));
+    expect(shiftMonth(new Date(2025, 11, 15), 1)).toEqual(new Date(2026, 0, 1));
+  });
+
+  it('purchasesInMonth deja solo las del mes elegido', () => {
+    expect(purchasesInMonth(purchases, new Date(2026, 9, 1)).map((p) => p.total)).toEqual([
+      122_760, 3_000,
+    ]);
+    expect(purchasesInMonth(purchases, new Date(2026, 6, 1))).toEqual([]);
+  });
+
+  it('monthComparison da el mes, el anterior y la diferencia', () => {
+    const c = monthComparison(purchases, new Date(2026, 9, 1));
+    expect(c.current).toEqual({ total: 125_760, count: 2, estimatedCount: 1 });
+    expect(c.previous.total).toBe(100_000);
+    expect(c.diff).toBe(25_760);
+  });
+
+  it('la diferencia también cruza de año (enero contra diciembre) y puede ser negativa', () => {
+    expect(monthComparison(purchases, new Date(2026, 0, 1)).diff).toBe(10_000);
+    expect(monthComparison(purchases, new Date(2026, 8, 1)).diff).toBeNull();
+    expect(
+      monthComparison([purchase(new Date(2026, 1, 3), 1_000), purchases[4]], new Date(2026, 1, 1))
+        .diff
+    ).toBe(-49_000);
+  });
+
+  it('sin compras el mes anterior no hay diferencia que mostrar', () => {
+    expect(monthComparison(purchases, new Date(2025, 11, 1)).diff).toBeNull();
   });
 });

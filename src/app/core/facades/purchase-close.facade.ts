@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { NavController } from '@ionic/angular';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
@@ -40,6 +41,9 @@ export type CloseMode = 'manual' | 'receipt';
  */
 export type CloseKind = 'active' | 'completed' | 'new';
 
+/** Pestaña desde la que se abrió el cierre: Mi Lista ("Finalizar") o Compras. */
+export type CloseOrigin = 'active' | 'purchases';
+
 /** Compra vacía que representa "sin lista" mientras se concilia la boleta. */
 const NEW_PURCHASE: ActiveShoppingList = {
   id: '',
@@ -61,6 +65,7 @@ export class PurchaseCloseFacade {
   private readonly receipts = inject(ReceiptsRepository);
   private readonly products = inject(ProductsRepository);
   private readonly toast = inject(ToastService);
+  private readonly nav = inject(NavController);
 
   readonly list = signal<ActiveShoppingList | null>(null);
   readonly mode = signal<CloseMode | null>(null);
@@ -145,12 +150,26 @@ export class PurchaseCloseFacade {
   readonly receiptSummaries = computed(() =>
     this.parts().map((p) => ({
       store: p.receipt.store,
+      date: p.receipt.date,
       total: p.receipt.total ?? p.validation.computedTotal,
       noDetail: p.receipt.lines.length === 0,
     }))
   );
   /** Otra boleta solo al cerrar la lista activa: "Agregar boleta" del Historial es de una. */
   readonly canAddReceipt = computed(() => this.kind() === 'active' && this.parts().length > 0);
+
+  /** Pestaña a la que vuelve el cierre al terminar o cancelar (spec 0016 AC8). */
+  readonly origin = signal<CloseOrigin>('active');
+  /** Miniatura de la foto mientras se lee (spec 0016 AC14). */
+  readonly previewUrl = signal<string | null>(null);
+  /** Hay una boleta leyéndose o leída sin cerrar: se puede volver a ella desde Compras. */
+  readonly hasOpenReceipt = computed(
+    () => this.mode() === 'receipt' && (this.isScanning() || this.parts().length > 0)
+  );
+  /** La pantalla del cierre está abierta; si no, al terminar de leer se avisa (D6). */
+  private visible = false;
+  /** Cambia con cada cierre nuevo o cancelado: una lectura vieja no pisa al siguiente. */
+  private session = 0;
 
   constructor() {
     inject(SessionScopeService).register(() => this.reset());
@@ -160,9 +179,11 @@ export class PurchaseCloseFacade {
     list: ActiveShoppingList,
     carryPending: boolean,
     mode: CloseMode,
-    kind: CloseKind = 'active'
+    kind: CloseKind = 'active',
+    origin: CloseOrigin = 'active'
   ): void {
     this.reset();
+    this.origin.set(origin);
     this.list.set(list);
     this.carryPending.set(carryPending);
     this.mode.set(mode);
@@ -173,8 +194,21 @@ export class PurchaseCloseFacade {
   }
 
   /** Compra no planificada: no hay lista, la boleta crea la compra. */
-  startNew(): void {
-    this.start(NEW_PURCHASE, false, 'receipt', 'new');
+  startNew(origin: CloseOrigin = 'active'): void {
+    this.start(NEW_PURCHASE, false, 'receipt', 'new', origin);
+  }
+
+  setVisible(visible: boolean): void {
+    this.visible = visible;
+  }
+
+  /** Corrige la tienda o la fecha que leyó la IA en una de las boletas (spec 0016 AC12). */
+  setReceiptMeta(index: number, patch: { store?: string | null; date?: string | null }): void {
+    const parts = this.parts().map((p, i) =>
+      i === index ? { ...p, receipt: { ...p.receipt, ...patch } } : p
+    );
+    this.parts.set(parts);
+    this.receipt.set(combineReceipts(parts.map((p) => p.receipt)));
   }
 
   setManualPrice(itemId: string, price: number | null): void {
@@ -214,6 +248,9 @@ export class PurchaseCloseFacade {
   private async read(files: File[], append: boolean): Promise<void> {
     const list = this.list();
     if (!list || !files.length) return;
+    // Si se cancela o empieza otro cierre mientras lee, el resultado ya no es de nadie.
+    const session = this.session;
+    const stale = () => session !== this.session;
     const previous = append ? this.decisions() : [];
     this.isScanning.set(true);
     this.error.set(null);
@@ -221,6 +258,7 @@ export class PurchaseCloseFacade {
       this.decisions.set([]);
       this.parts.set([]);
     }
+    this.setPreview(files[0]);
 
     try {
       const toReconcile = (i: PopulatedListItem) => ({
@@ -252,6 +290,7 @@ export class PurchaseCloseFacade {
         this.receipts.findAliases(familyId),
         this.products.findByFamily(familyId),
       ]);
+      if (stale()) return;
 
       const validation = validateReceipt(receipt);
       const result = reconcileReceipt(
@@ -290,13 +329,28 @@ export class PurchaseCloseFacade {
         );
       }
     } catch (e) {
+      if (stale()) return;
       console.error('Error OCR:', e);
       this.error.set(
         'No pudimos leer la boleta. Revisa tu conexión y que la foto se vea nítida, y reintenta.'
       );
     } finally {
-      this.isScanning.set(false);
+      if (!stale()) this.isScanning.set(false);
     }
+    // Se salió del cierre mientras leía (D6): el aviso lleva de vuelta al resultado.
+    if (!stale() && !this.visible) {
+      this.toast.action(
+        this.error() ? 'No pudimos leer la boleta' : 'Tu boleta está lista',
+        'Ver',
+        () => this.nav.navigateForward('/app/close')
+      );
+    }
+  }
+
+  private setPreview(file: File | undefined): void {
+    const previous = this.previewUrl();
+    if (previous) URL.revokeObjectURL?.(previous);
+    this.previewUrl.set(file && URL.createObjectURL ? URL.createObjectURL(file) : null);
   }
 
   updateDecision(index: number, patch: Partial<LineDecision>): void {
@@ -372,6 +426,9 @@ export class PurchaseCloseFacade {
   }
 
   reset(): void {
+    this.session++;
+    this.setPreview(undefined);
+    this.origin.set('active');
     this.list.set(null);
     this.mode.set(null);
     this.kind.set('active');

@@ -1,0 +1,143 @@
+<div class="h-full flex flex-col bg-base" data-testid="purchase-detail">
+  <app-header
+    [title]="purchase()?.title ?? 'Compra'"
+    [showBrand]="false"
+    [showBack]="true"
+    (backClicked)="back()"
+  >
+    @if (purchase()) {
+    <button
+      slot="actions"
+      class="w-11 h-11 rounded-full flex items-center justify-center text-text-muted active:scale-95 transition-all"
+      aria-label="Más opciones"
+      data-llm-action="opciones-compra"
+      (click)="more()"
+    >
+      <app-icon name="more-horizontal" [size]="22" [attr.aria-label]="'Más opciones'" />
+    </button>
+    }
+  </app-header>
+
+  <main class="flex-1 overflow-y-auto px-4 pb-chrome">
+    @if (facade.isLoading() && !facade.hasData()) {
+    <div class="flex flex-col gap-3 mt-2">
+      <app-skeleton-block variant="rect" width="100%" height="96px" />
+      <app-skeleton-block variant="rect" width="100%" height="200px" />
+    </div>
+    } @else if (purchase(); as p) {
+    <div class="flex flex-col gap-4 mt-2">
+      <section class="bg-surface border border-border-default rounded-2xl p-4">
+        <p class="text-sm text-text-muted">{{ dateLabel() }}</p>
+        @if (p.store) {
+        <p class="font-semibold text-text-primary mt-0.5">{{ p.store }}</p>
+        }
+        <div class="flex items-end justify-between gap-3 mt-2">
+          <p class="kpi-value">
+            @if (p.totalSource === 'estimated' && p.total === 0) { Sin precios } @else { ${{
+              p.total | number : '1.0-0'
+            }}
+            }
+          </p>
+          <p class="text-xs text-text-muted pb-1">
+            @switch (p.totalSource) { @case ('receipt') { Boleta } @case ('manual') { Total
+            ingresado } @default { Estimado } }
+          </p>
+        </div>
+        @if (canAddReceipt() || canEnterTotal()) {
+        <div class="flex flex-wrap gap-2 mt-3">
+          @if (canAddReceipt()) {
+          <button
+            class="px-3 py-1.5 rounded-full text-sm font-semibold bg-brand text-brand-contrast active:scale-95 transition-transform"
+            data-llm-action="agregar-boleta"
+            (click)="addReceipt()"
+          >
+            Agregar boleta
+          </button>
+          } @if (canEnterTotal()) {
+          <button
+            class="px-3 py-1.5 rounded-full text-sm font-semibold border border-border-default text-text-primary active:scale-95 transition-transform"
+            data-llm-action="ingresar-total"
+            (click)="enterTotal()"
+          >
+            Ingresar total
+          </button>
+          }
+        </div>
+        }
+      </section>
+
+      <!-- Boletas: miniaturas que se amplían -->
+      @if (p.receiptImagePaths.length) {
+      <section class="flex gap-2 overflow-x-auto" data-testid="fotos-boleta">
+        @for (url of photos(); track $index) { @if (url) {
+        <button
+          class="shrink-0 w-24 h-32 rounded-xl overflow-hidden border border-border-subtle"
+          [attr.aria-label]="'Ampliar boleta ' + ($index + 1)"
+          (click)="enlarged.set(url)"
+        >
+          <img [src]="url" alt="Foto de la boleta" class="w-full h-full object-cover" loading="lazy" />
+        </button>
+        } @else {
+        <p class="text-xs text-text-muted self-center">No se pudo abrir la foto.</p>
+        } }
+      </section>
+      }
+
+      <ul class="bg-surface border border-border-default rounded-2xl px-4 py-2">
+        @for (item of p.items; track $index) {
+        <li class="flex items-center gap-3 py-2 text-sm">
+          <span class="flex-1 min-w-0 text-text-primary truncate">{{ item.name }}</span>
+          <span class="text-text-muted shrink-0">
+            {{ item.quantity }} × @if (item.unitPrice !== null) { ${{
+              item.unitPrice | number : '1.0-0'
+            }}
+            } @else { sin precio }
+          </span>
+          <span class="w-20 text-right font-semibold text-text-primary shrink-0"
+            >${{ item.subtotal | number : '1.0-0' }}</span
+          >
+        </li>
+        } @empty {
+        <li class="py-2 text-sm text-text-muted">No se marcó ningún producto.</li>
+        } @for (charge of p.charges; track $index) {
+        <li class="flex items-center gap-3 py-2 text-sm" data-testid="cargo-boleta">
+          <span class="flex-1 min-w-0 text-text-muted truncate">
+            @switch (charge.kind) { @case ('bag') { Bolsa } @case ('deposit') { Envase } @case
+            ('discount') { Descuento } @default { Otro } } · {{ charge.rawText }}
+          </span>
+          <span class="w-20 text-right font-semibold text-text-primary shrink-0"
+            >{{ charge.amount < 0 ? '-' : '' }}${{ abs(charge.amount) | number : '1.0-0' }}</span
+          >
+        </li>
+        }
+      </ul>
+    </div>
+    } @else {
+    <app-empty-state
+      icon="receipt"
+      message="No encontramos esta compra"
+      subtitle="Puede que se haya borrado."
+      actionLabel="Volver a Compras"
+      actionIcon="arrow-left"
+      (action)="back()"
+    />
+    }
+  </main>
+
+  @if (enlarged(); as url) {
+  <div class="fixed inset-0 z-50 bg-base flex flex-col" role="dialog" aria-label="Boleta">
+    <div class="flex justify-end p-2">
+      <button
+        class="w-11 h-11 rounded-full flex items-center justify-center text-text-primary"
+        aria-label="Cerrar boleta"
+        (click)="enlarged.set(null)"
+      >
+        <app-icon name="x" [size]="22" [attr.aria-label]="'Cerrar'" />
+      </button>
+    </div>
+    <div class="flex-1 overflow-auto px-4 pb-6">
+      <img [src]="url" alt="Foto de la boleta" class="w-full rounded-xl" />
+    </div>
+  </div>
+  }
+</div>

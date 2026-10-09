@@ -1,5 +1,6 @@
 import type { ActiveShoppingList, ListReceipt } from '@core/models/shopping-list.model';
 import type {
+  MonthComparison,
   MonthlySpending,
   PurchaseSummary,
   PurchasedCharge,
@@ -74,6 +75,7 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
     totalSource: paid == null ? 'estimated' : list.total_source ?? 'estimated',
     hasReceipt: receipts.length > 0,
     receiptImagePath: receipts.find((r) => r.image_url)?.image_url ?? null,
+    receiptImagePaths: receipts.flatMap((r) => (r.image_url ? [r.image_url] : [])),
     store: stores || null,
     items,
     charges,
@@ -88,6 +90,22 @@ export function summarizePurchases(lists: ActiveShoppingList[]): PurchaseSummary
   return summaries.map((s, i) => ({ ...s, title: titles[i] }));
 }
 
+/** Primer día (hora local) del mes de `date` corrido `delta` meses. */
+export function shiftMonth(date: Date, delta: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + delta, 1);
+}
+
+/** Las compras finalizadas en el mes de `month` (hora local). */
+export function purchasesInMonth<T extends Pick<PurchaseSummary, 'completedAt'>>(
+  purchases: T[],
+  month: Date
+): T[] {
+  return purchases.filter((p) => {
+    const d = new Date(p.completedAt);
+    return d.getFullYear() === month.getFullYear() && d.getMonth() === month.getMonth();
+  });
+}
+
 /**
  * Gasto de las compras finalizadas en el mes de `now` (hora local), con cuántas son estimadas
  * (sin boleta ni total ingresado).
@@ -96,13 +114,23 @@ export function spendingInMonth(
   purchases: Pick<PurchaseSummary, 'completedAt' | 'total' | 'totalSource'>[],
   now: Date = new Date()
 ): MonthlySpending {
-  const inMonth = purchases.filter((p) => {
-    const d = new Date(p.completedAt);
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  });
+  const inMonth = purchasesInMonth(purchases, now);
   return {
     total: inMonth.reduce((sum, p) => sum + p.total, 0),
     count: inMonth.length,
     estimatedCount: inMonth.filter((p) => p.totalSource === 'estimated').length,
   };
+}
+
+/**
+ * Gasto del mes elegido contra el anterior (spec 0016 D4). `diff` es null si el mes anterior no
+ * tuvo compras: no hay con qué comparar.
+ */
+export function monthComparison(
+  purchases: Pick<PurchaseSummary, 'completedAt' | 'total' | 'totalSource'>[],
+  month: Date
+): MonthComparison {
+  const current = spendingInMonth(purchases, month);
+  const previous = spendingInMonth(purchases, shiftMonth(month, -1));
+  return { current, previous, diff: previous.count ? current.total - previous.total : null };
 }

@@ -15,8 +15,8 @@ import {
   cart,
   personOutline,
   person,
-  receiptOutline,
-  receipt,
+  bagHandleOutline,
+  bagHandle,
   listOutline,
   list,
 } from 'ionicons/icons';
@@ -42,9 +42,9 @@ import { tabChromeFor } from '@core/utils/tab-chrome.utils';
           <ion-label>Mi Lista</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="receipt">
-          <ion-icon name="receipt-outline"></ion-icon>
-          <ion-label>Boletas</ion-label>
+        <ion-tab-button tab="purchases">
+          <ion-icon name="bag-handle-outline"></ion-icon>
+          <ion-label>Compras</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="products">
@@ -135,13 +135,13 @@ export class TabsLayoutComponent {
     { initialValue: this.router.url }
   );
 
-  /** Pestaña activa (Historial y cierre cuelgan de Mi Lista) y si la barra se oculta. */
+  /** Pestaña activa (el detalle y el cierre cuelgan de Compras) y si la barra se oculta. */
   readonly chrome = computed(() => tabChromeFor(this.url()));
 
   @ViewChild('tabBar', { read: ElementRef }) private tabBar?: ElementRef<HTMLIonTabBarElement>;
 
   /**
-   * ion-tabs marca como pestaña el primer segmento de la URL ("history" no existe y no queda
+   * ion-tabs marca como pestaña el primer segmento de la URL ("close" no existe y no queda
    * ninguna activa). Después de cada cambio se corrige con la de `tabChromeFor` (Q18).
    */
   markSelectedTab(): void {
@@ -156,8 +156,8 @@ export class TabsLayoutComponent {
       cart,
       personOutline,
       person,
-      receiptOutline,
-      receipt,
+      bagHandleOutline,
+      bagHandle,
       listOutline,
       list,
     });

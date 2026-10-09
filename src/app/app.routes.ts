@@ -45,25 +45,28 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
       },
-      // Toda boleta cierra una compra (spec 0008): la pestaña Boletas y Finalizar llevan al cierre.
+      // Compras (spec 0016): gasto por mes, compras y boletas; reemplaza a Boletas e Historial.
       {
-        path: 'receipt',
+        path: 'purchases',
         loadComponent: () =>
-          import('./features/shopping/purchase-close/purchase-close.page').then(
-            (m) => m.PurchaseClosePage
+          import('./features/shopping/purchases/purchases.page').then((m) => m.PurchasesPage),
+      },
+      {
+        path: 'purchases/:id',
+        loadComponent: () =>
+          import('./features/shopping/purchases/purchase-detail.page').then(
+            (m) => m.PurchaseDetailPage
           ),
       },
+      { path: 'receipt', redirectTo: 'purchases', pathMatch: 'full' },
+      { path: 'history', redirectTo: 'purchases', pathMatch: 'full' },
+      // Toda boleta cierra una compra (spec 0008): a pantalla completa, desde Finalizar o Compras.
       {
         path: 'close',
         loadComponent: () =>
           import('./features/shopping/purchase-close/purchase-close.page').then(
             (m) => m.PurchaseClosePage
           ),
-      },
-      {
-        path: 'history',
-        loadComponent: () =>
-          import('./features/shopping/history/history.page').then((m) => m.HistoryPage),
       },
       {
         path: 'products',

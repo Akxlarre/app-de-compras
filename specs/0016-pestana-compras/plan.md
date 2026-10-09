@@ -1,5 +1,5 @@
 > spec: 0016-pestana-compras
-> status: draft (se aprueba junto con D1–D6 de la spec)
+> status: approved
 > created: 2026-10-09
 
 # Plan

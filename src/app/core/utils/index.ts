@@ -13,3 +13,4 @@ export * from './purchase-name.utils';
 export * from './tab-chrome.utils';
 export * from './shopping-list.utils';
 export * from './avatar.utils';
+export * from './close-groups.utils';

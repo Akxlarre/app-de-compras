@@ -1,7 +1,7 @@
 > id: 0016-pestana-compras
 > refs: `docs/RECORRIDO-UX.md` §6 (coherencia entre pestañas, N1–N4), §4 Historial (R1–R7) y §2
 > Boletas (G1, G3, G4); revisión con capturas del 2026-10-09; fix-049 (lo que quedó fuera).
-> status: draft — falta que el dueño confirme D1–D6
+> status: approved (D1–D6 confirmadas el 2026-10-09)
 > created: 2026-10-09
 
 ## Problema
