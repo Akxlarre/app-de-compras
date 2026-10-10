@@ -6,7 +6,7 @@
 | Selector | Inputs | Outputs | Archivo |
 |----------|--------|---------|---------|
 | `app-alert-card` | `severity`, `title`, `actionLabel`, `dismissible` | `action`, `dismissed` | `src/app/shared/components/alert-card/alert-card.component.ts` |
-| `app-header` | `title`, `showBrand`, `showStreak`, `showBack` | `backClicked` | `src/app/shared/components/app-header/app-header.component.ts` |
+| `app-header` | `title`, `showStreak`, `showBack` | `backClicked` | `src/app/shared/components/app-header/app-header.component.ts` |
 | `app-update-modal` | `visible`, `updateInfo`, `isDownloading`, `downloadProgress`, `error` | `startUpdate`, `dismiss` | `src/app/shared/components/app-update-modal/app-update-modal.component.ts` |
 | `app-confirm-modal` | — | — | `src/app/shared/components/confirm-modal/confirm-modal.component.ts` |
 | `app-drawer` | `isOpen`, `title`, `icon`, `hasFooter`, `noPadding` | `closed` | `src/app/shared/components/drawer/drawer.component.ts` |
