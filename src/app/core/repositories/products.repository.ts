@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import type { Product } from '@core/models/product.model';
+import type { Aisle, Product } from '@core/models/product.model';
 import type { ProductPurchaseRow } from '@core/models/product-sheet.model';
 import type { StorePriceRow } from '@core/models/price-insights.model';
 import type { RestockStat } from '@core/models/restock.model';
@@ -76,6 +76,15 @@ export class ProductsRepository {
     const { error } = await this.db
       .from('products')
       .update({ last_price: price, updated_at: new Date().toISOString() })
+      .eq('id', productId);
+    if (error) throw error;
+  }
+
+  /** Pasillo elegido en la ficha (spec 0019 D2): vale para siempre. */
+  async updateAisle(productId: string, aisle: Aisle): Promise<void> {
+    const { error } = await this.db
+      .from('products')
+      .update({ category: aisle, updated_at: new Date().toISOString() })
       .eq('id', productId);
     if (error) throw error;
   }

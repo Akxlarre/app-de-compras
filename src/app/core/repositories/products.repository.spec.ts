@@ -167,6 +167,16 @@ describe('ProductsRepository', () => {
     expect(q.eq).toHaveBeenCalledWith('id', 'p1');
   });
 
+  it('updateAisle cambia el pasillo (spec 0019)', async () => {
+    const q = queryMock();
+    mock.shop.from.mockReturnValue(q);
+
+    await repo.updateAisle('p1', 'Limpieza');
+
+    expect(q.update).toHaveBeenCalledWith({ category: 'Limpieza', updated_at: expect.any(String) });
+    expect(q.eq).toHaveBeenCalledWith('id', 'p1');
+  });
+
   describe('reposición (spec 0014)', () => {
     it('findRestockStats usa la RPC restock_stats', async () => {
       const rows = [

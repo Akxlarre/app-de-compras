@@ -231,6 +231,15 @@ describe('PurchaseCloseFacade', () => {
       expect(facade.manualSum()).toBe(2000);
     });
 
+    it('el precio anotado al marcar manda sobre el último (spec 0019 D5)', () => {
+      const noted = {
+        ...list,
+        list_items: list.list_items.map((i) => (i.id === 'i-pan' ? { ...i, unit_price: 1290 } : i)),
+      } as ActiveShoppingList;
+      facade.start(noted, true, 'manual');
+      expect(facade.manualPrices()).toEqual({ 'i-leche': 1000, 'i-pan': 1290 });
+    });
+
     it('confirma con los precios editados y el total', async () => {
       facade.setManualPrice('i-pan', 900);
       facade.manualTotal.set(3100);

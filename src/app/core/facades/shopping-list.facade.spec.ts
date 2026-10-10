@@ -72,6 +72,7 @@ describe('ShoppingListFacade', () => {
       changeQuantity: vi.fn().mockResolvedValue(1),
       setChecked: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
       watchList: vi.fn(() => stopWatching),
     };
     online = signal(true);
@@ -225,6 +226,45 @@ describe('ShoppingListFacade', () => {
 
       expect(items['changeQuantity']).toHaveBeenCalledWith('item-2', 1);
       expect(facade.data()?.list_items[1].quantity).toBe(4);
+    });
+
+    describe('unidad, cantidad y precio (spec 0019)', () => {
+      it('editItem cambia al instante y lo guarda', async () => {
+        await facade.editItem('item-1', { unit: 'kg', quantity: 1.5 });
+
+        expect(facade.data()?.list_items[0]).toMatchObject({ unit: 'kg', quantity: 1.5 });
+        expect(items['update']).toHaveBeenCalledWith('item-1', { unit: 'kg', quantity: 1.5 });
+      });
+
+      it('editItem vuelve a lo anterior si el servidor lo rechaza', async () => {
+        items['update'].mockRejectedValue(new Error('rls'));
+
+        await facade.editItem('item-1', { unit_price: 1990 });
+
+        expect(facade.data()?.list_items[0].unit_price).toBeUndefined();
+        expect(toast['error']).toHaveBeenCalled();
+      });
+
+      it('sin red queda en la cola y se envía al volver', async () => {
+        online.set(false);
+        await facade.editItem('item-2', { unit_price: 2490 });
+
+        expect(items['update']).not.toHaveBeenCalled();
+        expect(facade.data()?.list_items[1].unit_price).toBe(2490);
+        expect(stored.queue).toEqual([
+          { kind: 'patch', itemId: 'item-2', patch: { unit_price: 2490 } },
+        ]);
+
+        online.set(true);
+        await facade.flushQueue();
+        expect(items['update']).toHaveBeenCalledWith('item-2', { unit_price: 2490 });
+        expect(stored.queue).toEqual([]);
+      });
+
+      it('un ítem que ya no está no hace nada', async () => {
+        await facade.editItem('zz', { unit_price: 1 });
+        expect(items['update']).not.toHaveBeenCalled();
+      });
     });
 
     it('updateItemQuantity no baja de 1', async () => {

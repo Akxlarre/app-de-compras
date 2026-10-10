@@ -101,7 +101,18 @@
           <app-icon name="trending-up" [size]="16" [attr.aria-label]="'Subió'" /> Subió
           {{ sheet.rise }}% desde la compra anterior
         </p>
-        } @if (sheet.frequency) {
+        }
+        <button
+          class="flex items-center gap-1 mt-1 text-sm text-text-muted"
+          aria-label="Cambiar pasillo"
+          data-testid="pasillo"
+          data-llm-action="actualizar-pasillo"
+          (click)="pickAisle()"
+        >
+          Pasillo: <span class="font-semibold text-text-primary">{{ aisle() }}</span>
+          <app-icon name="chevron-right" [size]="14" [attr.aria-label]="'Cambiar'" />
+        </button>
+        @if (sheet.frequency) {
         <p class="text-sm text-text-muted mt-1" data-testid="frecuencia">{{ sheet.frequency }}</p>
         } @if (!isArchived()) {
         <button

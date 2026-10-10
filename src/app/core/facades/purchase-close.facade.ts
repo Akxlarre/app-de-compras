@@ -200,7 +200,10 @@ export class PurchaseCloseFacade {
     this.mode.set(mode);
     this.kind.set(kind);
     this.manualPrices.set(
-      Object.fromEntries(this.checkedItems().map((i) => [i.id, i.product?.last_price ?? null]))
+      // Lo anotado al marcar manda sobre el último precio (spec 0019 D5).
+      Object.fromEntries(
+        this.checkedItems().map((i) => [i.id, i.unit_price ?? i.product?.last_price ?? null])
+      )
     );
   }
 

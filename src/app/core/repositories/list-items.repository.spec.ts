@@ -83,6 +83,17 @@ describe('ListItemsRepository', () => {
     expect(q.select).toHaveBeenCalledWith('id');
   });
 
+  it('update escribe unidad, cantidad y precio tal cual (spec 0019)', async () => {
+    const q = queryMock({ data: [{ id: 'i1' }] });
+    mock.shop.from.mockReturnValue(q);
+
+    await repo.update('i1', { unit: 'kg', quantity: 1.5, unit_price: 2990 });
+
+    expect(q.update).toHaveBeenCalledWith({ unit: 'kg', quantity: 1.5, unit_price: 2990 });
+    expect(q.eq).toHaveBeenCalledWith('id', 'i1');
+    expect(q.select).toHaveBeenCalledWith('id');
+  });
+
   it('clearList borra todos los ítems de la lista; una lista ya vacía no es error (spec 0012)', async () => {
     const q = queryMock({ data: [] });
     mock.shop.from.mockReturnValue(q);
@@ -108,6 +119,7 @@ describe('ListItemsRepository', () => {
   it.each([
     ['setChecked', (r: ListItemsRepository) => r.setChecked('i1', true)],
     ['remove', (r: ListItemsRepository) => r.remove('i1')],
+    ['update', (r: ListItemsRepository) => r.update('i1', { unit_price: 1 })],
   ])('%s que no afecta filas lanza not_found', async (_, act) => {
     mock.shop.from.mockReturnValue(queryMock({ data: [] }));
     expect(await codeOf(act(repo))).toBe('not_found');

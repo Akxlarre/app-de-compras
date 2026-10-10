@@ -25,16 +25,25 @@ export interface ListReceipt {
   total_amount?: number | null;
 }
 
+/** Unidades de un ítem (spec 0019 D4; CHECK en `shop.list_items`). */
+export const ITEM_UNITS = ['un', 'kg', 'g', 'L', 'ml', 'paquete'] as const;
+export type ItemUnit = (typeof ITEM_UNITS)[number];
+
 export interface ListItem {
   id: string;
   list_id: string;
   product_id?: string;
   quantity: number;
+  /** "un" por defecto; kg y L admiten decimales (spec 0019 D4). */
+  unit?: ItemUnit;
   notes?: string;
   is_checked: boolean;
   checked_at?: string;
   checked_by?: string;
-  /** Precio pagado; lo fija la RPC `complete_list` al finalizar la compra. */
+  /**
+   * Precio pagado. Se puede anotar al marcar (spec 0019 D5); si no, lo completa `complete_list`
+   * con el último precio al finalizar.
+   */
   unit_price?: number | null;
   created_at: string;
 }

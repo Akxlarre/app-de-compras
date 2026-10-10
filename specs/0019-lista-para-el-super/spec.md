@@ -1,6 +1,6 @@
 > id: 0019-lista-para-el-super
 > refs: `docs/RECORRIDO-UX.md` §1 Mi Lista (F3, F4, F5), §3 Catálogo (H4, K8) y §6 (paso 6, extras).
-> status: approved (D1–D5 confirmadas el 2026-10-10; va después de 0020)
+> status: approved (D1–D5 confirmadas el 2026-10-10)
 > created: 2026-10-10
 
 ## Problema
@@ -34,15 +34,23 @@ compra sin boleta:
 - Categorías en el gasto (va en 0020 si se quiere).
 
 ## Criterios de aceptación
-- [ ] AC1. Cada producto tiene un pasillo de la lista de D1; los nuevos lo reciben solo (D2) y se
+- [x] AC1. Cada producto tiene un pasillo de la lista de D1; los nuevos lo reciben solo (D2) y se
   cambia en la ficha.
-- [ ] AC2. Mi Lista agrupa por pasillo en el orden de D1, con los marcados al final de cada grupo, y
+- [x] AC2. Mi Lista agrupa por pasillo en el orden de D1, con los marcados al final de cada grupo, y
   se puede volver a "Como la agregué".
-- [ ] AC3. Un ítem puede tener unidad y cantidad decimal en kg/L; se ve "1,5 kg" en la fila.
-- [ ] AC4. Al marcar aparece "¿Precio?" sin bloquear; lo anotado suma en "Total estimado" y viene
+- [x] AC3. Un ítem puede tener unidad y cantidad decimal en kg/L; se ve "1,5 kg" en la fila.
+- [x] AC4. Al marcar aparece "¿Precio?" sin bloquear; lo anotado suma en "Total estimado" y viene
   puesto en el cierre "sin boleta".
-- [ ] AC5. Migración en `plataforma-db` (columna de unidad y pasillo con valores válidos, más
+- [x] AC5. Migración en `plataforma-db` (columna de unidad y pasillo con valores válidos, más
   backfill por palabras clave) con pgTAP.
-- [ ] AC6. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
+- [x] AC6. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
 - [ ] AC7. Verificado en staging a 375×667: lista agrupada, unidades, precio al marcar y cierre sin
   boleta con esos precios.
+
+## Avance (2026-10-10)
+- AC5: migración `20261010030000_shop_aisles_units` + pgTAP `shop_aisles_units` (16) en la rama
+  `feat/shop-aisles-units` de plataforma-db; todas las migraciones y tests pasan en Postgres local.
+- AC6: 792 tests, `lint:arch` sin errores, `ng build` sin avisos.
+- AC7 pendiente: staging todavía no tiene la migración (se aplica al mergear en plataforma-db). Sin ella
+  se revisó el diseño: lista "Por pasillo" (todo en "Otros" hasta el backfill), barra "¿Precio?" al
+  marcar y hoja de detalle (unidad kg, 1,5) sobre la barra de pestañas.

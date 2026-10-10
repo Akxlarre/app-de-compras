@@ -34,8 +34,20 @@ describe('ProductSheetFacade (spec 0017)', () => {
         .mockResolvedValue([{ product_id: 'p1', purchase_count: 2, median_interval_days: 15 }]),
       findIdByName: vi.fn().mockResolvedValue(null),
       findStorePrices: vi.fn().mockResolvedValue([
-        { unit_price: 1290, quantity: 1, amount: 1290, receipt: { store: 'Aroca', purchased_at: '2026-10-05' }, list: null },
-        { unit_price: 1190, quantity: 1, amount: 1190, receipt: { store: 'Líder', purchased_at: '2026-09-20' }, list: null },
+        {
+          unit_price: 1290,
+          quantity: 1,
+          amount: 1290,
+          receipt: { store: 'Aroca', purchased_at: '2026-10-05' },
+          list: null,
+        },
+        {
+          unit_price: 1190,
+          quantity: 1,
+          amount: 1190,
+          receipt: { store: 'Líder', purchased_at: '2026-09-20' },
+          list: null,
+        },
       ]),
       rename: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
@@ -43,6 +55,7 @@ describe('ProductSheetFacade (spec 0017)', () => {
       unarchive: vi.fn().mockResolvedValue(undefined),
       merge: vi.fn().mockResolvedValue(2),
       updatePrice: vi.fn().mockResolvedValue(undefined),
+      updateAisle: vi.fn().mockResolvedValue(undefined),
       searchByName: vi.fn().mockResolvedValue([arroz, { id: 'p2', name: 'Arroz G1' }]),
     };
     receipts = {
@@ -54,7 +67,10 @@ describe('ProductSheetFacade (spec 0017)', () => {
     TestBed.configureTestingModule({
       providers: [
         ProductSheetFacade,
-        { provide: FamilyRepository, useValue: { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') } },
+        {
+          provide: FamilyRepository,
+          useValue: { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') },
+        },
         { provide: ProductsRepository, useValue: products },
         { provide: ReceiptsRepository, useValue: receipts },
         { provide: ToastService, useValue: toast },
@@ -150,7 +166,10 @@ describe('ProductSheetFacade (spec 0017)', () => {
     it('juntar llama a merge con este como el que se va y avisa cuántas compras pasaron', async () => {
       expect(await facade.mergeInto('p2', 'Arroz G1')).toBe(true);
       expect(products['merge']).toHaveBeenCalledWith('p1', 'p2');
-      expect(toast['success']).toHaveBeenCalledWith('Productos juntados', 'Se juntaron 2 compras en «Arroz G1».');
+      expect(toast['success']).toHaveBeenCalledWith(
+        'Productos juntados',
+        'Se juntaron 2 compras en «Arroz G1».'
+      );
     });
 
     it('si juntar falla, avisa y no cambia nada', async () => {
@@ -169,6 +188,18 @@ describe('ProductSheetFacade (spec 0017)', () => {
     expect(await facade.removeAlias('ARROZ G1 1KG')).toBe(true);
     expect(receipts['removeAlias']).toHaveBeenCalledWith('fam-1', 'ARROZ G1 1KG');
     expect(facade.data()?.aliases).toEqual([]);
+  });
+
+  it('cambiar el pasillo lo guarda y actualiza la ficha (spec 0019 D2)', async () => {
+    await facade.open('p1');
+    expect(await facade.setAisle('Despensa')).toBe(true);
+    expect(products['updateAisle']).toHaveBeenCalledWith('p1', 'Despensa');
+    expect(facade.data()?.product.category).toBe('Despensa');
+
+    products['updateAisle'].mockRejectedValue(new Error('boom'));
+    expect(await facade.setAisle('Otros')).toBe(false);
+    expect(facade.data()?.product.category).toBe('Despensa');
+    expect(toast['error']).toHaveBeenCalled();
   });
 
   it('el precio estimado solo se escribe sin compras (AC11)', async () => {

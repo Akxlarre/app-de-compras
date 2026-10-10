@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { ActiveListPage } from './active-list.page';
+import { ActiveListPage, PRICE_PROMPT_MS } from './active-list.page';
 import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import { ConfirmationService } from 'primeng/api';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ChangeDetectorRef, signal } from '@angular/core';
 import { AlertController, NavController } from '@ionic/angular';
 import { FamilyFacade } from '@core/facades/family.facade';
@@ -118,6 +118,110 @@ describe('ActiveListPage', () => {
 
     // Costo estimado: (2 * 1000) + (1 * 500) + (3 * 0) = 2500
     expect(kpis.estimatedCost).toBe(2500);
+  });
+
+  describe('lista para el súper (spec 0019)', () => {
+    const item = (id: string, category: string | null, over: object = {}) => ({
+      id,
+      created_at: `2026-10-10T10:0${id}:00Z`,
+      is_checked: false,
+      quantity: 1,
+      product: { id: `p${id}`, name: `P${id}`, category, last_price: 1000 },
+      ...over,
+    });
+
+    afterEach(() => localStorage.removeItem('shop.list.view.v1'));
+
+    beforeEach(() => {
+      mockFacade.editItem = vi.fn().mockResolvedValue(undefined);
+      mockFacade.data.set({
+        id: 'list-1',
+        list_items: [
+          item('1', 'Limpieza'),
+          item('2', 'Frutas y verduras', { is_checked: true }),
+          item('3', 'Frutas y verduras'),
+        ],
+      });
+    });
+
+    it('por pasillo: encabezados en el orden del súper y marcados al final (D3, AC2)', () => {
+      expect(component.byAisle()).toBe(true);
+      expect(component.rows().map((r) => r.aisle ?? r.item!.id)).toEqual([
+        'Frutas y verduras',
+        '3',
+        '2',
+        'Limpieza',
+        '1',
+      ]);
+      expect(component.rows()[0].pending).toBe(1);
+    });
+
+    it('"Como la agregué" quita los encabezados y se recuerda en el teléfono', () => {
+      component.setView(false);
+      expect(component.rows().map((r) => r.item!.id)).toEqual(['1', '3', '2']);
+      expect(localStorage.getItem('shop.list.view.v1')).toBe('added');
+    });
+
+    it('el total estimado usa el precio anotado al marcar (D5, AC4)', () => {
+      mockFacade.data.set({
+        id: 'list-1',
+        list_items: [
+          item('1', null, { quantity: 1.5, unit: 'kg', unit_price: 2000 }),
+          item('2', null),
+        ],
+      });
+      expect(component.listSummary().estimatedCost).toBe(4000);
+      expect(component.priceUnit(mockFacade.data().list_items[0])).toBe('/kg');
+    });
+
+    it('al marcar pregunta el precio unos segundos y lo guarda si se escribe (D5)', () => {
+      vi.useFakeTimers();
+      component.toggleItem('1', false);
+      expect(component.pricePrompt()).toMatchObject({ id: '1', name: 'P1' });
+
+      component.savePrompt('$1.990');
+      expect(mockFacade.editItem).toHaveBeenCalledWith('1', { unit_price: 1990 });
+      expect(component.pricePrompt()).toBeNull();
+
+      component.toggleItem('3', false);
+      vi.advanceTimersByTime(PRICE_PROMPT_MS);
+      expect(component.pricePrompt()).toBeNull(); // se ignora sin bloquear
+      vi.useRealTimers();
+    });
+
+    it('mientras se escribe el precio no se cierra; vacío no guarda nada', () => {
+      vi.useFakeTimers();
+      component.toggleItem('1', false);
+      component.holdPrompt();
+      vi.advanceTimersByTime(PRICE_PROMPT_MS * 2);
+      expect(component.pricePrompt()).not.toBeNull();
+      component.savePrompt('');
+      expect(mockFacade.editItem).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it('no pregunta si ya tiene precio anotado, ni al desmarcar', () => {
+      mockFacade.data.set({ id: 'list-1', list_items: [item('1', null, { unit_price: 900 })] });
+      component.toggleItem('1', false);
+      expect(component.pricePrompt()).toBeNull();
+      component.toggleItem('1', true);
+      expect(component.pricePrompt()).toBeNull();
+    });
+
+    it('el detalle del ítem guarda unidad, cantidad y precio (D4, AC3)', () => {
+      component.openDetail(mockFacade.data().list_items[0]);
+      expect(component.detail()).toEqual({
+        id: '1',
+        name: 'P1',
+        quantity: 1,
+        unit: 'un',
+        unitPrice: null,
+      });
+
+      component.saveDetail({ itemId: '1', patch: { unit: 'kg', quantity: 1.5 } });
+      expect(mockFacade.editItem).toHaveBeenCalledWith('1', { unit: 'kg', quantity: 1.5 });
+      expect(component.detail()).toBeNull();
+    });
   });
 
   describe('quién marcó', () => {

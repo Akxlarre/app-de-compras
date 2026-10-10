@@ -9,12 +9,15 @@ Lenguaje ubicuo. Usar estos términos en código, UI y specs.
 | Código de familia | `families.invite_code` | 8 caracteres (`ABCD-EFGH`, sin 0/O/1/I) para que otro usuario se una (`join_family_by_code`). Cambia cuando el dueño quita a un miembro. |
 | Dueño | `family_members.role = 'owner'` | Quien creó la familia. Puede quitar miembros. |
 | Producto | `products` | Ítem del catálogo de la familia. Guarda `last_price` y `estimated_duration_days`. |
+| Pasillo | `products.category`, `AISLES` | Sección del súper donde está el producto, de una lista fija de 11 (Frutas y verduras … Otros). La BD la sugiere al crear el producto por palabras clave (`shop.suggest_aisle`); se cambia en la ficha. Mi Lista agrupa por pasillo (spec 0019). |
 | Tus Esenciales | `ProductSearchFacade.loadEssentials` | Productos sugeridos al abrir el buscador. |
 | Lista | `shopping_lists` | Una compra. Estados: `active`, `completed`, `archived`, `template`. |
 | Lista activa | `status = 'active'` | La compra en curso (la más reciente). |
 | Plantilla | `status = 'template'` | Lista reutilizable (ej. "Asado"). Se clona a la lista activa. |
 | Repetir última compra | `lastCompletedList`, `startListFrom` | Clonar la última lista `completed`. Sin lista activa crea la lista con esos ítems (spec 0010). |
 | Ítem | `list_items` | Producto + cantidad dentro de una lista. `is_checked` = ya está en el carro. |
+| Unidad | `list_items.unit`, `ITEM_UNITS` | un, kg, g, L, ml o paquete; kg y L admiten decimales ("1,5 kg"). Se elige en el detalle del ítem (spec 0019). |
+| Precio anotado | `list_items.unit_price` | Precio que se escribe al marcar ("¿Precio?", opcional). Suma en el Total estimado y viene puesto al cerrar sin boleta; con boleta manda la boleta (spec 0019). |
 | Tachar / marcar | `toggleItemCheck` | Marcar un ítem como comprado. Se propaga por Realtime. La BD guarda quién y cuándo (`checked_by`, `checked_at`). |
 | Pendiente | `is_checked = false` | Ítem de la lista que aún no está en el carro. |
 | Finalizar compra | `completeList(id, carryPending)` → RPC `complete_list` | La lista pasa a `completed` con lo marcado; los pendientes pasan a la próxima lista o se descartan. |

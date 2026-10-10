@@ -15,6 +15,8 @@ import type { Product } from '@core/models/product.model';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatAmount } from '@core/utils/price.utils';
 import { daysSince, formatDaysAgo } from '@core/utils/date.utils';
+import { aisleOf } from '@core/utils/aisles.utils';
+import { AISLES } from '@core/models/product.model';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -107,6 +109,28 @@ export class ProductSheetPage implements OnInit {
   }
 
   /** Menú ⋯ (D2): Renombrar, Juntar, y Archivar/Reactivar o Borrar según tenga compras. */
+  /** El pasillo del producto (spec 0019 D1); sin uno válido, "Otros". */
+  readonly aisle = computed(() => aisleOf(this.product()?.category));
+
+  /** Elegir el pasillo entre los 11 fijos; el actual va marcado. */
+  async pickAisle(): Promise<void> {
+    if (!this.product()) return;
+    const current = this.aisle();
+    const sheet = await this.sheets.create({
+      header: 'Pasillo',
+      buttons: [
+        ...AISLES.map((a) => ({
+          text: a === current ? `${a} (actual)` : a,
+          handler: () => {
+            if (a !== current) void this.facade.setAisle(a);
+          },
+        })),
+        { text: 'Cancelar', role: 'cancel' },
+      ],
+    });
+    await sheet.present();
+  }
+
   async more(): Promise<void> {
     if (!this.product()) return;
     const last = this.isArchived()

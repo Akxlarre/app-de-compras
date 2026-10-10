@@ -27,6 +27,33 @@ import { PurchaseCloseFacade, type CloseMode } from '@core/facades/purchase-clos
 type CloseMethod = CloseMode | 'later';
 
 const SWIPE_HINT_KEY = 'shop.hint.swipe-delete.v1';
+const VIEW_KEY = 'shop.list.view.v1';
+/** Cuánto queda a la vista "¿Precio?" después de marcar, si no se toca (spec 0019 D5). */
+export const PRICE_PROMPT_MS = 6000;
+
+/** Una fila de Mi Lista: un ítem o el encabezado de un pasillo. */
+interface ListRow {
+  key: string;
+  item?: PopulatedListItem;
+  aisle?: string;
+  pending?: number;
+}
+
+function readView(): string | null {
+  try {
+    return localStorage.getItem(VIEW_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeView(view: 'aisle' | 'added'): void {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Sin almacenamiento: vuelve a "Por pasillo" la próxima vez.
+  }
+}
 
 /** Preferencias de UI por dispositivo; sin almacenamiento (modo privado) se comporta como "no visto". */
 function readFlag(key: string): boolean {
@@ -46,6 +73,11 @@ function writeFlag(key: string): void {
 }
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { sortListItems } from '@core/utils/shopping-list.utils';
+import { groupByAisle } from '@core/utils/aisles.utils';
+import { formatQuantity, hasStepper, isDecimalUnit } from '@core/utils/units.utils';
+import { parsePrice } from '@core/utils/price.utils';
+import type { ItemPatch } from '@core/models/offline-queue.model';
+import { ItemDetailSheetComponent, type ItemDetail } from './item-detail-sheet.component';
 import { restockSuggestions, snoozeUntil } from '@core/utils/restock.utils';
 import { RestockFacade } from '@core/facades/restock.facade';
 import type { RestockSuggestion } from '@core/models/restock.model';
@@ -84,6 +116,7 @@ import {
     ProductSearchComponent,
     ListShortcutsComponent,
     RestockStripComponent,
+    ItemDetailSheetComponent,
     ConfirmDialogModule,
     IonList,
     IonItemSliding,
@@ -116,6 +149,94 @@ export class ActiveListPage implements OnInit {
 
   public isSearchOpen = signal(false);
 
+  /** "Por pasillo" (por defecto) o "Como la agregué"; se recuerda en el teléfono (spec 0019 D3). */
+  readonly byAisle = signal(readView() !== 'added');
+
+  setView(byAisle: boolean): void {
+    this.byAisle.set(byAisle);
+    writeView(byAisle ? 'aisle' : 'added');
+  }
+
+  /**
+   * Filas de la lista: por pasillo, con un encabezado por pasillo y los marcados al final de cada
+   * uno; o como se agregó, pendientes arriba y marcados abajo (Q19).
+   */
+  readonly rows = computed<ListRow[]>(() => {
+    const items = this.facade.data()?.list_items ?? [];
+    if (!this.byAisle()) return sortListItems(items).map((item) => ({ key: item.id, item }));
+    return groupByAisle(items).flatMap((g) => [
+      { key: `aisle:${g.aisle}`, aisle: g.aisle, pending: g.pending },
+      ...g.items.map((item) => ({ key: item.id, item })),
+    ]);
+  });
+
+  readonly hasStepper = hasStepper;
+  readonly formatQuantity = formatQuantity;
+
+  /** Precio que se muestra: el anotado al marcar o, si no, el último (spec 0019 D5). */
+  priceOf(item: PopulatedListItem): number | null {
+    return item.unit_price ?? item.product?.last_price ?? null;
+  }
+
+  /** "/kg" en lo que se compra a granel. */
+  priceUnit(item: PopulatedListItem): string {
+    return isDecimalUnit(item.unit) ? `/${item.unit}` : '';
+  }
+
+  // ── Detalle del ítem: unidad, cantidad y precio (D4) ───────────────────────
+  readonly detail = signal<ItemDetail | null>(null);
+
+  openDetail(item: PopulatedListItem, event?: Event): void {
+    event?.stopPropagation();
+    this.detail.set({
+      id: item.id,
+      name: item.product?.name ?? 'Producto',
+      quantity: item.quantity || 1,
+      unit: item.unit ?? 'un',
+      unitPrice: item.unit_price ?? null,
+    });
+  }
+
+  saveDetail(change: { itemId: string; patch: ItemPatch }): void {
+    void this.facade.editItem(change.itemId, change.patch);
+    this.detail.set(null);
+  }
+
+  // ── "¿Precio?" al marcar (D5): unos segundos, sin bloquear ─────────────────
+  readonly pricePrompt = signal<{ id: string; name: string; unit: string } | null>(null);
+  private promptTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private askPrice(item: PopulatedListItem): void {
+    this.pricePrompt.set({
+      id: item.id,
+      name: item.product?.name ?? 'el producto',
+      unit: isDecimalUnit(item.unit) ? ` por ${item.unit}` : '',
+    });
+    this.releasePrompt();
+  }
+
+  /** Mientras se escribe, no se cierra. */
+  holdPrompt(): void {
+    if (this.promptTimer) clearTimeout(this.promptTimer);
+    this.promptTimer = null;
+  }
+
+  /** Se cierra sola si no se toca. */
+  releasePrompt(): void {
+    this.holdPrompt();
+    this.promptTimer = setTimeout(() => this.pricePrompt.set(null), PRICE_PROMPT_MS);
+  }
+
+  savePrompt(raw: string): void {
+    const prompt = this.pricePrompt();
+    const price = parsePrice(raw.replace(/\D/g, ''));
+    this.holdPrompt();
+    this.pricePrompt.set(null);
+    if (prompt && price !== null && price > 0) {
+      void this.facade.editItem(prompt.id, { unit_price: price });
+    }
+  }
+
   // Pendientes arriba, marcados abajo; cada grupo en orden de alta (Q19).
   public sortedListItems = computed(() => sortListItems(this.facade.data()?.list_items ?? []));
 
@@ -130,7 +251,8 @@ export class ActiveListPage implements OnInit {
     for (const item of list.list_items) {
       if (item.is_checked) checked++;
 
-      const price = item.product?.last_price || 0;
+      // Lo anotado al marcar manda sobre el último precio (spec 0019 D5).
+      const price = this.priceOf(item) ?? 0;
       estimatedCost += (item.quantity || 1) * price;
     }
 
@@ -299,6 +421,10 @@ export class ActiveListPage implements OnInit {
 
   /** Marca/desmarca con un solo movimiento corto a su nuevo lugar (Q3). */
   toggleItem(itemId: string, currentStatus: boolean) {
+    const item = this.facade.data()?.list_items.find((i) => i.id === itemId);
+    if (!currentStatus && item && item.unit_price == null) this.askPrice(item);
+    else if (currentStatus && this.pricePrompt()?.id === itemId) this.pricePrompt.set(null);
+
     const list = this.listElementRef?.nativeElement as HTMLElement | undefined;
     if (!list) {
       this.facade.toggleItemCheck(itemId, currentStatus);

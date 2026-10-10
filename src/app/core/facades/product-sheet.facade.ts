@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { BaseFacade } from './base.facade';
-import type { Product } from '../models/product.model';
+import type { Aisle, Product } from '../models/product.model';
 import type { ProductSheet } from '../models/product-sheet.model';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
@@ -134,15 +134,30 @@ export class ProductSheetFacade extends BaseFacade<ProductSheet> {
       () => this.receipts.removeAlias(sheet.product.family_id, rawText),
       'No se pudo quitar'
     );
-    if (ok) this._data.set({ ...sheet, aliases: sheet.aliases.filter((a) => a.rawText !== rawText) });
+    if (ok)
+      this._data.set({ ...sheet, aliases: sheet.aliases.filter((a) => a.rawText !== rawText) });
     return ok;
   }
 
   /** Precio estimado de un producto que nunca se compró (D5); con compras manda el pagado. */
   async setEstimatedPrice(price: number): Promise<boolean> {
     if (!this.data() || this.hasPurchases()) return false;
-    const ok = await this.run(() => this.products.updatePrice(this.id, price), 'No se pudo guardar el precio');
+    const ok = await this.run(
+      () => this.products.updatePrice(this.id, price),
+      'No se pudo guardar el precio'
+    );
     if (ok) this.patchProduct({ last_price: price });
+    return ok;
+  }
+
+  /** Pasillo del producto (spec 0019 D2): elegido en la ficha, vale para siempre. */
+  async setAisle(aisle: Aisle): Promise<boolean> {
+    if (!this.data()) return false;
+    const ok = await this.run(
+      () => this.products.updateAisle(this.id, aisle),
+      'No se pudo cambiar el pasillo'
+    );
+    if (ok) this.patchProduct({ category: aisle });
     return ok;
   }
 

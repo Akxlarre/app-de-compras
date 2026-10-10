@@ -97,6 +97,18 @@ describe('ProductSheetPage (spec 0017)', () => {
     vi.useRealTimers();
   });
 
+  it('el pasillo se elige entre los 11 fijos y guarda el elegido (spec 0019 D2)', async () => {
+    const present = vi.fn();
+    sheets.create.mockResolvedValue({ present });
+    facade.setAisle = vi.fn().mockResolvedValue(true);
+
+    await page.pickAisle();
+    const { buttons } = sheets.create.mock.calls.at(-1)[0];
+    expect(buttons).toHaveLength(12); // 11 pasillos + Cancelar
+    buttons.find((b: { text: string }) => b.text === 'Limpieza').handler();
+    expect(facade.setAisle).toHaveBeenCalledWith('Limpieza');
+  });
+
   it('el precio dice de dónde sale (D5)', () => {
     expect(page.priceLabel()).toBe('Último pagado $1.290');
     data.set(sheet({}, []));

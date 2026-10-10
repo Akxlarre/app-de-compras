@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { BaseFacade } from './base.facade';
 import type { ActiveShoppingList } from '../models/shopping-list.model';
-import type { QueuedChange } from '../models/offline-queue.model';
+import type { ItemPatch, QueuedChange } from '../models/offline-queue.model';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ListItemsRepository } from '../repositories/list-items.repository';
@@ -231,6 +231,31 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
   }
 
   /**
+   * Unidad y cantidad (spec 0019 D4) o precio anotado al marcar (D5): valores finales, al
+   * instante. Sin red se guardan en la cola; si el servidor lo rechaza, vuelven a lo anterior.
+   */
+  async editItem(itemId: string, patch: ItemPatch): Promise<void> {
+    const item = this._data()?.list_items?.find((i) => i.id === itemId);
+    if (!item) return;
+    const prev = Object.fromEntries(
+      Object.keys(patch).map((k) => [k, item[k as keyof ItemPatch]])
+    ) as ItemPatch;
+
+    this.patchItem(itemId, patch); // optimistic
+    const change: QueuedChange = { kind: 'patch', itemId, patch };
+    if (!this.network.online()) {
+      this.queueChange(change);
+      return;
+    }
+
+    try {
+      await this.items.update(itemId, patch);
+    } catch (e) {
+      await this.handleMutationError(e, change, () => this.patchItem(itemId, prev));
+    }
+  }
+
+  /**
    * Finaliza la compra: queda en el Historial con lo marcado. Los pendientes pasan a la lista
    * activa (`carryPending`) o se descartan.
    * @returns false si falló (la lista sigue como estaba).
@@ -433,6 +458,7 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
         const [change] = this.queue;
         try {
           if (change.kind === 'check') await this.items.setChecked(change.itemId, change.checked);
+          else if (change.kind === 'patch') await this.items.update(change.itemId, change.patch);
           else await this.items.changeQuantity(change.itemId, change.delta);
         } catch (e) {
           if (isNetworkFailure(toMutationError(e))) {

@@ -1,8 +1,25 @@
+/** Pasillos fijos, en el orden de un súper chileno (spec 0019 D1; CHECK en `shop.products`). */
+export const AISLES = [
+  'Frutas y verduras',
+  'Carnes y pescados',
+  'Lácteos y huevos',
+  'Panadería',
+  'Despensa',
+  'Bebidas',
+  'Congelados',
+  'Limpieza',
+  'Higiene y cuidado personal',
+  'Mascotas',
+  'Otros',
+] as const;
+export type Aisle = (typeof AISLES)[number];
+
 export interface Product {
   id: string;
   family_id: string;
   name: string;
-  category?: string | null;
+  /** Pasillo (spec 0019): la BD lo sugiere al crear y nunca queda vacío. */
+  category?: Aisle | string | null;
   last_price?: number;
   estimated_duration_days?: number;
   /** Última compra finalizada que lo incluyó (RPC `complete_list`). */
