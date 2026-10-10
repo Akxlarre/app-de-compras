@@ -39,6 +39,8 @@ interface ListRow {
   item?: PopulatedListItem;
   aisle?: string;
   pending?: number;
+  /** Encabezado "En el carro" del modo súper (spec 0025). */
+  cart?: boolean;
 }
 
 function readView(): string | null {
@@ -78,6 +80,8 @@ import { sortListItems } from '@core/utils/shopping-list.utils';
 import { groupByAisle } from '@core/utils/aisles.utils';
 import { pendingListText } from '@core/utils/share-list.utils';
 import { ShareService } from '@core/services/share.service';
+import { WakeLockService } from '@core/services/wake-lock.service';
+import { budgetProgress } from '@core/utils/shopping-list.utils';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatQuantity, hasStepper, isDecimalUnit } from '@core/utils/units.utils';
 import { parsePrice } from '@core/utils/price.utils';
@@ -144,6 +148,7 @@ export class ActiveListPage implements OnInit {
   private restock = inject(RestockFacade);
   private sharing = inject(ShareService);
   private toast = inject(ToastService);
+  private wakeLock = inject(WakeLockService);
 
   @ViewChild('ionList', { read: ElementRef }) listElementRef?: ElementRef;
 
@@ -170,6 +175,20 @@ export class ActiveListPage implements OnInit {
    */
   readonly rows = computed<ListRow[]>(() => {
     const items = this.facade.data()?.list_items ?? [];
+    if (this.superMode()) {
+      // Modo súper (spec 0025 D1): los pendientes por pasillo; lo del carro, al final si se pide.
+      const pending = groupByAisle(items.filter((i) => !i.is_checked)).flatMap((g) => [
+        { key: `aisle:${g.aisle}`, aisle: g.aisle, pending: g.pending },
+        ...g.items.map((item) => ({ key: item.id, item })),
+      ]);
+      if (!this.showCart()) return pending;
+      const cart = sortListItems(items.filter((i) => i.is_checked));
+      return [
+        ...pending,
+        { key: 'cart', cart: true },
+        ...cart.map((item) => ({ key: item.id, item })),
+      ];
+    }
     if (!this.byAisle()) return sortListItems(items).map((item) => ({ key: item.id, item }));
     return groupByAisle(items).flatMap((g) => [
       { key: `aisle:${g.aisle}`, aisle: g.aisle, pending: g.pending },
@@ -205,6 +224,95 @@ export class ActiveListPage implements OnInit {
       notes: item.notes ?? null,
       addedBy: this.addedByDetail(item),
     });
+  }
+
+  // ── En el súper (spec 0025) ────────────────────────────────────────────────
+  /** Solo pendientes, letra grande y pantalla encendida (D1); no se recuerda. */
+  readonly superMode = signal(false);
+  /** "N en el carro": muestra lo marcado para poder desmarcarlo. */
+  readonly showCart = signal(false);
+  readonly cartCount = computed(
+    () => (this.facade.data()?.list_items ?? []).filter((i) => i.is_checked).length
+  );
+
+  enterSuperMode(): void {
+    this.superMode.set(true);
+    void this.wakeLock.keepScreenOn();
+  }
+
+  exitSuperMode(): void {
+    if (!this.superMode()) return;
+    this.superMode.set(false);
+    this.showCart.set(false);
+    void this.wakeLock.release();
+  }
+
+  /** Dejar la pestaña sale del modo súper (D1). */
+  ionViewWillLeave(): void {
+    this.exitSuperMode();
+  }
+
+  /** Presupuesto contra el total estimado o, en modo súper, contra lo del carro (D2). */
+  readonly budgetView = computed(() => {
+    const budget = this.facade.data()?.budget;
+    if (!budget) return null;
+    const summary = this.listSummary();
+    const inStore = this.superMode();
+    const amount = inStore ? summary.cartCost : summary.estimatedCost;
+    return {
+      label: inStore ? 'En el carro' : 'Total estimado',
+      amount,
+      budget,
+      ...budgetProgress(amount, budget),
+    };
+  });
+
+  /** "$60.000" → 60000; vacío → null (quitar); inválido → undefined. */
+  parseBudget(text: string): number | null | undefined {
+    const raw = text.replace(/[$.\s]/g, '');
+    if (raw === '') return null;
+    const value = parsePrice(raw);
+    return value && value > 0 ? value : undefined;
+  }
+
+  async askBudget(): Promise<void> {
+    const current = this.facade.data()?.budget;
+    const alert = await this.alertController.create({
+      header: 'Presupuesto',
+      message: 'Un tope para esta compra. Déjalo vacío para quitarlo.',
+      inputs: [
+        {
+          name: 'budget',
+          type: 'text',
+          value: current ? String(current) : '',
+          placeholder: '$',
+          attributes: { inputmode: 'numeric' },
+        },
+      ],
+      cssClass: 'premium-alert',
+      buttons: [
+        { text: 'Cancelar', role: 'cancel', cssClass: 'alert-cancel-btn' },
+        {
+          text: 'Guardar',
+          role: 'confirm',
+          cssClass: 'alert-confirm-btn',
+          handler: (data?: { budget?: string }) => {
+            const budget = this.parseBudget(data?.budget ?? '');
+            if (budget === undefined) {
+              this.toast.warning(
+                'Monto no válido',
+                'Escribe un monto en pesos, por ejemplo 60000.'
+              );
+              return false;
+            }
+            void this.facade.setBudget(budget);
+            return true;
+          },
+        },
+      ],
+    });
+    await alert.present();
+    alert.querySelector<HTMLInputElement>('input')?.focus();
   }
 
   // ── Lista compartida (spec 0024) ───────────────────────────────────────────
@@ -325,17 +433,21 @@ export class ActiveListPage implements OnInit {
   // KPIs
   public listSummary = computed(() => {
     const list = this.facade.data();
-    if (!list || !list.list_items) return { total: 0, checked: 0, pending: 0, estimatedCost: 0 };
+    if (!list || !list.list_items)
+      return { total: 0, checked: 0, pending: 0, estimatedCost: 0, cartCost: 0 };
 
     let checked = 0;
     let estimatedCost = 0;
+    let cartCost = 0;
 
     for (const item of list.list_items) {
-      if (item.is_checked) checked++;
-
       // Lo anotado al marcar manda sobre el último precio (spec 0019 D5).
-      const price = this.priceOf(item) ?? 0;
-      estimatedCost += (item.quantity || 1) * price;
+      const cost = (item.quantity || 1) * (this.priceOf(item) ?? 0);
+      estimatedCost += cost;
+      if (item.is_checked) {
+        checked++;
+        cartCost += cost; // lo que ya está en el carro (spec 0025 D2)
+      }
     }
 
     return {
@@ -343,6 +455,7 @@ export class ActiveListPage implements OnInit {
       checked,
       pending: list.list_items.length - checked,
       estimatedCost,
+      cartCost,
     };
   });
 

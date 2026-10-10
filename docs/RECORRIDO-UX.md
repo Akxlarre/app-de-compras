@@ -50,8 +50,8 @@ falla o confunde, qué falta y qué daría un plus. Prioridad: **P1** = afecta e
 | # | Idea |
 |---|---|
 | X1 | ✅ 0024 · **Compartir la lista por WhatsApp** (texto con los pendientes) para alguien que no usa la app. |
-| X2 | **Presupuesto de la compra**: fijar un tope y ver "vas en $X de $Y" con el costo estimado. |
-| X3 | **Modo supermercado**: pantalla siempre encendida, filas más grandes, solo pendientes. |
+| X2 | ✅ 0025 · **Presupuesto de la compra**: fijar un tope y ver "vas en $X de $Y" con el costo estimado. |
+| X3 | ✅ 0025 · **Modo supermercado**: pantalla siempre encendida, filas más grandes, solo pendientes. |
 | X4 | **Agregar por voz o pegando un texto** ("leche, pan, 2 kg de papas") que se convierte en ítems. |
 | X5 | **Aviso a la familia** cuando alguien empieza o termina de comprar ("Ana está en el súper"). |
 
@@ -317,3 +317,4 @@ cierre fijo abajo; mientras lee la boleta, se ve la foto y se puede seguir usand
 | 9 | ✅ Spec 0026: "Exportar <mes> a planilla" en Compras (2026-10-10): CSV para Excel/Sheets en español; en el teléfono se abre con una app de planillas. | Y3 |
 | 10 | ✅ Spec 0023: buscar en Compras, "Agregar a la lista" desde cualquier compra y "Cerrada por" (2026-10-10). | R8, R9, R10 |
 | 11 | ✅ Spec 0024: "Pedido por" en la lista y "Compartir" los pendientes por WhatsApp (2026-10-10). | F6, X1 |
+| 12 | ✅ Spec 0025: modo súper (pantalla encendida, solo pendientes, "N en el carro") y presupuesto de la lista con barra (2026-10-10). Quedan cerradas las specs 0022–0026. | X2, X3 |

@@ -9,6 +9,7 @@ import { FamilyFacade } from '@core/facades/family.facade';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 import { RestockFacade } from '@core/facades/restock.facade';
 import { ShareService } from '@core/services/share.service';
+import { WakeLockService } from '@core/services/wake-lock.service';
 import { ToastService } from '@core/services/ui/toast.service';
 
 describe('ActiveListPage', () => {
@@ -20,6 +21,7 @@ describe('ActiveListPage', () => {
   let closeFacade: { start: ReturnType<typeof vi.fn> };
   let nav: { navigateForward: ReturnType<typeof vi.fn> };
   let share: { openWhatsApp: ReturnType<typeof vi.fn> };
+  let wake: { keepScreenOn: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> };
   let toast: { info: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -33,6 +35,7 @@ describe('ActiveListPage', () => {
     closeFacade = { start: vi.fn() };
     nav = { navigateForward: vi.fn() };
     share = { openWhatsApp: vi.fn().mockResolvedValue('opened') };
+    wake = { keepScreenOn: vi.fn().mockResolvedValue(undefined), release: vi.fn() };
     toast = { info: vi.fn(), error: vi.fn() };
     // Mock del Facade y su Signal 'data'
     mockFacade = {
@@ -90,6 +93,7 @@ describe('ActiveListPage', () => {
         { provide: RestockFacade, useValue: restock },
         { provide: NavController, useValue: nav },
         { provide: ShareService, useValue: share },
+        { provide: WakeLockService, useValue: wake },
         { provide: ToastService, useValue: toast },
         // La página se instancia como provider (sin render), así que no hay CDR de vista.
         { provide: ChangeDetectorRef, useValue: { detectChanges: vi.fn() } },
@@ -106,6 +110,7 @@ describe('ActiveListPage', () => {
       checked: 0,
       pending: 0,
       estimatedCost: 0,
+      cartCost: 0,
     });
 
     // Escenario 2: Lista con ítems mixtos y precios
@@ -306,6 +311,75 @@ describe('ActiveListPage', () => {
     it('al entrar carga la familia si todavía no está', () => {
       component.ngOnInit();
       expect(familyFacade.loadMyFamily).toHaveBeenCalled();
+    });
+  });
+
+  describe('en el súper (spec 0025)', () => {
+    const it2 = (id: string, category: string, is_checked: boolean, price = 1000) => ({
+      id,
+      created_at: `2026-10-10T10:0${id}:00Z`,
+      is_checked,
+      quantity: 1,
+      product: { id: `p${id}`, name: `P${id}`, category, last_price: price },
+    });
+    beforeEach(() => {
+      mockFacade.setBudget = vi.fn().mockResolvedValue(true);
+      mockFacade.data.set({
+        id: 'list-1',
+        budget: null,
+        list_items: [
+          it2('1', 'Despensa', false, 2000),
+          it2('2', 'Despensa', true, 1500),
+          it2('3', 'Panadería', true, 1000),
+        ],
+      });
+    });
+
+    it('modo súper: solo pendientes; "En el carro" muestra lo marcado; pantalla encendida (D1)', async () => {
+      component.enterSuperMode();
+      expect(wake.keepScreenOn).toHaveBeenCalled();
+      expect(component.rows().map((r) => r.key)).toEqual(['aisle:Despensa', '1']);
+      expect(component.cartCount()).toBe(2);
+
+      component.showCart.set(true);
+      expect(component.rows().map((r) => r.key)).toEqual(['aisle:Despensa', '1', 'cart', '2', '3']);
+
+      component.exitSuperMode();
+      expect(component.superMode()).toBe(false);
+      expect(component.showCart()).toBe(false);
+      expect(wake.release).toHaveBeenCalled();
+    });
+
+    it('dejar la pestaña sale del modo súper (D1)', () => {
+      component.enterSuperMode();
+      component.ionViewWillLeave();
+      expect(component.superMode()).toBe(false);
+    });
+
+    it('presupuesto: estimado de $Y, y en modo súper el carro (D2)', () => {
+      expect(component.budgetView()).toBeNull();
+      mockFacade.data.update((l: any) => ({ ...l, budget: 4000 }));
+      expect(component.budgetView()).toEqual({
+        label: 'Total estimado',
+        amount: 4500,
+        budget: 4000,
+        percent: 100,
+        over: 500,
+      });
+      component.enterSuperMode();
+      expect(component.budgetView()).toMatchObject({
+        label: 'En el carro',
+        amount: 2500,
+        over: null,
+      });
+    });
+
+    it('el monto del presupuesto acepta "$60.000"; vacío lo quita (D2)', () => {
+      expect(component.parseBudget('$60.000')).toBe(60000);
+      expect(component.parseBudget(' 45000 ')).toBe(45000);
+      expect(component.parseBudget('')).toBeNull();
+      expect(component.parseBudget('0')).toBeUndefined();
+      expect(component.parseBudget('mucho')).toBeUndefined();
     });
   });
 

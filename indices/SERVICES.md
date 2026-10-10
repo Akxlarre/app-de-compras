@@ -25,6 +25,7 @@
 | `SearchPanelFacadeService` | `SearchPanelFacadeService` | `src/app/core/services/ui/search-panel.service.ts` |
 | `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `MessageService` | `src/app/core/services/ui/theme.service.ts` |
 | `ToastService` | `MessageService`, `ToastController` | `src/app/core/services/ui/toast.service.ts` |
+| `WakeLockService` | — | `src/app/core/services/wake-lock.service.ts` |
 
 <!-- AUTO-GENERATED:END -->
 

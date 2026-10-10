@@ -3,6 +3,18 @@
  * el orden en que se agregaron. Así al desmarcar un producto vuelve a su lugar, sin depender del
  * orden en que el servidor devuelva las filas.
  */
+/**
+ * Cómo va un monto contra el presupuesto (spec 0025 D2): `percent` para la barra (0–100) y `over`,
+ * cuánto se pasa (null si no se pasa).
+ */
+export function budgetProgress(
+  amount: number,
+  budget: number
+): { percent: number; over: number | null } {
+  const percent = Math.min(100, Math.round((amount / budget) * 100));
+  return { percent, over: amount > budget ? Math.round(amount - budget) : null };
+}
+
 export function sortListItems<T extends { id: string; created_at: string; is_checked: boolean }>(
   items: readonly T[]
 ): T[] {

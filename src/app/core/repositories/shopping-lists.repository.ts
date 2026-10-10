@@ -110,6 +110,17 @@ export class ShoppingListsRepository {
     assertAffected(data, error);
   }
 
+  /** Presupuesto de la lista activa; null lo quita (spec 0025 D2). */
+  async setBudget(listId: string, budget: number | null): Promise<void> {
+    const { data, error } = await this.db
+      .from('shopping_lists')
+      .update({ budget })
+      .eq('id', listId)
+      .eq('status', 'active')
+      .select('id');
+    assertAffected(data, error);
+  }
+
   /** Borra una plantilla con sus ítems (cascada). Nunca toca compras ni la lista activa. */
   async deleteTemplate(templateId: string): Promise<void> {
     const { data, error } = await this.db

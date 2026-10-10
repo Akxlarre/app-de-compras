@@ -700,6 +700,30 @@ describe('ShoppingListFacade', () => {
       expect(facade.data()?.id).toBe('list-1');
     });
 
+    describe('presupuesto (spec 0025 D2)', () => {
+      beforeEach(async () => {
+        lists['setBudget'] = vi.fn().mockResolvedValue(undefined);
+        await facade.initialize();
+      });
+
+      it('lo fija al instante y lo guarda; null lo quita', async () => {
+        expect(await facade.setBudget(60000)).toBe(true);
+        expect(facade.data()?.budget).toBe(60000);
+        expect(lists['setBudget']).toHaveBeenCalledWith('list-1', 60000);
+
+        await facade.setBudget(null);
+        expect(lists['setBudget']).toHaveBeenLastCalledWith('list-1', null);
+        expect(facade.data()?.budget).toBeNull();
+      });
+
+      it('si falla, vuelve al anterior y avisa', async () => {
+        lists['setBudget'].mockRejectedValue(new Error('rls'));
+        expect(await facade.setBudget(60000)).toBe(false);
+        expect(facade.data()?.budget ?? null).toBeNull();
+        expect(toast['error']).toHaveBeenCalled();
+      });
+    });
+
     describe('addToList (spec 0023 D1)', () => {
       const bought = [
         { product_id: 'p1', quantity: 2 },
