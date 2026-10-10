@@ -39,6 +39,16 @@ describe('pricesByStore (spec 0020 D1)', () => {
     expect(prices).toEqual([{ store: 'Aroca', unitPrice: 1490, date: '2026-10-05' }]);
   });
 
+  it('varias líneas de la misma tienda y fecha se promedian por cantidad (fix-051)', () => {
+    const prices = pricesByStore([
+      row('Aroca', '2026-10-05', 1350, { quantity: 2, amount: 2700 }),
+      row('Aroca', '2026-10-05', 5700, { quantity: 1, amount: 5700 }),
+      row('Aroca', '2026-09-01', 900),
+    ]);
+    // Igual que "Último pagado": (2.700 + 5.700) / 3.
+    expect(prices).toEqual([{ store: 'Aroca', unitPrice: 2800, date: '2026-10-05' }]);
+  });
+
   it('sin fecha de boleta usa la del cierre de la compra', () => {
     const r = row('Aroca', '2026-10-05', 1000);
     r.receipt!.purchased_at = null;
