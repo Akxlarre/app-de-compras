@@ -25,3 +25,8 @@
 | `ToastService` | `MessageService`, `ToastController` | `src/app/core/services/ui/toast.service.ts` |
 
 <!-- AUTO-GENERATED:END -->
+
+## Notas (manual)
+- `SupabaseService.updateUserMetadata(data)`: `auth.updateUser({ data })`; lo usa `AuthFacade.rename` para el `display_name` de la sesión (spec 0018).
+- `AppUpdateService.getCurrentVersion()`: versión instalada (`App.getInfo().version`); null en la web. `AppUpdateFacade.currentVersion` / `loadVersion()` la exponen a Perfil (spec 0018).
+- `AuthFacade.rename(name)` (RPC `set_my_display_name` + metadata) y `changePassword(current, next, repeat)` (verifica la actual con `signIn`) (spec 0018).
