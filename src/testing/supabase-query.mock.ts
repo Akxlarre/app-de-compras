@@ -9,6 +9,8 @@ const CHAIN_METHODS = [
   'update',
   'delete',
   'eq',
+  'is',
+  'not',
   'ilike',
   'like',
   'order',

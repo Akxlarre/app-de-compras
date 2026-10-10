@@ -1,7 +1,7 @@
 > id: 0017-ficha-producto
 > refs: `docs/RECORRIDO-UX.md` §3 Catálogo (K1–K8, H1–H6) y §6 (paso 4 del orden replanificado);
 > fix-050 (precio como texto en la fila).
-> status: draft — falta que el dueño confirme D1–D6
+> status: approved (D1–D6 confirmadas el 2026-10-10)
 > created: 2026-10-10
 
 ## Problema

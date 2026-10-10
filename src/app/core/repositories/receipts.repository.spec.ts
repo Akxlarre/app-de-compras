@@ -406,6 +406,25 @@ describe('ReceiptsRepository', () => {
     expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
   });
 
+  it('findAliasesOf lee los textos de boleta de un producto (spec 0017 AC4)', async () => {
+    const q = queryMock({ data: [{ raw_text: 'arroz g1 1kg', product_id: 'p1' }] });
+    mock.shop.from.mockReturnValue(q);
+
+    expect(await repo.findAliasesOf('p1')).toEqual([{ rawText: 'arroz g1 1kg', productId: 'p1' }]);
+    expect(q.eq).toHaveBeenCalledWith('product_id', 'p1');
+  });
+
+  it('removeAlias borra un texto de boleta de la familia', async () => {
+    const q = queryMock({ data: [{ raw_text: 'x' }] });
+    mock.shop.from.mockReturnValue(q);
+
+    await repo.removeAlias('fam-1', 'arroz g1 1kg');
+
+    expect(q.delete).toHaveBeenCalled();
+    expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
+    expect(q.eq).toHaveBeenCalledWith('raw_text', 'arroz g1 1kg');
+  });
+
   it('extractReceipt lanza si la Edge Function falla', async () => {
     const error = new Error('500');
     mock.client.functions.invoke.mockResolvedValue({ data: null, error });

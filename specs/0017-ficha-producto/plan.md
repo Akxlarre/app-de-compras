@@ -1,5 +1,5 @@
 > spec: 0017-ficha-producto
-> status: draft (se aprueba junto con D1–D6 de la spec)
+> status: approved
 > created: 2026-10-10
 
 # Plan

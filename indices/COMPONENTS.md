@@ -27,3 +27,5 @@
 | `app-purchases-page` (`PurchasesPage`) | — | — | `src/app/features/shopping/purchases/purchases.page.ts` — pestaña Compras `/app/purchases` (spec 0016): gasto por mes, compras del mes, "Escanear boleta". Exporta `purchaseRow()` |
 | `app-purchase-detail-page` (`PurchaseDetailPage`) | — (`:id` de la ruta) | — | `src/app/features/shopping/purchases/purchase-detail.page.ts` — `/app/purchases/:id`: fotos, líneas, cargos, menú ⋯ |
 | `app-purchase-close-page` (`PurchaseClosePage`) | — | — | `src/app/features/shopping/purchase-close/purchase-close.page.ts` — `/app/close` a pantalla completa; visibilidad con `ionViewWillEnter/WillLeave` (la página queda en caché) |
+| `app-product-sheet-page` (`ProductSheetPage`) | — (`:id` de la ruta) | — | `src/app/features/shopping/products/product-sheet.page.ts` — `/app/products/:id` (spec 0017): precio, cada cuánto, compras, textos de boleta; agregar a la lista, renombrar, juntar, archivar/borrar |
+| `app-products-page` (`ProductsPage`) | — | — | `src/app/features/shopping/products/products.page.ts` — Catálogo (spec 0017): buscador, "Crear «texto»", Activos/Archivados; la fila abre la ficha |

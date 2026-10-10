@@ -1,0 +1,175 @@
+<div class="h-full flex flex-col bg-base" data-testid="product-sheet">
+  <app-header [title]="product()?.name ?? 'Producto'" [showBack]="true" (backClicked)="back()">
+    @if (product()) {
+    <button
+      slot="actions"
+      class="w-11 h-11 rounded-full flex items-center justify-center text-text-muted active:scale-95 transition-all"
+      aria-label="Más opciones"
+      data-llm-action="opciones-producto"
+      (click)="more()"
+    >
+      <app-icon name="more-horizontal" [size]="22" [attr.aria-label]="'Más opciones'" />
+    </button>
+    }
+  </app-header>
+
+  <main class="flex-1 overflow-y-auto px-4 pb-chrome">
+    @if (facade.isLoading() && !facade.data()) {
+    <div class="flex flex-col gap-3 mt-2">
+      <app-skeleton-block variant="rect" width="100%" height="120px" />
+      <app-skeleton-block variant="rect" width="100%" height="200px" />
+    </div>
+    } @else if (facade.error()) {
+    <app-error-state
+      [title]="facade.error()!"
+      [message]="'Puede que se haya borrado o juntado con otro.'"
+      retryLabel="Volver al Catálogo"
+      (retry)="back()"
+    />
+    } @else if (facade.data(); as sheet) {
+    <div class="flex flex-col gap-4 mt-2">
+      @if (isArchived()) {
+      <div
+        class="flex items-center gap-3 p-3 bg-surface border border-border-default rounded-2xl"
+        data-testid="archivado"
+      >
+        <app-icon name="archive" [size]="18" class="text-text-muted" [attr.aria-label]="'Archivado'" />
+        <span class="flex-1 text-sm text-text-muted">Archivado: no sale en el buscador ni en las sugerencias.</span>
+        <button
+          class="text-sm font-semibold text-brand"
+          data-llm-action="reactivar-producto"
+          (click)="facade.unarchive()"
+        >
+          Reactivar
+        </button>
+      </div>
+      }
+
+      <!-- Nombre completo, precio y cada cuánto (AC2) -->
+      <section class="bg-surface border border-border-default rounded-2xl p-4">
+        <h2 class="text-xl font-bold text-text-primary break-words">{{ sheet.product.name }}</h2>
+        @if (editingPrice()) {
+        <div class="relative w-40 mt-2">
+          <span
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            aria-hidden="true"
+            >$</span
+          >
+          <input
+            inputmode="numeric"
+            data-estimated-price
+            class="w-full bg-base border border-brand rounded-lg py-2 pl-6 pr-3 text-right font-bold text-text-primary focus:outline-none"
+            aria-label="Precio estimado"
+            data-llm-description="precio estimado del producto en pesos, para un producto que nunca se compró"
+            [value]="formatAmount(sheet.product.last_price ?? null)"
+            (blur)="onPriceBlur($event)"
+            (keydown.enter)="$any($event.target).blur()"
+          />
+        </div>
+        } @else if (facade.hasPurchases()) {
+        <p class="text-lg font-semibold text-text-primary mt-1" data-testid="precio">{{ priceLabel() }}</p>
+        } @else {
+        <button
+          class="flex items-center gap-2 mt-1 text-lg font-semibold text-text-primary"
+          data-testid="precio"
+          aria-label="Editar precio estimado"
+          data-llm-action="actualizar-precio-estimado"
+          (click)="editPrice()"
+        >
+          {{ priceLabel() }}
+          <app-icon name="pencil" [size]="16" class="text-text-muted" [attr.aria-label]="'Editar'" />
+        </button>
+        } @if (sheet.frequency) {
+        <p class="text-sm text-text-muted mt-1" data-testid="frecuencia">{{ sheet.frequency }}</p>
+        } @if (!isArchived()) {
+        <button
+          class="btn-primary w-full mt-4"
+          data-llm-action="agregar-a-la-lista"
+          (click)="addToList()"
+        >
+          <app-icon name="plus" [size]="18" [attr.aria-label]="'Agregar'" /> Agregar a la lista
+        </button>
+        }
+      </section>
+
+      <!-- Compras (AC2) -->
+      <section class="flex flex-col gap-2" data-testid="compras">
+        <h3 class="text-sm font-bold text-text-primary">Compras</h3>
+        @for (p of sheet.purchases; track p.listId) {
+        <div class="flex items-center gap-3 p-3 bg-surface border border-border-default rounded-2xl">
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm text-text-primary">{{ dateLabel(p.date) }}</span>
+            <span class="block text-xs text-text-muted truncate">{{ p.stores ?? 'Sin boleta' }}</span>
+          </span>
+          <span class="text-sm text-text-muted shrink-0">
+            {{ p.quantity }} × @if (p.unitPrice !== null) { ${{ p.unitPrice | number : '1.0-0' }} }
+            @else { sin precio }
+          </span>
+        </div>
+        } @empty {
+        <p class="text-sm text-text-muted">Todavía no lo compras: aparecerá aquí cuando cierres una compra.</p>
+        }
+      </section>
+
+      <!-- Textos de boleta que lo reconocen (AC4) -->
+      @if (sheet.aliases.length) {
+      <section class="flex flex-col gap-2" data-testid="textos-boleta">
+        <h3 class="text-sm font-bold text-text-primary">En las boletas aparece como</h3>
+        @for (a of sheet.aliases; track a.rawText) {
+        <div class="flex items-center gap-3 p-3 bg-surface border border-border-default rounded-2xl">
+          <span class="flex-1 min-w-0 text-sm text-text-primary break-words">{{ a.rawText }}</span>
+          <button
+            class="text-sm text-text-muted underline shrink-0"
+            [attr.aria-label]="'Quitar ' + a.rawText"
+            data-llm-action="delete-alias"
+            (click)="removeAlias(a.rawText)"
+          >
+            Quitar
+          </button>
+        </div>
+        }
+      </section>
+      }
+    </div>
+    }
+  </main>
+
+  <!-- Juntar con otro producto (D4) -->
+  @if (merging()) {
+  <div class="fixed inset-0 z-50 bg-base flex flex-col" role="dialog" aria-label="Juntar con otro producto">
+    <div class="flex items-center gap-2 p-2">
+      <button
+        class="w-11 h-11 rounded-full flex items-center justify-center text-text-primary"
+        aria-label="Cerrar"
+        (click)="merging.set(false)"
+      >
+        <app-icon name="x" [size]="22" [attr.aria-label]="'Cerrar'" />
+      </button>
+      <h2 class="text-lg font-bold text-text-primary">Juntar con…</h2>
+    </div>
+    <div class="px-4 flex flex-col gap-3 overflow-y-auto pb-6">
+      <p class="text-sm text-text-muted">
+        Elige el producto que queda. Todo lo de «{{ product()?.name }}» pasa a ese.
+      </p>
+      <input
+        type="search"
+        class="w-full bg-surface border border-border-default rounded-full px-4 py-3 text-text-primary"
+        placeholder="Buscar producto"
+        aria-label="Buscar el producto que queda"
+        data-llm-description="nombre del producto con el que se junta este"
+        (input)="searchMerge($any($event.target).value)"
+      />
+      @for (p of mergeResults(); track p.id) {
+      <button
+        class="w-full flex items-center gap-3 p-4 bg-surface border border-border-default rounded-2xl text-left"
+        data-llm-action="juntar-productos"
+        (click)="pickMerge(p)"
+      >
+        <span class="flex-1 min-w-0 font-medium text-text-primary break-words">{{ p.name }}</span>
+        <app-icon name="chevron-right" [size]="18" class="text-text-muted" [attr.aria-label]="'Elegir'" />
+      </button>
+      }
+    </div>
+  </div>
+  }
+</div>

@@ -10,6 +10,7 @@
 | `ProductosFacade` | `ProductosRepository`, `SessionScopeService` | — | `src/app/core/facades/base.facade.ts` |
 | `FamilyFacade` | `FamilyRepository`, `ToastService`, `SessionScopeService` | — | `src/app/core/facades/family.facade.ts` |
 | `ProductSearchFacade` | `ProductsRepository`, `SessionScopeService` | — | `src/app/core/facades/product-search.facade.ts` |
+| `ProductSheetFacade` | `FamilyRepository`, `ProductsRepository`, `ReceiptsRepository`, `ToastService` | — | `src/app/core/facades/product-sheet.facade.ts` |
 | `ProductsFacade` | `FamilyRepository`, `ProductsRepository`, `SessionScopeService` | — | `src/app/core/facades/products.facade.ts` |
 | `PurchaseCloseFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ReceiptsRepository`, `ProductsRepository`, `ToastService`, `NavController`, `SessionScopeService` | — | `src/app/core/facades/purchase-close.facade.ts` |
 | `PurchaseHistoryFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ReceiptsRepository`, `ToastService` | — | `src/app/core/facades/purchase-history.facade.ts` |

@@ -73,6 +73,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/shopping/products/products.page').then((m) => m.ProductsPage),
       },
+      // Ficha de producto (spec 0017): la barra sigue marcando Catálogo.
+      {
+        path: 'products/:id',
+        loadComponent: () =>
+          import('./features/shopping/products/product-sheet.page').then((m) => m.ProductSheetPage),
+      },
     ],
   },
 

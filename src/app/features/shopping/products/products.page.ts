@@ -1,152 +1,204 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy, computed, inject } from '@angular/core';
+import { NavController } from '@ionic/angular';
 import { ProductsFacade } from '@core/facades/products.facade';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { formatAmount } from '@core/utils/price.utils';
 import { formatDaysAgo } from '@core/utils/date.utils';
+import { matchesSearch } from '@core/utils/product-sheet.utils';
 import { ToastService } from '@core/services/ui/toast.service';
 
+/**
+ * Catálogo (spec 0017): buscador que filtra al escribir, "Crear «texto»", activos o archivados y
+ * cada producto abre su ficha. El precio es el último pagado y no se edita en la fila (D5).
+ */
 @Component({
   selector: 'app-products-page',
   standalone: true,
   imports: [
-    CommonModule,
     AppHeaderComponent,
     IconComponent,
     SkeletonBlockComponent,
     EmptyStateComponent,
+    ErrorStateComponent,
   ],
   template: `
-    <div class="h-full flex flex-col bg-base">
+    <div class="h-full flex flex-col bg-base" data-testid="catalog-page">
       <app-header title="Catálogo" />
 
-      <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-chrome">
-        <div class="bento-grid">
-          <!-- Las sugerencias de reposición viven en Mi Lista ("Te puede faltar", spec 0014). -->
-          <!-- Lista de Productos -->
-          <div class="bento-wide flex flex-col gap-4">
-            <h2 class="text-lg font-bold text-primary">Todos tus productos</h2>
-
-            @if (facade.isLoading()) {
-            <div class="flex flex-col gap-3">
-              <app-skeleton-block variant="rect" width="100%" height="60px" />
-              <app-skeleton-block variant="rect" width="100%" height="60px" />
-              <app-skeleton-block variant="rect" width="100%" height="60px" />
-            </div>
-            } @else if (facade.products().length === 0) {
-            <app-empty-state
-              icon="package-open"
-              message="Tu catálogo está vacío"
-              subtitle="Añade productos desde tu lista de compras o escaneando boletas."
+      <main class="flex-1 overflow-y-auto px-4 pb-chrome">
+        <div class="flex flex-col gap-3 mt-2">
+          <!-- Buscador (AC9) -->
+          <div class="relative">
+            <app-icon
+              name="search"
+              [size]="18"
+              class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              [attr.aria-label]="'Buscar'"
             />
-            } @else {
-            <div class="flex flex-col gap-3">
-              @for (product of facade.products(); track product.id) {
-              <div
-                class="flex items-center justify-between p-3 bg-surface border border-border-default rounded-2xl"
+            <input
+              type="search"
+              class="w-full bg-surface border border-border-default rounded-full pl-11 pr-4 py-3 text-text-primary"
+              placeholder="Buscar o crear un producto"
+              aria-label="Buscar en el catálogo"
+              data-llm-description="texto para filtrar el catálogo o crear un producto nuevo"
+              [value]="facade.query()"
+              (input)="facade.query.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm text-text-muted" data-testid="contador">{{ countLabel() }}</p>
+            <div
+              class="flex rounded-full border border-border-default p-0.5 text-sm"
+              role="tablist"
+            >
+              <button
+                role="tab"
+                class="px-3 py-1 rounded-full"
+                [class.bg-surface]="!facade.archived()"
+                [class.font-semibold]="!facade.archived()"
+                [class.text-text-muted]="facade.archived()"
+                [attr.aria-selected]="!facade.archived()"
+                (click)="facade.showArchived(false)"
               >
-                <div class="flex-1 min-w-0 pr-4">
-                  <span class="font-medium text-primary block truncate">{{ product.name }}</span>
-                  <span class="text-xs text-muted block mt-0.5">
-                    <app-icon
-                      name="clock"
-                      [size]="12"
-                      class="inline-block mr-1 opacity-70"
-                      [attr.aria-label]="'Última compra'"
-                    />
+                Activos
+              </button>
+              <button
+                role="tab"
+                class="px-3 py-1 rounded-full"
+                [class.bg-surface]="facade.archived()"
+                [class.font-semibold]="facade.archived()"
+                [class.text-text-muted]="!facade.archived()"
+                [attr.aria-selected]="facade.archived()"
+                data-testid="ver-archivados"
+                (click)="facade.showArchived(true)"
+              >
+                Archivados
+              </button>
+            </div>
+          </div>
+
+          @if (canCreate()) {
+          <button
+            class="w-full flex items-center gap-3 p-4 bg-surface border border-dashed border-border-default rounded-2xl text-left active:scale-[0.99] transition-transform"
+            data-llm-action="crear-producto"
+            (click)="create()"
+          >
+            <app-icon name="plus" [size]="18" class="text-brand" [attr.aria-label]="'Crear'" />
+            <span class="font-semibold text-text-primary">Crear «{{ facade.query().trim() }}»</span>
+          </button>
+          } @if (facade.isLoading()) {
+          <div class="flex flex-col gap-3">
+            <app-skeleton-block variant="rect" width="100%" height="64px" />
+            <app-skeleton-block variant="rect" width="100%" height="64px" />
+            <app-skeleton-block variant="rect" width="100%" height="64px" />
+          </div>
+          } @else if (facade.error()) {
+          <app-error-state
+            [title]="'No se pudo cargar el catálogo'"
+            [message]="facade.error()!"
+            retryLabel="Reintentar"
+            (retry)="facade.loadProducts()"
+          />
+          } @else if (facade.products().length === 0) {
+          <app-empty-state
+            [icon]="facade.archived() ? 'archive' : 'package-open'"
+            [message]="facade.archived() ? 'No hay productos archivados' : 'Tu catálogo está vacío'"
+            [subtitle]="
+              facade.archived()
+                ? 'Archiva desde la ficha lo que ya no compras: sale del buscador y de las sugerencias.'
+                : 'Busca arriba para crear uno, o escanea una boleta: lo comprado queda aquí.'
+            "
+          />
+          } @else {
+          <ul class="flex flex-col gap-2">
+            @for (product of facade.filtered(); track product.id) {
+            <li>
+              <button
+                class="w-full flex items-center gap-3 p-4 bg-surface border border-border-default rounded-2xl text-left active:scale-[0.99] transition-transform"
+                [attr.aria-label]="'Ver ' + product.name"
+                (click)="open(product.id)"
+              >
+                <span class="flex-1 min-w-0">
+                  <span class="block font-medium text-text-primary line-clamp-2 break-words">{{
+                    product.name
+                  }}</span>
+                  <span class="block text-xs text-text-muted mt-0.5">
                     {{ lastPurchaseLabel(product.daysSincePurchase) }}
                   </span>
-                </div>
-
-                <!-- El precio se ve como texto y se edita al tocarlo (fix-050, V3) -->
-                @if (editingId() === product.id) {
-                <div class="relative w-28 shrink-0">
-                  <span
-                    class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-medium"
-                    aria-hidden="true"
-                    >$</span
-                  >
-                  <input
-                    inputmode="numeric"
-                    data-price-edit
-                    [attr.aria-label]="'Precio de ' + product.name"
-                    data-llm-description="último precio del producto en pesos"
-                    class="w-full bg-base border border-brand rounded-lg py-1.5 pl-6 pr-2 text-sm font-bold text-right focus:outline-none text-primary"
-                    [value]="formatAmount(product.last_price ?? null)"
-                    (blur)="onPriceBlur(product.id, $event)"
-                    (keydown.enter)="$any($event.target).blur()"
-                  />
-                </div>
-                } @else {
-                <button
-                  class="flex items-center gap-1 shrink-0 px-2 py-1.5 rounded-lg text-sm"
+                </span>
+                <span
+                  class="shrink-0 text-sm"
                   [class.font-bold]="product.last_price != null"
-                  [class.text-primary]="product.last_price != null"
-                  [class.text-muted]="product.last_price == null"
-                  [attr.aria-label]="'Editar precio de ' + product.name"
-                  data-llm-action="actualizar-precio"
-                  (click)="edit(product.id)"
+                  [class.text-text-primary]="product.last_price != null"
+                  [class.text-text-muted]="product.last_price == null"
+                  >{{ priceLabel(product.last_price ?? null) }}</span
                 >
-                  {{ priceLabel(product.last_price ?? null) }} @if (savedId() === product.id) {
-                  <app-icon name="check" [size]="14" class="text-brand" [attr.aria-label]="'Guardado'" />
-                  }
-                </button>
-                }
-              </div>
-              }
-            </div>
+                <app-icon
+                  name="chevron-right"
+                  [size]="18"
+                  class="text-text-muted shrink-0"
+                  [attr.aria-label]="'Ver ficha'"
+                />
+              </button>
+            </li>
             }
-          </div>
+          </ul>
+          }
         </div>
       </main>
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProductsPage implements OnInit {
-  public facade = inject(ProductsFacade);
-  private toast = inject(ToastService);
+export class ProductsPage {
+  readonly facade = inject(ProductsFacade);
+  private readonly nav = inject(NavController);
+  private readonly toast = inject(ToastService);
 
-  public savedId = signal<string | null>(null);
+  /** "Crear «texto»": hay algo escrito y ningún producto se llama exactamente así. */
+  readonly canCreate = computed(() => {
+    const term = this.facade.query().trim();
+    if (!term || this.facade.archived()) return false;
+    return !this.facade
+      .products()
+      .some((p) => matchesSearch(p.name, term) && matchesSearch(term, p.name));
+  });
 
-  ngOnInit() {
+  readonly countLabel = computed(() => {
+    const total = this.facade.products().length;
+    const shown = this.facade.filtered().length;
+    const noun = this.facade.archived()
+      ? total === 1
+        ? 'archivado'
+        : 'archivados'
+      : total === 1
+      ? 'producto'
+      : 'productos';
+    return shown === total ? `${total} ${noun}` : `${shown} de ${total} ${noun}`;
+  });
+
+  /** Cada vez que se entra (Ionic deja la pestaña en caché): vuelve de una ficha con cambios. */
+  ionViewWillEnter(): void {
     this.facade.loadProducts();
   }
 
-  /** Producto con el precio en edición; los demás se ven como texto. */
-  readonly editingId = signal<string | null>(null);
-  readonly formatAmount = formatAmount;
-
-  edit(productId: string): void {
-    this.editingId.set(productId);
-    // El input aparece en el próximo render: se enfoca para escribir de una vez.
-    setTimeout(() => document.querySelector<HTMLInputElement>('[data-price-edit]')?.focus());
+  open(id: string): void {
+    this.nav.navigateForward(`/app/products/${id}`);
   }
 
-  async onPriceBlur(productId: string, event: Event) {
-    if (this.editingId() !== productId) return; // Enter ya guardó y el blur llega después
-    this.editingId.set(null);
-    const input = event.target as HTMLInputElement;
-    const current = this.facade.products().find((p) => p.id === productId)?.last_price;
-    const digits = input.value.replace(/[^\d]/g, '');
-    const newPrice = digits ? Number(digits) : null;
-    if (newPrice === null || newPrice === current) return; // vacío o sin cambios: no se guarda
-
-    if (!(await this.facade.updatePrice(productId, newPrice))) {
-      this.toast.error('No se pudo guardar el precio', 'Intenta de nuevo.');
+  async create(): Promise<void> {
+    const id = await this.facade.create(this.facade.query());
+    if (!id) {
+      this.toast.error('No se pudo crear el producto', 'Revisa tu conexión e intenta de nuevo.');
       return;
     }
-
-    // Micro-feedback visual
-    this.savedId.set(productId);
-    setTimeout(() => {
-      if (this.savedId() === productId) {
-        this.savedId.set(null);
-      }
-    }, 1500);
+    this.facade.query.set('');
+    this.open(id);
   }
 
   priceLabel(price: number | null): string {

@@ -68,6 +68,7 @@ import {
   Upload,
   Camera,
   PackageOpen,
+  Archive, // Productos archivados (spec 0017)
   // ── Acciones extendidas ──
   Copy,
   Eye,
@@ -203,6 +204,7 @@ export const appConfig: ApplicationConfig = {
         Upload,
         Camera,
         PackageOpen,
+        Archive,
         // Acciones extendidas
         Copy,
         Eye,
