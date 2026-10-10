@@ -30,6 +30,8 @@ const SWIPE_HINT_KEY = 'shop.hint.swipe-delete.v1';
 const VIEW_KEY = 'shop.list.view.v1';
 /** Cuánto queda a la vista "¿Precio?" después de marcar, si no se toca (spec 0019 D5). */
 export const PRICE_PROMPT_MS = 6000;
+/** Cuánto hay que mantener apretada una fila para abrir su detalle (spec 0021 D3). */
+export const LONG_PRESS_MS = 500;
 
 /** Una fila de Mi Lista: un ítem o el encabezado de un pasillo. */
 interface ListRow {
@@ -190,11 +192,59 @@ export class ActiveListPage implements OnInit {
     event?.stopPropagation();
     this.detail.set({
       id: item.id,
+      productId: item.product?.id ?? item.product_id ?? null,
       name: item.product?.name ?? 'Producto',
       quantity: item.quantity || 1,
       unit: item.unit ?? 'un',
       unitPrice: item.unit_price ?? null,
+      notes: item.notes ?? null,
     });
+  }
+
+  /** "Ver ficha del producto" desde el detalle (spec 0021 D4). */
+  openProduct(productId: string): void {
+    this.detail.set(null);
+    this.nav.navigateForward(`/app/products/${productId}`);
+  }
+
+  // ── Pulsación larga en la fila: abre el detalle (spec 0021 D3) ─────────────
+  private pressTimer: ReturnType<typeof setTimeout> | null = null;
+  private pressStart: { x: number; y: number } | null = null;
+  /** El "click" que sigue a una pulsación larga no marca el ítem. */
+  private longPressed = false;
+
+  startPress(item: PopulatedListItem, event: PointerEvent): void {
+    this.cancelPress();
+    this.longPressed = false;
+    this.pressStart = { x: event.clientX, y: event.clientY };
+    this.pressTimer = setTimeout(() => {
+      this.pressTimer = null;
+      this.longPressed = true;
+      this.openDetail(item);
+    }, LONG_PRESS_MS);
+  }
+
+  /** Moverse más de unos píxeles (deslizar para borrar, hacer scroll) no es una pulsación larga. */
+  movePress(event: PointerEvent): void {
+    if (!this.pressStart) return;
+    const dx = event.clientX - this.pressStart.x;
+    const dy = event.clientY - this.pressStart.y;
+    if (Math.hypot(dx, dy) > 10) this.cancelPress();
+  }
+
+  cancelPress(): void {
+    if (this.pressTimer) clearTimeout(this.pressTimer);
+    this.pressTimer = null;
+    this.pressStart = null;
+  }
+
+  /** Toque en la fila: marca, salvo que haya sido una pulsación larga. */
+  tapItem(itemId: string, currentStatus: boolean): void {
+    if (this.longPressed) {
+      this.longPressed = false;
+      return;
+    }
+    this.toggleItem(itemId, currentStatus);
   }
 
   saveDetail(change: { itemId: string; patch: ItemPatch }): void {

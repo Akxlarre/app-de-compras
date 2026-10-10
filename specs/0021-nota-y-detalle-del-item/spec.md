@@ -1,7 +1,7 @@
 > id: 0021-nota-y-detalle-del-item
 > refs: `docs/RECORRIDO-UX.md` §1 Mi Lista (F1, F2). Sigue a la spec 0019, que creó la hoja de
 > detalle del ítem.
-> status: draft (falta que el dueño confirme D1–D4)
+> status: done (2026-10-10; D1–D4 confirmadas el mismo día)
 > created: 2026-10-10
 
 ## Problema
@@ -28,15 +28,26 @@
 - Quién agregó cada ítem (F6): necesita una columna nueva y va en otra spec.
 
 ## Criterios de aceptación
-- [ ] AC1. En el detalle del ítem se escribe una nota de hasta 80 caracteres y se guarda con
+- [x] AC1. En el detalle del ítem se escribe una nota de hasta 80 caracteres y se guarda con
   "Listo". Vacía, se borra.
-- [ ] AC2. La nota se ve en la fila de Mi Lista, en las dos vistas (por pasillo y como se agregó).
-- [ ] AC3. Sin conexión, la nota se guarda en la cola y se envía al volver, como la cantidad.
-- [ ] AC4. Una pulsación larga en la fila abre el detalle; el toque corto sigue marcando.
-- [ ] AC5. "Ver ficha del producto" abre la ficha del producto del ítem.
-- [ ] AC6. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
-- [ ] AC7. Verificado en staging a 375×667 con `test5`: escribir una nota, verla en la fila,
+- [x] AC2. La nota se ve en la fila de Mi Lista, en las dos vistas (por pasillo y como se agregó).
+- [x] AC3. Sin conexión, la nota se guarda en la cola y se envía al volver, como la cantidad.
+- [x] AC4. Una pulsación larga en la fila abre el detalle; el toque corto sigue marcando.
+- [x] AC5. "Ver ficha del producto" abre la ficha del producto del ítem.
+- [x] AC6. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
+- [x] AC7. Verificado en staging a 375×667 con `test5`: escribir una nota, verla en la fila,
   borrarla, y abrir la ficha desde el detalle.
+
+## Cierre (2026-10-10)
+- AC6: 801 tests, `lint:arch` sin errores y `ng build` sin avisos.
+- AC7, en staging a 375×667 con `test5`:
+  - la pulsación larga sobre Champiñones abrió el detalle sin cambiar el marcado;
+  - la nota "los de bandeja, no en conserva" se ve en la fila, en las dos vistas, y sigue ahí al
+    recargar;
+  - vaciar la nota la borró;
+  - "Ver ficha del producto" abrió `/app/products/<id>`.
+- En los ítems marcados la cantidad no se puede tocar (como antes); el detalle se abre con la
+  pulsación larga.
 
 ## Lo que viene después (orden propuesto, una spec por línea)
 | Spec | Qué | Cubre | BD |
@@ -45,4 +56,6 @@
 | 0023 | **Compras útiles**: "Agregar a la lista" desde cualquier compra pasada, buscar en el historial y quién cerró la compra. | R8, R10, R9 | R9 sí (quién cerró) |
 | 0024 | **Lista compartida**: quién agregó cada ítem y compartir los pendientes por WhatsApp como texto. | F6, X1 | F6 sí (`added_by`) |
 | 0025 | **En el súper**: modo supermercado (pantalla encendida, filas grandes, solo pendientes) y presupuesto de la compra ("vas en $X de $Y"). | X3, X2 | X2 sí (tope por lista) |
-| 0026 | **Gasto en familia**: exportar el mes a CSV y dividir el gasto entre miembros. | Y3, Y5 | Y5 sí |
+| 0026 | **Exportar el mes** a una planilla (CSV). | Y3 | No |
+
+Descartado por el dueño (2026-10-10): dividir el gasto entre miembros (Y5).

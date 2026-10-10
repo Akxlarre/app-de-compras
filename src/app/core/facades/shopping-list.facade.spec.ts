@@ -261,6 +261,18 @@ describe('ShoppingListFacade', () => {
         expect(stored.queue).toEqual([]);
       });
 
+      it('la nota también va a la cola sin red y vuelve a null al borrarla (spec 0021 AC3)', async () => {
+        online.set(false);
+        await facade.editItem('item-1', { notes: 'sin lactosa' });
+        expect(facade.data()?.list_items[0].notes).toBe('sin lactosa');
+        await facade.editItem('item-1', { notes: null });
+        expect(stored.queue).toEqual([{ kind: 'patch', itemId: 'item-1', patch: { notes: null } }]);
+
+        online.set(true);
+        await facade.flushQueue();
+        expect(items['update']).toHaveBeenCalledWith('item-1', { notes: null });
+      });
+
       it('un ítem que ya no está no hace nada', async () => {
         await facade.editItem('zz', { unit_price: 1 });
         expect(items['update']).not.toHaveBeenCalled();
