@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type { Product } from '@core/models/product.model';
 import type { ProductPurchaseRow } from '@core/models/product-sheet.model';
+import type { StorePriceRow } from '@core/models/price-insights.model';
 import type { RestockStat } from '@core/models/restock.model';
 import { MutationError, toMutationError } from '@core/utils/mutation-error.utils';
 
@@ -116,6 +117,20 @@ export class ProductsRepository {
     if (error) throw error;
     // `list` es a-uno (list_items → shopping_lists): PostgREST lo trae como objeto, no arreglo.
     return (data as unknown as ProductPurchaseRow[] | null) ?? [];
+  }
+
+  /** Líneas de boleta del producto con su tienda y fecha (precio por tienda, spec 0020 D1). */
+  async findStorePrices(productId: string): Promise<StorePriceRow[]> {
+    const { data, error } = await this.db
+      .from('purchase_lines')
+      .select(
+        'unit_price, quantity, amount, receipt:receipts(store, purchased_at), list:shopping_lists(completed_at)'
+      )
+      .eq('product_id', productId)
+      .eq('kind', 'product');
+    if (error) throw error;
+    // `receipt` y `list` son a-uno: PostgREST los trae como objeto.
+    return (data as unknown as StorePriceRow[] | null) ?? [];
   }
 
   async rename(id: string, name: string): Promise<void> {

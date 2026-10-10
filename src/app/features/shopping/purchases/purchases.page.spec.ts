@@ -63,6 +63,15 @@ describe('PurchasesPage', () => {
       data,
       month,
       visible: computed(() => data() ?? []),
+      chart: signal([
+        { month: new Date(2026, 4, 1), total: 0, count: 0 },
+        { month: new Date(2026, 5, 1), total: 0, count: 0 },
+        { month: new Date(2026, 6, 1), total: 0, count: 0 },
+        { month: new Date(2026, 7, 1), total: 1_000, count: 1 },
+        { month: new Date(2026, 8, 1), total: 80_000, count: 2 },
+        { month: new Date(2026, 9, 1), total: 40_000, count: 1 },
+      ]),
+      byStore: signal([{ name: 'Sin boleta', total: 2000 }]),
       initialize: vi.fn(),
       dispose: vi.fn(),
     };
@@ -114,6 +123,33 @@ describe('PurchasesPage', () => {
     expect(close.startNew).toHaveBeenCalledWith('purchases');
     expect(close.start).not.toHaveBeenCalled();
     expect(close.scan).toHaveBeenCalledWith([file]);
+  });
+
+  it('barras de 6 meses: alto relativo al mayor, el mes elegido marcado (spec 0020 D3)', () => {
+    const bars = page.bars();
+    expect(bars.map((b) => b.label)).toEqual(['May', 'Jun', 'Jul', 'Ago', 'Sept', 'Oct']);
+    expect(bars.map((b) => [b.height, b.empty])).toEqual([
+      [0, true],
+      [0, true],
+      [0, true],
+      [4, false], // un mes chico igual se ve
+      [100, false],
+      [50, false],
+    ]);
+    expect(bars.map((b) => b.selected)).toEqual([false, false, false, false, false, true]);
+    expect(bars[4].aria).toBe('Septiembre: $80.000');
+
+    facade.month.set(new Date(2026, 8, 1));
+    expect(page.bars()[4].selected).toBe(true);
+  });
+
+  it('gasto por tienda solo si hay alguna tienda, no solo "Sin boleta" (D4)', () => {
+    expect(page.stores()).toEqual([]);
+    facade.byStore.set([
+      { name: 'Líder', total: 5000 },
+      { name: 'Sin boleta', total: 2000 },
+    ]);
+    expect(page.stores().map((s: { name: string }) => s.name)).toEqual(['Líder', 'Sin boleta']);
   });
 
   it('abrir una compra va a su detalle', () => {

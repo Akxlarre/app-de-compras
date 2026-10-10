@@ -7,6 +7,7 @@ import { ProductsRepository } from '../repositories/products.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
 import { ToastService } from '../services/ui/toast.service';
 import { buyEvery, purchaseHistory } from '../utils/product-sheet.utils';
+import { lastRise, pricesByStore } from '../utils/price-insights.utils';
 
 const MAX_NAME = 60;
 const NOT_FOUND = 'product_not_found';
@@ -31,16 +32,20 @@ export class ProductSheetFacade extends BaseFacade<ProductSheet> {
     const id = this.id;
     const product = await this.products.findById(id);
     if (!product) throw new Error(NOT_FOUND);
-    const [rows, aliases, stats] = await Promise.all([
+    const [rows, aliases, stats, storeRows] = await Promise.all([
       this.products.findPurchases(id),
       this.receipts.findAliasesOf(id),
       this.products.findRestockStats(),
+      this.products.findStorePrices(id),
     ]);
+    const purchases = purchaseHistory(rows);
     return {
       product,
-      purchases: purchaseHistory(rows),
+      purchases,
       aliases,
       frequency: buyEvery(stats.find((s) => s.product_id === id)),
+      storePrices: pricesByStore(storeRows),
+      rise: lastRise(purchases),
     };
   }
 

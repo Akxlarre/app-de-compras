@@ -47,7 +47,10 @@
     } @else {
     <div class="flex flex-col gap-4 mt-2">
       <!-- Gasto del mes elegido (D4) -->
-      <section class="bg-surface border border-border-default rounded-2xl p-5" data-testid="gasto-mes">
+      <section
+        class="bg-surface border border-border-default rounded-2xl p-5"
+        data-testid="gasto-mes"
+      >
         <div class="flex items-center justify-between gap-2">
           <button
             class="w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-text-muted active:scale-95 transition-transform"
@@ -85,7 +88,45 @@
         <p class="text-xs text-text-muted text-center mt-1" data-testid="diferencia-mes">
           Lo mismo que {{ prevMonthLabel().toLowerCase() }}
         </p>
+        } @if (facade.selected().current.count > 1 && facade.average(); as avg) {
+        <p class="text-xs text-text-muted text-center mt-1" data-testid="promedio">
+          Promedio por compra ${{ avg | number : '1.0-0' }}
+        </p>
         }
+
+        <!-- Últimos 6 meses: tocar una barra va a ese mes (spec 0020 D3) -->
+        <div
+          class="flex items-end gap-0.5 h-28 mt-4"
+          role="group"
+          aria-label="Gasto de los últimos 6 meses"
+          data-testid="grafico-meses"
+        >
+          @for (b of bars(); track b.month.getTime()) {
+          <button
+            class="flex-1 h-full flex flex-col items-center justify-end gap-1.5"
+            [attr.aria-label]="b.aria"
+            [attr.aria-pressed]="b.selected"
+            (click)="facade.goToMonth(b.month)"
+          >
+            <span class="w-full flex-1 flex items-end justify-center">
+              <span
+                class="w-3/5 rounded-t-[4px]"
+                [class.bg-brand]="b.selected && !b.empty"
+                [class.bg-border-strong]="!b.selected && !b.empty"
+                [class.bg-border-default]="b.empty"
+                [style.height]="b.empty ? '2px' : b.height + '%'"
+              ></span>
+            </span>
+            <span
+              class="text-[11px]"
+              [class.text-text-primary]="b.selected"
+              [class.font-semibold]="b.selected"
+              [class.text-text-muted]="!b.selected"
+              >{{ b.label }}</span
+            >
+          </button>
+          }
+        </div>
       </section>
 
       <!-- Compras del mes -->
@@ -120,6 +161,41 @@
       </ul>
       } @else {
       <p class="text-sm text-text-muted text-center py-6">Sin compras en {{ monthLabel() }}.</p>
+      }
+
+      <!-- Lo que más pesó y por tienda, del mes elegido (spec 0020 D4) -->
+      @if (facade.top().length) {
+      <section class="flex flex-col gap-2" data-testid="lo-que-mas-peso">
+        <h3 class="text-sm font-bold text-text-primary">Lo que más pesó</h3>
+        <div
+          class="bg-surface border border-border-default rounded-2xl divide-y divide-border-default"
+        >
+          @for (t of facade.top(); track t.name) {
+          <div class="flex items-center gap-3 px-3 py-2.5">
+            <span class="flex-1 min-w-0 text-sm text-text-primary truncate">{{ t.name }}</span>
+            <span class="text-sm font-semibold text-text-primary shrink-0"
+              >${{ t.total | number : '1.0-0' }}</span
+            >
+          </div>
+          }
+        </div>
+      </section>
+      } @if (stores().length) {
+      <section class="flex flex-col gap-2" data-testid="gasto-por-tienda">
+        <h3 class="text-sm font-bold text-text-primary">Por tienda</h3>
+        <div
+          class="bg-surface border border-border-default rounded-2xl divide-y divide-border-default"
+        >
+          @for (s of stores(); track s.name) {
+          <div class="flex items-center gap-3 px-3 py-2.5">
+            <span class="flex-1 min-w-0 text-sm text-text-primary truncate">{{ s.name }}</span>
+            <span class="text-sm font-semibold text-text-primary shrink-0"
+              >${{ s.total | number : '1.0-0' }}</span
+            >
+          </div>
+          }
+        </div>
+      </section>
       }
 
       <div class="sticky-above-chrome bg-base pt-2 pb-2">

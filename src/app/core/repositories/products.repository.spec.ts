@@ -107,6 +107,19 @@ describe('ProductsRepository', () => {
       await expect(repo.remove('p1')).rejects.toBeInstanceOf(MutationError);
     });
 
+    it('findStorePrices trae las líneas de boleta del producto con su tienda (spec 0020 D1)', async () => {
+      const q = queryMock({ data: [{ unit_price: 1490 }] });
+      mock.shop.from.mockReturnValue(q);
+
+      expect(await repo.findStorePrices('p1')).toEqual([{ unit_price: 1490 }]);
+      expect(mock.shop.from).toHaveBeenCalledWith('purchase_lines');
+      expect(q.select).toHaveBeenCalledWith(
+        'unit_price, quantity, amount, receipt:receipts(store, purchased_at), list:shopping_lists(completed_at)'
+      );
+      expect(q.eq).toHaveBeenCalledWith('product_id', 'p1');
+      expect(q.eq).toHaveBeenCalledWith('kind', 'product');
+    });
+
     it('merge llama a merge_products y devuelve las compras movidas', async () => {
       mock.shop.rpc.mockResolvedValue({ data: 3, error: null });
 

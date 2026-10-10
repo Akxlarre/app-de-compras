@@ -1,6 +1,6 @@
 > id: 0019-lista-para-el-super
 > refs: `docs/RECORRIDO-UX.md` §1 Mi Lista (F3, F4, F5), §3 Catálogo (H4, K8) y §6 (paso 6, extras).
-> status: draft — falta que el dueño confirme D1–D5
+> status: approved (D1–D5 confirmadas el 2026-10-10; va después de 0020)
 > created: 2026-10-10
 
 ## Problema

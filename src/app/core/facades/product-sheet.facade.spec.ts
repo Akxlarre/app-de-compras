@@ -33,6 +33,10 @@ describe('ProductSheetFacade (spec 0017)', () => {
         .fn()
         .mockResolvedValue([{ product_id: 'p1', purchase_count: 2, median_interval_days: 15 }]),
       findIdByName: vi.fn().mockResolvedValue(null),
+      findStorePrices: vi.fn().mockResolvedValue([
+        { unit_price: 1290, quantity: 1, amount: 1290, receipt: { store: 'Aroca', purchased_at: '2026-10-05' }, list: null },
+        { unit_price: 1190, quantity: 1, amount: 1190, receipt: { store: 'Líder', purchased_at: '2026-09-20' }, list: null },
+      ]),
       rename: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
       archive: vi.fn().mockResolvedValue(undefined),
@@ -68,6 +72,17 @@ describe('ProductSheetFacade (spec 0017)', () => {
     expect(sheet.frequency).toBe('Lo compras cada ~15 días · 2 compras');
     expect(sheet.aliases).toEqual([{ rawText: 'ARROZ G1 1KG', productId: 'p1' }]);
     expect(facade.hasPurchases()).toBe(true);
+  });
+
+  it('trae el precio por tienda y cuánto subió la última compra (spec 0020 D1, D2)', async () => {
+    await facade.open('p1');
+    const sheet = facade.data()!;
+    expect(sheet.storePrices.map((p) => [p.store, p.unitPrice])).toEqual([
+      ['Líder', 1190],
+      ['Aroca', 1290],
+    ]);
+    // 1.100 (20/09) → 1.290 (05/10): subió 17%.
+    expect(sheet.rise).toBe(17);
   });
 
   it('abrir otro producto no muestra el anterior', async () => {

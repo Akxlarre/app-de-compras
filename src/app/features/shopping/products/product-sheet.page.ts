@@ -14,6 +14,7 @@ import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import type { Product } from '@core/models/product.model';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatAmount } from '@core/utils/price.utils';
+import { daysSince, formatDaysAgo } from '@core/utils/date.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -74,6 +75,12 @@ export class ProductSheetPage implements OnInit {
       month: 'short',
       year: 'numeric',
     }).format(new Date(iso));
+  }
+
+  /** "hace 5 días" (D1). La fecha de la boleta viene sin hora: se lee como día local. */
+  ago(date: string): string {
+    const local = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date;
+    return formatDaysAgo(daysSince(local));
   }
 
   back(): void {

@@ -89,6 +89,14 @@ describe('ProductSheetPage (spec 0017)', () => {
     expect(page.dateLabel('2026-10-05T15:00:00Z')).toMatch(/^5 oct\.? 2026$/);
   });
 
+  it('la fecha de la boleta (sin hora) es "hace n días" en hora local (spec 0020 D1)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 10, 0, 30));
+    expect(page.ago('2026-10-05')).toBe('hace 5 días');
+    expect(page.ago('2026-10-10')).toBe('hoy');
+    vi.useRealTimers();
+  });
+
   it('el precio dice de dónde sale (D5)', () => {
     expect(page.priceLabel()).toBe('Último pagado $1.290');
     data.set(sheet({}, []));

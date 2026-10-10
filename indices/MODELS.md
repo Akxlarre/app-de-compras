@@ -9,6 +9,7 @@
 | `Family`, `FamilyRole`, `FamilyMember`, `FamilyInfo`, `FamilyMemberView`, `FamilyPreview`, `JoinFamilyResult` | `other` | `src/app/core/models/family.model.ts` |
 | `NotificationType`, `Notification` | `other` | `src/app/core/models/notification.model.ts` |
 | `QueuedChange` | `other` | `src/app/core/models/offline-queue.model.ts` |
+| `StorePriceRow`, `StorePrice`, `MonthTotal`, `SpendItem` | `other` | `src/app/core/models/price-insights.model.ts` |
 | `ProductPurchaseRow`, `ProductPurchase`, `ProductSheet` | `other` | `src/app/core/models/product-sheet.model.ts` |
 | `Product` | `other` | `src/app/core/models/product.model.ts` |
 | `PurchasedItem`, `PurchasedCharge`, `PurchaseSummary`, `MonthlySpending`, `MonthComparison` | `other` | `src/app/core/models/purchase-history.model.ts` |

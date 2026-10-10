@@ -15,6 +15,7 @@ import type { PurchaseSummary } from '@core/models/purchase-history.model';
 import { capitalize } from '@core/utils/date.utils';
 import { isAutoListName } from '@core/utils/purchase-name.utils';
 import { shiftMonth } from '@core/utils/purchase-history.utils';
+import { formatAmount } from '@core/utils/price.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
@@ -24,6 +25,8 @@ import { ReceiptPickerComponent } from '../purchase-close/receipt-picker.compone
 
 const monthName = (d: Date) =>
   capitalize(new Intl.DateTimeFormat('es-CL', { month: 'long' }).format(d));
+const shortMonth = (d: Date) =>
+  capitalize(new Intl.DateTimeFormat('es-CL', { month: 'short' }).format(d).replace('.', ''));
 const shortDay = new Intl.DateTimeFormat('es-CL', {
   weekday: 'short',
   day: 'numeric',
@@ -37,7 +40,11 @@ export function purchaseRow(p: PurchaseSummary) {
   const showDate = !!p.store || !isAutoListName(p.name);
   const named = !!p.store && !isAutoListName(p.name);
   const count = `${p.itemCount} ${p.itemCount === 1 ? 'producto' : 'productos'}`;
-  const secondary = [showDate ? shortDay.format(new Date(p.completedAt)) : null, named ? p.name : null, count]
+  const secondary = [
+    showDate ? shortDay.format(new Date(p.completedAt)) : null,
+    named ? p.name : null,
+    count,
+  ]
     .filter(Boolean)
     .join(' · ');
   const source =
@@ -48,7 +55,14 @@ export function purchaseRow(p: PurchaseSummary) {
       : p.total === 0
       ? 'Sin precios'
       : 'Estimado';
-  return { id: p.id, primary, secondary, total: p.total, source, noPrices: source === 'Sin precios' };
+  return {
+    id: p.id,
+    primary,
+    secondary,
+    total: p.total,
+    source,
+    noPrices: source === 'Sin precios',
+  };
 }
 
 /**
@@ -83,6 +97,27 @@ export class PurchasesPage implements OnInit {
   /** Ninguna compra todavía: se explica cómo empezar (R6). */
   readonly isEmpty = computed(() => (this.facade.data() ?? []).length === 0);
   readonly rows = computed(() => this.facade.visible().map(purchaseRow));
+
+  /** Barras de los últimos 6 meses (spec 0020 D3): alto relativo al mes más alto. */
+  readonly bars = computed(() => {
+    const chart = this.facade.chart();
+    const max = Math.max(0, ...chart.map((m) => m.total));
+    const selected = this.facade.month().getTime();
+    return chart.map((m) => ({
+      month: m.month,
+      label: shortMonth(m.month),
+      height: m.total > 0 ? Math.max(4, Math.round((m.total / max) * 100)) : 0,
+      empty: m.total === 0,
+      selected: m.month.getTime() === selected,
+      aria: `${monthName(m.month)}: $${formatAmount(m.total)}`,
+    }));
+  });
+
+  /** El gasto por tienda solo dice algo si hay al menos una tienda (no solo "Sin boleta"). */
+  readonly stores = computed(() => {
+    const list = this.facade.byStore();
+    return list.some((s) => s.name !== 'Sin boleta') ? list : [];
+  });
 
   ngOnInit(): void {
     this.facade.initialize();

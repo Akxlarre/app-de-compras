@@ -171,8 +171,7 @@
         <app-icon name="camera" [size]="40" class="text-brand mb-4" [attr.aria-label]="'Cámara'" />
         <span class="text-lg font-bold text-text-primary mb-2">Foto de la boleta</span>
         <span class="text-sm text-text-muted"
-          >Tómala o elígela de la galería. Si es larga, hasta 5 fotos (de arriba hacia
-          abajo).</span
+          >Tómala o elígela de la galería. Si es larga, hasta 5 fotos (de arriba hacia abajo).</span
         >
       </button>
       @if (close.kind() === 'active') {
@@ -296,6 +295,14 @@
               } @if (g.decision.target?.wasPending) {
               <span class="block text-xs font-semibold text-brand" data-testid="estaba-pendiente">
                 Estaba pendiente: queda comprado
+              </span>
+              } @if (close.riseOf(g.decision); as rise) {
+              <span
+                class="flex items-center gap-1 text-xs font-semibold text-warning"
+                data-testid="subio"
+              >
+                <app-icon name="trending-up" [size]="14" [attr.aria-label]="'Subió'" /> Subió
+                {{ rise }}%
               </span>
               }
             </span>

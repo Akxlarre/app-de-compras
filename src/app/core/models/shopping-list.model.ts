@@ -15,12 +15,14 @@ export interface ShoppingList {
   total_source?: TotalSource;
 }
 
-/** Boleta embebida en la compra (`receipts(id, image_url, store)`). */
+/** Boleta embebida en la compra (`receipts(id, image_url, store, total_amount)`). */
 export interface ListReceipt {
   id: string;
   /** Ruta de la foto en el bucket privado `receipts`. */
   image_url: string | null;
   store: string | null;
+  /** Total impreso en la boleta (spec 0020: gasto por tienda). */
+  total_amount?: number | null;
 }
 
 export interface ListItem {

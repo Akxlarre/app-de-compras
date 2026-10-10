@@ -186,6 +186,29 @@ describe('PurchaseCloseFacade', () => {
       expect(toast['action']).not.toHaveBeenCalled();
     });
 
+    it('marca "Subió X%" cuando la boleta trae un precio 10% o más sobre el último (spec 0020 D2)', async () => {
+      products.findByFamily.mockResolvedValue([
+        { id: 'p-leche', name: 'Leche', last_price: 1000 },
+        { id: 'p-pan', name: 'Pan', last_price: 1000 },
+      ]);
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue({
+        store: 'Aroca',
+        date: '2026-10-05',
+        total: 3200,
+        lines: [
+          line({ raw_text: 'LECHE', quantity: 2, unit_price: 1200, line_total: 2400 }),
+          line({ raw_text: 'PAN', unit_price: 800, line_total: 800 }),
+        ],
+      });
+      await facade.scan([file]);
+
+      const [leche, pan] = facade.decisions();
+      expect(facade.riseOf(leche)).toBe(20);
+      expect(facade.riseOf(pan)).toBeNull();
+      expect(facade.riseOf({ ...leche, target: { kind: 'new' } })).toBeNull();
+    });
+
     it('hasOpenReceipt: hay una boleta leyéndose o leída sin cerrar', async () => {
       expect(facade.hasOpenReceipt()).toBe(false);
       facade.start(list, true, 'receipt');
