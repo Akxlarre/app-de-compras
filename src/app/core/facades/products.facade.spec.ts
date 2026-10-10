@@ -11,7 +11,7 @@ const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000).toISOStr
 describe('ProductsFacade', () => {
   let facade: ProductsFacade;
   let family: { getOrCreateFamilyId: ReturnType<typeof vi.fn> };
-  let catalog: { findByFamily: ReturnType<typeof vi.fn>; updatePrice: ReturnType<typeof vi.fn> };
+  let catalog: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -19,7 +19,11 @@ describe('ProductsFacade', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     family = { getOrCreateFamilyId: vi.fn().mockResolvedValue('fam-1') };
-    catalog = { findByFamily: vi.fn(), updatePrice: vi.fn().mockResolvedValue(undefined) };
+    catalog = {
+      findByFamily: vi.fn(),
+      findIdByName: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({ id: 'p-new', name: 'Sal de mar' }),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -43,7 +47,7 @@ describe('ProductsFacade', () => {
 
       await facade.loadProducts();
 
-      expect(catalog.findByFamily).toHaveBeenCalledWith('fam-1');
+      expect(catalog.findByFamily).toHaveBeenCalledWith('fam-1', undefined, { archived: false });
       const byId = Object.fromEntries(facade.products().map((p) => [p.id, p.daysSincePurchase]));
       expect(byId).toEqual({ a: 10, b: 2, c: null });
       expect(facade.isLoading()).toBe(false);
@@ -60,32 +64,52 @@ describe('ProductsFacade', () => {
     });
   });
 
-  describe('updatePrice', () => {
-    beforeEach(() => {
-      facade.products.set([
-        { id: 'a', name: 'Arroz', last_price: 1290, daysSincePurchase: 12 } as any,
+  describe('Catálogo (spec 0017)', () => {
+    beforeEach(async () => {
+      catalog.findByFamily.mockResolvedValue([
+        { id: 'a', name: 'Arroz', last_purchased_at: null },
+        { id: 'b', name: 'Café molido', last_purchased_at: null },
+        { id: 'c', name: 'Champiñones', last_purchased_at: null },
       ]);
+      await facade.loadProducts();
     });
 
-    it('persiste el precio sin tocar la fecha de compra', async () => {
-      expect(await facade.updatePrice('a', 1990)).toBe(true);
-
-      expect(catalog.updatePrice).toHaveBeenCalledWith('a', 1990);
-      expect(facade.products()[0]).toMatchObject({ last_price: 1990, daysSincePurchase: 12 });
+    it('filtra mientras se escribe, sin tildes ni mayúsculas (AC9)', () => {
+      facade.query.set('CHAMPI');
+      expect(facade.filtered().map((p) => p.id)).toEqual(['c']);
+      facade.query.set('');
+      expect(facade.filtered()).toHaveLength(3);
     });
 
-    it('no guarda si el precio no cambió', async () => {
-      expect(await facade.updatePrice('a', 1290)).toBe(false);
-
-      expect(catalog.updatePrice).not.toHaveBeenCalled();
+    it('"Archivados" carga solo los archivados (AC7)', async () => {
+      await facade.showArchived(true);
+      expect(catalog.findByFamily).toHaveBeenLastCalledWith('fam-1', undefined, { archived: true });
+      expect(facade.archived()).toBe(true);
     });
 
-    it('no toca el estado local si la BD falla (devuelve false para que la página avise)', async () => {
-      catalog.updatePrice.mockRejectedValue(new Error('rls'));
+    it('al volver a la pestaña refresca sin mostrar el skeleton', async () => {
+      const loading: boolean[] = [];
+      catalog.findByFamily.mockImplementation(async () => {
+        loading.push(facade.isLoading());
+        return [];
+      });
+      await facade.loadProducts();
+      expect(loading).toEqual([false]);
+    });
 
-      expect(await facade.updatePrice('a', 1990)).toBe(false);
+    it('crear devuelve el id del nuevo producto', async () => {
+      expect(await facade.create('  Sal de mar ')).toBe('p-new');
+      expect(catalog.create).toHaveBeenCalledWith({ name: 'Sal de mar', familyId: 'fam-1' });
+    });
 
-      expect(facade.products()[0].last_price).toBe(1290);
+    it('crear uno que ya existe devuelve el existente sin duplicar', async () => {
+      catalog.findIdByName.mockResolvedValue('a');
+      expect(await facade.create('arroz')).toBe('a');
+      expect(catalog.create).not.toHaveBeenCalled();
+    });
+
+    it('crear sin nombre no hace nada', async () => {
+      expect(await facade.create('   ')).toBeNull();
     });
   });
 

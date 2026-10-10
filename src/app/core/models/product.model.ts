@@ -9,6 +9,8 @@ export interface Product {
   last_purchased_at?: string | null;
   /** "Todavía tengo": no sugerir reponer hasta esta fecha (spec 0014). */
   restock_snoozed_until?: string | null;
+  /** Archivado: fuera del buscador, del Catálogo y de las sugerencias (spec 0017 D3). */
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 }

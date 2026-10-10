@@ -26,6 +26,18 @@ describe('ProductsRepository', () => {
     expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
     expect(q.order).toHaveBeenCalledWith('name');
     expect(q.limit).toHaveBeenCalledWith(8);
+    // Los archivados no salen en el catálogo ni en los esenciales (spec 0017 D3).
+    expect(q.is).toHaveBeenCalledWith('archived_at', null);
+  });
+
+  it('findByFamily con archived trae solo los archivados', async () => {
+    const q = queryMock({ data: [] });
+    mock.shop.from.mockReturnValue(q);
+
+    await repo.findByFamily('fam-1', undefined, { archived: true });
+
+    expect(q.not).toHaveBeenCalledWith('archived_at', 'is', null);
+    expect(q.is).not.toHaveBeenCalled();
   });
 
   it('findByFamily sin límite no llama a limit', async () => {
@@ -44,6 +56,63 @@ describe('ProductsRepository', () => {
 
     expect(q.ilike).toHaveBeenCalledWith('name', '%lec%');
     expect(q.limit).toHaveBeenCalledWith(20);
+    expect(q.is).toHaveBeenCalledWith('archived_at', null);
+  });
+
+  describe('ficha de producto (spec 0017)', () => {
+    it('findById trae un producto', async () => {
+      const q = queryMock({ data: { id: 'p1', name: 'Arroz' } });
+      mock.shop.from.mockReturnValue(q);
+
+      expect(await repo.findById('p1')).toEqual({ id: 'p1', name: 'Arroz' });
+      expect(q.eq).toHaveBeenCalledWith('id', 'p1');
+      expect(q.maybeSingle).toHaveBeenCalled();
+    });
+
+    it('findPurchases trae lo marcado en compras cerradas con fecha y tiendas', async () => {
+      const row = {
+        quantity: 2,
+        unit_price: 1290,
+        list: { id: 'l1', completed_at: '2026-10-05T12:00:00Z', receipts: [{ store: 'Aroca' }] },
+      };
+      const q = queryMock({ data: [row] });
+      mock.shop.from.mockReturnValue(q);
+
+      expect(await repo.findPurchases('p1')).toEqual([row]);
+      expect(mock.shop.from).toHaveBeenCalledWith('list_items');
+      expect(q.select).toHaveBeenCalledWith(
+        'quantity, unit_price, list:shopping_lists!inner(id, completed_at, receipts(store))'
+      );
+      expect(q.eq).toHaveBeenCalledWith('product_id', 'p1');
+      expect(q.eq).toHaveBeenCalledWith('is_checked', true);
+      expect(q.eq).toHaveBeenCalledWith('list.status', 'completed');
+    });
+
+    it('rename, archive y unarchive actualizan el producto', async () => {
+      const q = queryMock({ data: [{ id: 'p1' }] });
+      mock.shop.from.mockReturnValue(q);
+
+      await repo.rename('p1', 'Arroz');
+      expect(q.update).toHaveBeenCalledWith(expect.objectContaining({ name: 'Arroz' }));
+      await repo.archive('p1');
+      expect(q.update).toHaveBeenCalledWith(
+        expect.objectContaining({ archived_at: expect.any(String) })
+      );
+      await repo.unarchive('p1');
+      expect(q.update).toHaveBeenCalledWith(expect.objectContaining({ archived_at: null }));
+    });
+
+    it('remove borra y lanza not_found si RLS no dejó borrar nada', async () => {
+      mock.shop.from.mockReturnValue(queryMock({ data: [] }));
+      await expect(repo.remove('p1')).rejects.toBeInstanceOf(MutationError);
+    });
+
+    it('merge llama a merge_products y devuelve las compras movidas', async () => {
+      mock.shop.rpc.mockResolvedValue({ data: 3, error: null });
+
+      expect(await repo.merge('p2', 'p1')).toBe(3);
+      expect(mock.shop.rpc).toHaveBeenCalledWith('merge_products', { p_from: 'p2', p_into: 'p1' });
+    });
   });
 
   it('create inserta (con precio opcional) y devuelve el producto', async () => {

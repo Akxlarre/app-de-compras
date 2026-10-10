@@ -61,6 +61,29 @@ export class ReceiptsRepository {
   }
 
   /** Textos de boleta ya confirmados por la familia (`shop.product_aliases`). */
+  /** Textos de boleta que reconocen a un producto (ficha, spec 0017 AC4). */
+  async findAliasesOf(productId: string): Promise<ReceiptAlias[]> {
+    const { data, error } = await this.db
+      .from('product_aliases')
+      .select('raw_text, product_id')
+      .eq('product_id', productId);
+    if (error) throw error;
+    return ((data ?? []) as { raw_text: string; product_id: string }[]).map((a) => ({
+      rawText: a.raw_text,
+      productId: a.product_id,
+    }));
+  }
+
+  /** Quita un texto equivocado: la próxima boleta ya no lo reconoce sola. */
+  async removeAlias(familyId: string, rawText: string): Promise<void> {
+    const { error } = await this.db
+      .from('product_aliases')
+      .delete()
+      .eq('family_id', familyId)
+      .eq('raw_text', rawText);
+    if (error) throw error;
+  }
+
   async findAliases(familyId: string): Promise<ReceiptAlias[]> {
     const { data, error } = await this.db
       .from('product_aliases')
