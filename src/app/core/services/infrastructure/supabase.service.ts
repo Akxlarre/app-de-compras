@@ -55,6 +55,11 @@ export class SupabaseService {
     return await this.supabase.auth.updateUser({ password });
   }
 
+  /** Datos del usuario en la sesión (p. ej. `display_name`, spec 0018). */
+  async updateUserMetadata(data: Record<string, unknown>) {
+    return await this.supabase.auth.updateUser({ data });
+  }
+
   // Auth
   async signUp(email: string, password: string, options?: { data?: Record<string, unknown> }) {
     return await this.supabase.auth.signUp({ email, password, options });

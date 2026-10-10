@@ -22,4 +22,13 @@ export class ProfilesRepository {
     if (error) throw error;
     return (data as ProfileRow | null) ?? null;
   }
+
+  /**
+   * Nombre propio (spec 0018): lo que ven los demás miembros de la familia. Va por la RPC
+   * `set_my_display_name` porque la policy de UPDATE de `profiles` es recursiva (42P17).
+   */
+  async updateDisplayName(name: string): Promise<void> {
+    const { error } = await this.supabase.client.rpc('set_my_display_name', { p_name: name });
+    if (error) throw error;
+  }
 }

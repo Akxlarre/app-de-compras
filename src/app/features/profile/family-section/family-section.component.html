@@ -85,9 +85,23 @@
       </ul>
     </div>
 
-    <!-- Unirse a otra familia -->
+    <!-- Unirse a otra familia: se usa una vez, va plegado (spec 0018 AC4) -->
     <div class="border-t border-border-subtle pt-3">
-      <p class="text-xs text-text-muted mb-2">¿Te invitaron a otra familia? Ingresa su código:</p>
+      <button
+        class="w-full flex items-center justify-between gap-2 text-left text-sm text-text-muted"
+        data-testid="toggle-unirme"
+        [attr.aria-expanded]="joinOpen()"
+        (click)="toggleJoin()"
+      >
+        ¿Te invitaron a otra familia?
+        <app-icon
+          [name]="joinOpen() ? 'chevron-up' : 'chevron-down'"
+          [size]="16"
+          [attr.aria-label]="joinOpen() ? 'Cerrar' : 'Abrir'"
+        />
+      </button>
+      @if (joinOpen()) {
+      <p class="text-xs text-text-muted mt-2 mb-2">Ingresa el código de esa familia:</p>
       <div class="flex gap-2">
         <input
           #joinInput
@@ -110,7 +124,7 @@
           Unirme
         </button>
       </div>
-      @if (joinError(); as message) {
+      } @if (joinError(); as message) {
       <p class="text-xs text-danger mt-2" role="alert" data-testid="join-error">{{ message }}</p>
       }
     </div>

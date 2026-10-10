@@ -7,6 +7,9 @@ import { ProfilesRepository, type ProfileRow } from '@core/repositories/profiles
 import { mapAuthError } from '@core/utils/auth-errors.utils';
 import { SessionScopeService } from '@core/services/auth/session-scope.service';
 
+const MAX_NAME = 40;
+const MIN_PASSWORD = 6;
+
 /** El error de GoTrue es por falta de red (no un rechazo de la sesión). */
 function isNetworkAuthError(error: { name?: string; status?: number } | null | undefined): boolean {
   if (!error) return false;
@@ -189,6 +192,52 @@ export class AuthFacade {
 
   setUser(user: User | null): void {
     this._currentUser.set(user);
+  }
+
+  /**
+   * Cambia el nombre propio (spec 0018): en `profiles` (lo que ve la familia) y en la sesión.
+   * Si el perfil no se pudo cambiar, no toca nada más.
+   */
+  async rename(input: string): Promise<{ ok: boolean; error?: string }> {
+    const name = input.trim();
+    const user = this._currentUser();
+    if (!user) return { ok: false };
+    if (!name || name.length > MAX_NAME) {
+      return { ok: false, error: `Escribe un nombre de 1 a ${MAX_NAME} caracteres.` };
+    }
+    try {
+      await this.profiles.updateDisplayName(name);
+    } catch (e) {
+      console.error('No se pudo cambiar el nombre:', e);
+      return { ok: false, error: 'No se pudo cambiar el nombre. Revisa tu conexión.' };
+    }
+    const { error } = await this.supabase.updateUserMetadata({ display_name: name });
+    if (error) console.error('El nombre de la sesión no se actualizó:', error);
+    this._currentUser.update((u) => (u ? { ...u, name, initials: initialsOf(name) } : u));
+    return { ok: true };
+  }
+
+  /**
+   * Cambia la contraseña estando dentro (spec 0018): verifica la actual antes de cambiarla.
+   */
+  async changePassword(
+    current: string,
+    next: string,
+    repeat: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    const email = this._currentUser()?.email;
+    if (!email) return { ok: false };
+    if (next !== repeat) return { ok: false, error: 'Las contraseñas nuevas no coinciden.' };
+    if (next.length < MIN_PASSWORD) {
+      return { ok: false, error: `La nueva debe tener al menos ${MIN_PASSWORD} caracteres.` };
+    }
+    if (next === current) return { ok: false, error: 'La nueva debe ser distinta de la actual.' };
+
+    const check = await this.supabase.signIn(email, current);
+    if (check.error) return { ok: false, error: 'La contraseña actual no es correcta.' };
+
+    const { error } = await this.supabase.updatePassword(next);
+    return error ? { ok: false, error: mapAuthError(error) } : { ok: true };
   }
 
   async updatePassword(password: string): Promise<{ error: Error | null }> {

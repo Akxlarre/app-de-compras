@@ -37,6 +37,13 @@ export class FamilySectionComponent implements OnInit {
 
   /** Por qué no se pudo unir (se muestra bajo el campo del código). */
   readonly joinError = signal<string | null>(null);
+  /** "¿Te invitaron a otra familia?": se usa una vez, va plegado (spec 0018 AC4). */
+  readonly joinOpen = signal(false);
+
+  toggleJoin(): void {
+    this.joinOpen.update((open) => !open);
+  }
+
   /** El botón de copiar muestra un check un momento. */
   readonly copied = signal(false);
 

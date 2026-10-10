@@ -9,6 +9,7 @@ describe('AppUpdateFacade', () => {
   let service: {
     getCurrentBuild: ReturnType<typeof vi.fn>;
     getLatestUpdate: ReturnType<typeof vi.fn>;
+    getCurrentVersion: ReturnType<typeof vi.fn>;
   };
   let toast: {
     success: ReturnType<typeof vi.fn>;
@@ -17,8 +18,14 @@ describe('AppUpdateFacade', () => {
     warning: ReturnType<typeof vi.fn>;
   };
 
-  function setup(opts: { build: number | null; latest?: unknown; falla?: boolean }) {
+  function setup(opts: {
+    build: number | null;
+    latest?: unknown;
+    falla?: boolean;
+    version?: string | null;
+  }) {
     service = {
+      getCurrentVersion: vi.fn().mockResolvedValue(opts.version ?? null),
       getCurrentBuild: vi.fn().mockResolvedValue(opts.build),
       getLatestUpdate: opts.falla
         ? vi.fn().mockRejectedValue(new Error('sin red'))
@@ -45,6 +52,17 @@ describe('AppUpdateFacade', () => {
   it('should be created', () => {
     setup({ build: 1 });
     expect(facade).toBeTruthy();
+  });
+
+  it('loadVersion expone la versión instalada; en la web queda null (spec 0018 AC5)', async () => {
+    setup({ build: 7, version: '1.0.7' });
+    await facade.loadVersion();
+    expect(facade.currentVersion()).toBe('1.0.7');
+
+    TestBed.resetTestingModule();
+    setup({ build: 1, version: null });
+    await facade.loadVersion();
+    expect(facade.currentVersion()).toBeNull();
   });
 
   // Antes: tocar "Buscar Actualizaciones" no respondía nada salvo que

@@ -18,7 +18,7 @@
 | `ProductsRepository` | `findByFamily(familyId, limit?, { archived })` (sin archivados por defecto), `searchByName(term, limit)` (sin archivados), `findById`, `findPurchases(productId)` (lo marcado en compras cerradas con fecha y tiendas), `create`, `findIdByName`, `updatePrice`, `rename`, `archive`, `unarchive`, `remove` (solo sin compras), `merge(from, into)` (RPC `merge_products`), `findRestockStats`, `snoozeRestock` | `products`; RPC `restock_stats` | `src/app/core/repositories/products.repository.ts` |
 | `ReceiptsRepository` | `extractReceipt(images, expectedItems)` → `OcrReceipt`, `uploadImage(familyId, file)` → ruta, `findAliases(familyId)`, `findAliasesOf(productId)`, `removeAlias(familyId, rawText)`, `applyReceipt(input)` → id de la boleta, `attachReceipt(input)`, `createReceiptPurchase(input, name?)`, `getSignedUrl(path)` (1 hora), `removeImage(path)` | Edge Function `process-receipt`; bucket privado `receipts`; `product_aliases`; RPC `apply_receipt`, `attach_receipt`, `create_receipt_purchase` | `src/app/core/repositories/receipts.repository.ts` Spec 0015: `p_receipt.lines` (todas las líneas → `purchase_lines`), `p_receipt.others` (las demás boletas de la salida) y `receipt_index`/`line_index` en los extras. |
 | `AppUpdatesRepository` | `findLatest(target)`, `getApkPublicUrl(path)` | `app_updates`, bucket `releases` | `src/app/core/repositories/app-updates.repository.ts` |
-| `ProfilesRepository` | `findById(id)` → `{ id, email, role_id }` | `profiles` | `src/app/core/repositories/profiles.repository.ts` |
+| `ProfilesRepository` | `findById(id)` → `{ id, email, role_id }`, `updateDisplayName(name)` (RPC `set_my_display_name`, spec 0018) | `profiles` | `src/app/core/repositories/profiles.repository.ts` |
 
 ## Quién usa qué
 

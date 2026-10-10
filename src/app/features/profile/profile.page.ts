@@ -4,8 +4,17 @@ import {
   inject,
   AfterViewInit,
   ElementRef,
+  OnInit,
 } from '@angular/core';
-import { IonContent, IonItem, IonLabel, IonList, IonSpinner } from '@ionic/angular';
+import {
+  AlertController,
+  IonContent,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonSpinner,
+} from '@ionic/angular';
+import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { AppUpdateFacade } from '@core/facades/app-update.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -31,19 +40,52 @@ import { FamilySectionComponent } from './family-section/family-section.componen
     <ion-content class="profile-content tier-trabajo" [fullscreen]="true">
       <app-header title="Perfil"></app-header>
       @if (auth.currentUser(); as user) {
-      <div class="profile-hero" data-anim="bloque">
-        <div class="avatar">
-          {{ user.initials }}
+      <!-- Encabezado en una fila (spec 0018 AC3) -->
+      <div class="profile-hero" data-anim="bloque" data-testid="perfil-encabezado">
+        <div class="avatar" aria-hidden="true">{{ user.initials }}</div>
+        <div class="who">
+          <h2 class="user-name">{{ user.name }}</h2>
+          <p class="user-email">{{ user.email }}</p>
         </div>
-        <h2 class="user-name">{{ user.name }}</h2>
-        <p class="user-email">{{ user.email }}</p>
+        <button
+          class="edit-name-btn"
+          aria-label="Editar mi nombre"
+          data-llm-action="actualizar-nombre"
+          (click)="editName()"
+        >
+          Editar
+        </button>
       </div>
 
       <app-family-section data-anim="bloque" />
 
       <div class="options-section" data-anim="bloque">
-        <p class="section-label">OPCIONES</p>
+        <p class="section-label">Cuenta</p>
         <ion-list class="options-list">
+          <ion-item
+            button
+            detail="false"
+            lines="none"
+            class="option-item"
+            data-llm-action="cambiar-contrasena"
+            (click)="changePassword()"
+          >
+            <app-icon
+              name="lock"
+              slot="start"
+              class="option-icon"
+              [size]="20"
+              [ariaHidden]="true"
+            />
+            <ion-label>Cambiar contraseña</ion-label>
+            <app-icon
+              name="chevron-right"
+              slot="end"
+              class="chevron-icon"
+              [size]="18"
+              [ariaHidden]="true"
+            />
+          </ion-item>
           <ion-item
             button
             detail="false"
@@ -58,7 +100,11 @@ import { FamilySectionComponent } from './family-section/family-section.componen
               [size]="20"
               [ariaHidden]="true"
             />
-            <ion-label>Buscar actualizaciones</ion-label>
+            <ion-label>
+              Buscar actualizaciones @if (updateFacade.currentVersion(); as version) {
+              <p class="version" data-testid="version">Versión {{ version }}</p>
+              }
+            </ion-label>
             @if (updateFacade.isChecking()) {
             <ion-spinner slot="end" name="crescent" class="update-spinner"></ion-spinner>
             } @else {
@@ -92,43 +138,69 @@ import { FamilySectionComponent } from './family-section/family-section.componen
       /* Sin regla de fondo propia: la global de ion-content ya pinta la
          tinta (fix-028). */
 
+      /* Una fila: la familia empieza arriba, no en y≈350 (spec 0018, P2). */
       .profile-hero {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        padding: 2rem 1rem 2.5rem 1rem;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem 1rem 1rem;
       }
 
-      /* Ember sólido con iniciales en tinta: 7.0:1, el mismo par del chip
-         activo. Antes iban en blanco sobre un degradé ember a carmesí
-         (2.9:1 en el extremo ember) con un resplandor azul del branding
-         anterior. Es el único acento de marca decorativo de la vista. */
+      /* Ember sólido con iniciales en tinta: 7.0:1, el mismo par del chip activo. Es el único
+         acento de marca decorativo de la vista. */
       .avatar {
-        width: 88px;
-        height: 88px;
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
         border-radius: 50%;
         background: var(--ds-brand);
         color: var(--color-primary-text);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 2rem;
+        font-size: 1.1rem;
         font-weight: 700;
-        margin-bottom: 1rem;
       }
 
-      /* Anton deja de leerse bajo 28px; medía 24. */
+      .who {
+        flex: 1;
+        min-width: 0;
+      }
+
       .user-name {
-        margin: 0 0 0.25rem 0;
-        font-family: var(--font-display);
-        font-size: var(--font-display-floor);
+        margin: 0;
+        font-size: var(--text-lg);
         font-weight: 700;
         color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .user-email {
         margin: 0;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .edit-name-btn {
+        flex-shrink: 0;
+        min-height: var(--target-min);
+        padding: 0 0.75rem;
+        border-radius: var(--radius-full);
+        border: 1px solid var(--border-default);
+        background: transparent;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .version {
+        margin: 2px 0 0 0;
+        font-size: var(--text-xs);
         color: var(--text-muted);
       }
 
@@ -138,10 +210,8 @@ import { FamilySectionComponent } from './family-section/family-section.componen
 
       /* Medía 12px, bajo el piso de 13. */
       .section-label {
-        font-size: var(--text-xs);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        font-size: var(--text-sm);
+        font-weight: 700;
         color: var(--text-muted);
         padding: 0 4px;
         margin: 0 0 0.5rem 0;
@@ -218,11 +288,17 @@ import { FamilySectionComponent } from './family-section/family-section.componen
     `,
   ],
 })
-export class ProfilePage implements AfterViewInit {
+export class ProfilePage implements OnInit, AfterViewInit {
   auth = inject(AuthFacade);
   updateFacade = inject(AppUpdateFacade);
   gsap = inject(GsapAnimationsService);
   private host = inject(ElementRef<HTMLElement>);
+  private alerts = inject(AlertController);
+  private toast = inject(ToastService);
+
+  ngOnInit(): void {
+    this.updateFacade.loadVersion();
+  }
 
   ngAfterViewInit() {
     // Acotado al host: Ionic mantiene otras vistas en el DOM, y el
@@ -236,5 +312,73 @@ export class ProfilePage implements AfterViewInit {
 
   async logout() {
     await this.auth.logout();
+  }
+
+  /** Nombre propio (spec 0018 AC1): lo ven los demás miembros de la familia. */
+  async editName(): Promise<void> {
+    const name = await this.ask<string>({
+      header: 'Tu nombre',
+      message: 'Lo ven los demás miembros de tu familia (también en Entrenamiento).',
+      inputs: [
+        {
+          name: 'name',
+          type: 'text',
+          value: this.auth.currentUser()?.name ?? '',
+          attributes: { maxlength: 40 },
+        },
+      ],
+      confirm: 'Guardar',
+      value: (data?: { name?: string }) => data?.name ?? '',
+    });
+    if (name === null) return;
+    const result = await this.auth.rename(name);
+    if (result.ok) this.toast.success('Nombre actualizado');
+    else if (result.error) this.toast.warning('No se cambió el nombre', result.error);
+  }
+
+  /** Cambiar contraseña estando dentro (spec 0018 AC2). */
+  async changePassword(): Promise<void> {
+    const data = await this.ask<{ current?: string; next?: string; repeat?: string }>({
+      header: 'Cambiar contraseña',
+      message: 'También cambia la de Entrenamiento: es la misma cuenta.',
+      inputs: [
+        { name: 'current', type: 'password', placeholder: 'Contraseña actual' },
+        { name: 'next', type: 'password', placeholder: 'Nueva (mínimo 6)' },
+        { name: 'repeat', type: 'password', placeholder: 'Repite la nueva' },
+      ],
+      confirm: 'Cambiar',
+      value: (d?: { current?: string; next?: string; repeat?: string }) => d ?? {},
+    });
+    if (data === null) return;
+    const result = await this.auth.changePassword(
+      data.current ?? '',
+      data.next ?? '',
+      data.repeat ?? ''
+    );
+    if (result.ok) this.toast.success('Contraseña cambiada');
+    else if (result.error) this.toast.warning('No se cambió la contraseña', result.error);
+  }
+
+  /** Alerta con inputs y un botón que resuelve un valor, más "Cancelar" (resuelve null). */
+  private ask<T>(opts: {
+    header: string;
+    message?: string;
+    inputs: { name: string; type: 'text' | 'password'; value?: string; placeholder?: string; attributes?: object }[];
+    confirm: string;
+    value: (data?: any) => T;
+  }): Promise<T | null> {
+    return new Promise<T | null>(async (resolve) => {
+      const alert = await this.alerts.create({
+        header: opts.header,
+        message: opts.message,
+        inputs: opts.inputs,
+        buttons: [
+          { text: 'Cancelar', role: 'cancel', cssClass: 'alert-cancel-btn', handler: () => resolve(null) },
+          { text: opts.confirm, role: 'confirm', handler: (data?: unknown) => resolve(opts.value(data)) },
+        ],
+      });
+      alert.onDidDismiss().then(() => resolve(null));
+      await alert.present();
+    });
   }
 }
