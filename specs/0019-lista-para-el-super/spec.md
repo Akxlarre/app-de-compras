@@ -1,6 +1,6 @@
 > id: 0019-lista-para-el-super
 > refs: `docs/RECORRIDO-UX.md` §1 Mi Lista (F3, F4, F5), §3 Catálogo (H4, K8) y §6 (paso 6, extras).
-> status: approved (D1–D5 confirmadas el 2026-10-10)
+> status: done (2026-10-10; D1–D5 confirmadas el mismo día)
 > created: 2026-10-10
 
 ## Problema
@@ -44,13 +44,21 @@ compra sin boleta:
 - [x] AC5. Migración en `plataforma-db` (columna de unidad y pasillo con valores válidos, más
   backfill por palabras clave) con pgTAP.
 - [x] AC6. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
-- [ ] AC7. Verificado en staging a 375×667: lista agrupada, unidades, precio al marcar y cierre sin
+- [x] AC7. Verificado en staging a 375×667: lista agrupada, unidades, precio al marcar y cierre sin
   boleta con esos precios.
 
-## Avance (2026-10-10)
-- AC5: migración `20261010030000_shop_aisles_units` + pgTAP `shop_aisles_units` (16) en la rama
-  `feat/shop-aisles-units` de plataforma-db; todas las migraciones y tests pasan en Postgres local.
-- AC6: 792 tests, `lint:arch` sin errores, `ng build` sin avisos.
-- AC7 pendiente: staging todavía no tiene la migración (se aplica al mergear en plataforma-db). Sin ella
-  se revisó el diseño: lista "Por pasillo" (todo en "Otros" hasta el backfill), barra "¿Precio?" al
-  marcar y hoja de detalle (unidad kg, 1,5) sobre la barra de pestañas.
+## Cierre (2026-10-10)
+- AC5: migración `20261010030000_shop_aisles_units` con pgTAP `shop_aisles_units` (16 tests),
+  mergeada en plataforma-db #20 y desplegada en staging.
+- AC6: 792 tests, `lint:arch` sin errores y `ng build` sin avisos.
+- AC7, verificado en staging a 375×667 con `test5`:
+  - el backfill dejó Leche en Lácteos y huevos, Champiñones en Frutas y verduras, Pan en Panadería
+    y Palmitos en Otros;
+  - "Por pasillo" y "Como la agregué" funcionan, y la elección se mantiene al recargar;
+  - "¿Precio?" al marcar guardó $1.990;
+  - el detalle del ítem cambió Leche a 1,5 kg, y la fila muestra "1,5 kg · $1.990/kg";
+  - el Total estimado es $4.475 (1,5 × 1.990 + 1.490);
+  - el cierre "sin boleta" trae "Leche × 1,5 kg" con $1.990 y Champiñones con $1.490;
+  - la ficha muestra "Pasillo: Lácteos y huevos".
+- Arreglo durante la verificación: el cierre sin boleta mostraba "× 1.5"; ahora usa
+  `formatQuantity` ("× 1,5 kg").

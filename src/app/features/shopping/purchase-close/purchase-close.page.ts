@@ -14,6 +14,7 @@ import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import type { LineDecision, MatchCandidate } from '@core/models/receipt.model';
 import { groupDecisions, type DecisionGroup } from '@core/utils/close-groups.utils';
 import { formatAmount, totalDifference } from '@core/utils/price.utils';
+import { formatQuantity } from '@core/utils/units.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -129,6 +130,8 @@ export class PurchaseClosePage implements OnInit {
 
   /** Montos con separador de miles mientras se escriben; el `$` va fijo a la izquierda (Q32). */
   readonly formatAmount = formatAmount;
+  /** "1,5 kg" en las filas del cierre sin boleta (spec 0019 D4). */
+  readonly formatQuantity = formatQuantity;
   readonly abs = Math.abs;
 
   /** Total pagado − suma de precios, si ambos existen y no calzan (Q32). */
