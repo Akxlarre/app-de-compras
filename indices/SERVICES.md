@@ -9,11 +9,11 @@
 | `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
 | `RoleService` | — | `src/app/core/services/auth/role.service.ts` |
 | `SessionScopeService` | — | `src/app/core/services/auth/session-scope.service.ts` |
-| `FileExportService` | — | `src/app/core/services/file-export.service.ts` |
+| `FileExportService` | — | `src/app/core/services/file-export.service.ts` — `saveCsv()`: en el teléfono lo abre con `FileOpener`, en la web lo descarga (spec 0026) |
 | `NetworkStatusService` | `DestroyRef` | `src/app/core/services/infrastructure/network-status.service.ts` |
 | `OfflineStoreService` | `SessionScopeService` | `src/app/core/services/infrastructure/offline-store.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
-| `ShareService` | — | `src/app/core/services/share.service.ts` |
+| `ShareService` | — | `src/app/core/services/share.service.ts` — `openWhatsApp(text)` con `wa.me`; si no abre, copia el texto (spec 0024) |
 | `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
 | `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
 | `GsapAnimationsService` | `PLATFORM_ID`, `NgZone` | `src/app/core/services/ui/gsap-animations.service.ts` |
@@ -25,7 +25,7 @@
 | `SearchPanelFacadeService` | `SearchPanelFacadeService` | `src/app/core/services/ui/search-panel.service.ts` |
 | `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `MessageService` | `src/app/core/services/ui/theme.service.ts` |
 | `ToastService` | `MessageService`, `ToastController` | `src/app/core/services/ui/toast.service.ts` |
-| `WakeLockService` | — | `src/app/core/services/wake-lock.service.ts` |
+| `WakeLockService` | — | `src/app/core/services/wake-lock.service.ts` — `keepScreenOn()`/`release()` con la Screen Wake Lock API (spec 0025) |
 
 <!-- AUTO-GENERATED:END -->
 
