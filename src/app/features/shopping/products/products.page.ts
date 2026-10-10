@@ -1,6 +1,8 @@
 import { Component, ChangeDetectionStrategy, computed, inject } from '@angular/core';
-import { NavController } from '@ionic/angular';
+import { ActionSheetController, NavController } from '@ionic/angular';
 import { ProductsFacade } from '@core/facades/products.facade';
+import { AISLES } from '@core/models/product.model';
+import type { CatalogOrder } from '@core/utils/catalog.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -11,8 +13,14 @@ import { formatDaysAgo } from '@core/utils/date.utils';
 import { matchesSearch } from '@core/utils/product-sheet.utils';
 import { ToastService } from '@core/services/ui/toast.service';
 
+const ORDER_LABELS: Record<CatalogOrder, string> = {
+  name: 'A–Z',
+  most: 'Más comprados',
+  oldest: 'Hace más tiempo',
+};
+
 /**
- * Catálogo (spec 0017): buscador que filtra al escribir, "Crear «texto»", activos o archivados y
+ * Catálogo (spec 0017; orden y filtros, spec 0022): buscador que filtra al escribir, "Crear «texto»", activos o archivados y
  * cada producto abre su ficha. El precio es el último pagado y no se edita en la fila (D5).
  */
 @Component({
@@ -82,7 +90,43 @@ import { ToastService } from '@core/services/ui/toast.service';
             </div>
           </div>
 
-          @if (canCreate()) {
+          @if (!facade.archived()) {
+          <!-- Orden y filtros (spec 0022) -->
+          <div class="flex gap-2 overflow-x-auto -mx-4 px-4 text-sm" data-testid="filtros-catalogo">
+            <button
+              class="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border border-border-default text-text-primary"
+              data-testid="orden"
+              (click)="pickOrder()"
+            >
+              {{ orderLabel() }}
+              <app-icon name="chevron-down" [size]="14" [attr.aria-label]="'Elegir orden'" />
+            </button>
+            <button
+              class="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border"
+              [class.border-border-default]="!facade.aisle()"
+              [class.text-text-primary]="!facade.aisle()"
+              [class.border-brand]="!!facade.aisle()"
+              [class.text-brand]="!!facade.aisle()"
+              data-testid="filtro-pasillo"
+              (click)="pickAisle()"
+            >
+              {{ facade.aisle() ?? 'Pasillo' }}
+              <app-icon name="chevron-down" [size]="14" [attr.aria-label]="'Elegir pasillo'" />
+            </button>
+            <button
+              class="shrink-0 px-3 py-1.5 rounded-full border"
+              [class.border-border-default]="!facade.noPrice()"
+              [class.text-text-primary]="!facade.noPrice()"
+              [class.border-brand]="facade.noPrice()"
+              [class.text-brand]="facade.noPrice()"
+              [attr.aria-pressed]="facade.noPrice()"
+              data-testid="filtro-sin-precio"
+              (click)="facade.noPrice.set(!facade.noPrice())"
+            >
+              Sin precio
+            </button>
+          </div>
+          } @if (canCreate()) {
           <button
             class="w-full flex items-center gap-3 p-4 bg-surface border border-dashed border-border-default rounded-2xl text-left active:scale-[0.99] transition-transform"
             data-llm-action="crear-producto"
@@ -114,6 +158,20 @@ import { ToastService } from '@core/services/ui/toast.service';
                 : 'Busca arriba para crear uno, o escanea una boleta: lo comprado queda aquí.'
             "
           />
+          } @else if (facade.filtered().length === 0 && facade.hasFilters()) {
+          <div
+            class="flex flex-col items-center gap-3 py-8 text-center"
+            data-testid="sin-resultados"
+          >
+            <p class="text-sm text-text-muted">Nada con estos filtros.</p>
+            <button
+              class="text-sm font-semibold text-brand"
+              data-testid="quitar-filtros"
+              (click)="facade.clearFilters()"
+            >
+              Quitar filtros
+            </button>
+          </div>
           } @else {
           <ul class="flex flex-col gap-2">
             @for (product of facade.filtered(); track product.id) {
@@ -159,6 +217,7 @@ export class ProductsPage {
   readonly facade = inject(ProductsFacade);
   private readonly nav = inject(NavController);
   private readonly toast = inject(ToastService);
+  private readonly sheets = inject(ActionSheetController);
 
   /** "Crear «texto»": hay algo escrito y ningún producto se llama exactamente así. */
   readonly canCreate = computed(() => {
@@ -181,6 +240,43 @@ export class ProductsPage {
       : 'productos';
     return shown === total ? `${total} ${noun}` : `${shown} de ${total} ${noun}`;
   });
+
+  // ── Orden y filtros (spec 0022) ────────────────────────────────────────────
+  readonly orderLabel = computed(() => ORDER_LABELS[this.facade.order()]);
+
+  async pickOrder(): Promise<void> {
+    const current = this.facade.order();
+    const sheet = await this.sheets.create({
+      header: 'Ordenar',
+      buttons: [
+        ...(Object.keys(ORDER_LABELS) as CatalogOrder[]).map((o) => ({
+          text: o === current ? `${ORDER_LABELS[o]} (actual)` : ORDER_LABELS[o],
+          handler: () => this.facade.order.set(o),
+        })),
+        { text: 'Cancelar', role: 'cancel' },
+      ],
+    });
+    await sheet.present();
+  }
+
+  async pickAisle(): Promise<void> {
+    const current = this.facade.aisle();
+    const sheet = await this.sheets.create({
+      header: 'Pasillo',
+      buttons: [
+        {
+          text: current === null ? 'Todos (actual)' : 'Todos',
+          handler: () => this.facade.aisle.set(null),
+        },
+        ...AISLES.map((a) => ({
+          text: a === current ? `${a} (actual)` : a,
+          handler: () => this.facade.aisle.set(a),
+        })),
+        { text: 'Cancelar', role: 'cancel' },
+      ],
+    });
+    await sheet.present();
+  }
 
   /** Cada vez que se entra (Ionic deja la pestaña en caché): vuelve de una ficha con cambios. */
   ionViewWillEnter(): void {

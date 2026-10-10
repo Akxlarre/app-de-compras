@@ -18,3 +18,4 @@ export * from './product-sheet.utils';
 export * from './price-insights.utils';
 export * from './aisles.utils';
 export * from './units.utils';
+export * from './catalog.utils';

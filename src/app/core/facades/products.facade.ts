@@ -4,7 +4,8 @@ import { FamilyRepository } from '../repositories/family.repository';
 import { ProductsRepository } from '../repositories/products.repository';
 import { SessionScopeService } from '../services/auth/session-scope.service';
 import { daysSince } from '../utils/date.utils';
-import { matchesSearch } from '../utils/product-sheet.utils';
+import type { Aisle } from '../models/product.model';
+import { filterCatalog, sortCatalog, type CatalogOrder } from '../utils/catalog.utils';
 
 export interface ProductWithStatus extends Product {
   /** Días desde la última compra finalizada; null si nunca se compró. */
@@ -24,10 +25,31 @@ export class ProductsFacade {
   readonly query = signal('');
   readonly archived = signal(false);
 
-  /** Los productos que coinciden con el buscador (sin tildes ni mayúsculas). */
-  readonly filtered = computed(() =>
-    this.products().filter((p) => matchesSearch(p.name, this.query()))
-  );
+  /** Orden del Catálogo (spec 0022 D1); vale mientras la app está abierta. */
+  readonly order = signal<CatalogOrder>('name');
+  /** Pasillo elegido; null = todos (spec 0022 D2). */
+  readonly aisle = signal<Aisle | null>(null);
+  readonly noPrice = signal(false);
+  /** Compras por producto (`restock_stats`), para "Más comprados". */
+  private readonly counts = signal<ReadonlyMap<string, number>>(new Map());
+
+  readonly hasFilters = computed(() => this.noPrice() || this.aisle() !== null);
+
+  /** Buscador + filtros + orden; en Archivados, solo el buscador y A–Z. */
+  readonly filtered = computed(() => {
+    const archived = this.archived();
+    const list = filterCatalog(this.products(), {
+      query: this.query(),
+      aisle: archived ? null : this.aisle(),
+      noPrice: !archived && this.noPrice(),
+    });
+    return sortCatalog(list, archived ? 'name' : this.order(), this.counts());
+  });
+
+  clearFilters(): void {
+    this.noPrice.set(false);
+    this.aisle.set(null);
+  }
 
   constructor() {
     inject(SessionScopeService).register(() => this.reset());
@@ -39,6 +61,9 @@ export class ProductsFacade {
     this.error.set(null);
     this.query.set('');
     this.archived.set(false);
+    this.order.set('name');
+    this.clearFilters();
+    this.counts.set(new Map());
   }
 
   /** Carga el catálogo; con datos ya cargados refresca sin skeleton (al volver de una ficha). */
@@ -48,9 +73,12 @@ export class ProductsFacade {
 
     try {
       const familyId = await this.family.getOrCreateFamilyId();
-      const rows = await this.catalog.findByFamily(familyId, undefined, {
-        archived: this.archived(),
-      });
+      const [rows, stats] = await Promise.all([
+        this.catalog.findByFamily(familyId, undefined, { archived: this.archived() }),
+        // Sin estadísticas el Catálogo funciona igual ("Más comprados" queda como A–Z).
+        this.catalog.findRestockStats().catch(() => []),
+      ]);
+      this.counts.set(new Map(stats.map((s) => [s.product_id, s.purchase_count])));
 
       this.products.set(
         rows.map((p) => ({
