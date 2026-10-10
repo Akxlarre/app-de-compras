@@ -291,7 +291,7 @@ export class ActiveListPage implements OnInit {
   async clearList() {
     const confirmed = await this.choose<boolean>(
       '¿Vaciar la lista?',
-      'Se quitan todos los productos. No queda nada en el Historial.',
+      'Se quitan todos los productos. No queda nada en Compras.',
       [{ text: 'Vaciar', value: true, role: 'destructive' }]
     );
     if (confirmed) await this.facade.clearList();
@@ -399,9 +399,5 @@ export class ActiveListPage implements OnInit {
       alert.onDidDismiss().then(() => resolve(null));
       await alert.present();
     });
-  }
-
-  openHistory() {
-    this.nav.navigateForward('/app/history');
   }
 }

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { NavController } from '@ionic/angular';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { PurchaseCloseFacade } from './purchase-close.facade';
 import { FamilyRepository } from '../repositories/family.repository';
@@ -63,6 +64,7 @@ describe('PurchaseCloseFacade', () => {
   let receipts: Record<string, ReturnType<typeof vi.fn>>;
   let products: { findByFamily: ReturnType<typeof vi.fn> };
   let toast: Record<string, ReturnType<typeof vi.fn>>;
+  let nav: { navigateForward: ReturnType<typeof vi.fn> };
   const file = new File(['foto'], 'boleta.jpg', { type: 'image/jpeg' });
 
   beforeEach(() => {
@@ -85,7 +87,8 @@ describe('PurchaseCloseFacade', () => {
         { id: 'p-cafe', name: 'Café molido' },
       ]),
     };
-    toast = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
+    toast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), action: vi.fn() };
+    nav = { navigateForward: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -98,9 +101,102 @@ describe('PurchaseCloseFacade', () => {
         { provide: ReceiptsRepository, useValue: receipts },
         { provide: ProductsRepository, useValue: products },
         { provide: ToastService, useValue: toast },
+        { provide: NavController, useValue: nav },
       ],
     });
     facade = TestBed.inject(PurchaseCloseFacade);
+  });
+
+  describe('origen y lectura en segundo plano (spec 0016 D3, D6)', () => {
+    const ok = {
+      store: 'Aroca',
+      date: '2026-10-05',
+      total: 1000,
+      lines: [line({ raw_text: 'LECHE' })],
+    };
+
+    it('recuerda de dónde se vino para volver ahí; reset vuelve a Mi Lista', () => {
+      facade.start(list, true, 'receipt', 'active', 'purchases');
+      expect(facade.origin()).toBe('purchases');
+      facade.startNew('purchases');
+      expect(facade.origin()).toBe('purchases');
+      facade.reset();
+      expect(facade.origin()).toBe('active');
+      facade.start(list, true, 'receipt');
+      expect(facade.origin()).toBe('active');
+    });
+
+    it('si el cierre está a la vista al terminar de leer, no avisa', async () => {
+      facade.start(list, true, 'receipt');
+      facade.setVisible(true);
+      receipts['extractReceipt'].mockResolvedValue(ok);
+      await facade.scan([file]);
+      expect(toast['action']).not.toHaveBeenCalled();
+    });
+
+    it('si se salió del cierre, al terminar avisa "Tu boleta está lista" y "Ver" vuelve', async () => {
+      facade.start(list, true, 'receipt');
+      facade.setVisible(false);
+      receipts['extractReceipt'].mockResolvedValue(ok);
+      await facade.scan([file]);
+
+      expect(toast['action']).toHaveBeenCalledWith(
+        'Tu boleta está lista',
+        'Ver',
+        expect.any(Function)
+      );
+      toast['action'].mock.calls[0][2]();
+      expect(nav.navigateForward).toHaveBeenCalledWith('/app/close');
+      expect(facade.decisions()).toHaveLength(1);
+    });
+
+    it('si falla fuera del cierre también avisa, para reintentar', async () => {
+      facade.start(list, true, 'receipt');
+      facade.setVisible(false);
+      receipts['extractReceipt'].mockRejectedValue(new Error('timeout'));
+      await facade.scan([file]);
+      expect(toast['action']).toHaveBeenCalledWith(
+        'No pudimos leer la boleta',
+        'Ver',
+        expect.any(Function)
+      );
+    });
+
+    it('mientras lee muestra la foto como data: (la CSP no deja blob:)', async () => {
+      facade.start(list, true, 'receipt');
+      let release!: (v: unknown) => void;
+      receipts['extractReceipt'].mockReturnValue(new Promise((r) => (release = r)));
+      const reading = facade.scan([file]);
+      await vi.waitFor(() => expect(facade.previewUrl()).toMatch(/^data:image\/jpeg;base64,/));
+      release(ok);
+      await reading;
+      facade.reset();
+      expect(facade.previewUrl()).toBeNull();
+    });
+
+    it('una lectura de un cierre cancelado no pisa al siguiente ni avisa', async () => {
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue(ok);
+      const reading = facade.scan([file]);
+      facade.startNew('purchases');
+      await reading;
+
+      expect(facade.decisions()).toEqual([]);
+      expect(facade.kind()).toBe('new');
+      expect(toast['action']).not.toHaveBeenCalled();
+    });
+
+    it('hasOpenReceipt: hay una boleta leyéndose o leída sin cerrar', async () => {
+      expect(facade.hasOpenReceipt()).toBe(false);
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue(ok);
+      const reading = facade.scan([file]);
+      expect(facade.hasOpenReceipt()).toBe(true);
+      await reading;
+      expect(facade.hasOpenReceipt()).toBe(true);
+      facade.reset();
+      expect(facade.hasOpenReceipt()).toBe(false);
+    });
   });
 
   describe('sin boleta', () => {
@@ -368,6 +464,25 @@ describe('PurchaseCloseFacade', () => {
       await facade.addReceipt([file2]);
     });
 
+    it('se corrigen la tienda y la fecha de cada boleta y llegan al cierre (0016 AC12)', async () => {
+      facade.setReceiptMeta(1, { store: 'Pedregal Concepción', date: '2026-10-04' });
+      facade.setReceiptMeta(0, { date: '2026-10-06' });
+
+      expect(facade.receiptSummaries().map((r) => [r.store, r.date])).toEqual([
+        ['Aroca', '2026-10-06'],
+        ['Pedregal Concepción', '2026-10-04'],
+      ]);
+      expect(facade.receipt()?.store).toBe('Aroca · Pedregal Concepción');
+      facade.setMissingBought('i-pan', true);
+      await facade.confirmReceipt();
+      const input = receipts['applyReceipt'].mock.calls[0][0];
+      expect(input.purchasedAt).toBe('2026-10-06');
+      expect(input.others[0]).toMatchObject({
+        store: 'Pedregal Concepción',
+        purchasedAt: '2026-10-04',
+      });
+    });
+
     it('la segunda boleta se suma: tiendas, total y líneas seguidas', () => {
       expect(facade.receiptCount()).toBe(2);
       expect(facade.receipt()).toMatchObject({ store: 'Aroca · Pedregal', total: 3800 });
@@ -397,6 +512,33 @@ describe('PurchaseCloseFacade', () => {
       expect(input.extras).toEqual([
         expect.objectContaining({ name: 'Té verde', receiptIndex: 1, lineIndex: 1 }),
       ]);
+    });
+
+    it('resume cada boleta: tienda, total y si trae detalle (fix-049, E8)', async () => {
+      receipts['extractReceipt'].mockResolvedValueOnce({
+        store: 'Feria',
+        date: null,
+        total: 22800,
+        lines: [],
+      });
+      await facade.addReceipt([file2]);
+
+      expect(facade.receiptSummaries()).toEqual([
+        { store: 'Aroca', date: '2026-10-05', total: 2200, noDetail: false },
+        { store: 'Pedregal', date: '2026-10-05', total: 1600, noDetail: false },
+        { store: 'Feria', date: null, total: 22800, noDetail: true },
+      ]);
+    });
+
+    it('"Guardar todos en el catálogo" marca y desmarca solo lo nuevo (fix-049, E6)', () => {
+      facade.saveAllToCatalog(true);
+      expect(facade.decisions().map((d) => [d.rawText, d.saveToCatalog])).toEqual([
+        ['LECHE', false],
+        ['PAN', false],
+        ['TE VERDE', true],
+      ]);
+      facade.saveAllToCatalog(false);
+      expect(facade.decisions().some((d) => d.saveToCatalog)).toBe(false);
     });
 
     it('solo al cerrar la lista activa se pueden agregar boletas', () => {

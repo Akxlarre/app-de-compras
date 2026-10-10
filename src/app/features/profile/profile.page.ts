@@ -58,7 +58,7 @@ import { FamilySectionComponent } from './family-section/family-section.componen
               [size]="20"
               [ariaHidden]="true"
             />
-            <ion-label>Buscar Actualizaciones</ion-label>
+            <ion-label>Buscar actualizaciones</ion-label>
             @if (updateFacade.isChecking()) {
             <ion-spinner slot="end" name="crescent" class="update-spinner"></ion-spinner>
             } @else {
@@ -77,7 +77,7 @@ import { FamilySectionComponent } from './family-section/family-section.componen
       <div class="logout-section" data-anim="bloque">
         <button class="logout-btn" (click)="logout()">
           <app-icon name="log-out" [size]="20" [ariaHidden]="true" />
-          Cerrar Sesión
+          Cerrar sesión
         </button>
       </div>
       } @else {

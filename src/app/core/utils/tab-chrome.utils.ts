@@ -1,16 +1,15 @@
-/** Pestaña marcada y visibilidad de la barra para una URL (spec 0013). */
+/** Pestaña marcada y visibilidad de la barra para una URL (spec 0013, 0016). */
 export interface TabChrome {
   tab: string | null;
   hideBar: boolean;
 }
 
-const TABS = ['active', 'receipt', 'products', 'profile'];
+const TABS = ['active', 'purchases', 'products', 'profile'];
 
 /** Pantallas que no son pestaña: a cuál pertenecen y si ocultan la barra. */
 const SUB_PAGES: Record<string, TabChrome> = {
-  history: { tab: 'active', hideBar: false },
-  // El cierre es un flujo: sin barra que invite a salir a mitad (Q34).
-  close: { tab: 'active', hideBar: true },
+  // El cierre es un flujo: sin barra que invite a salir a mitad (Q34, 0016 D3).
+  close: { tab: 'purchases', hideBar: true },
 };
 
 export function tabChromeFor(url: string): TabChrome {

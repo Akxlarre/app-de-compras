@@ -5,40 +5,47 @@
     @if (!close.list()) {
     <app-empty-state
       icon="shopping-cart"
-      message="No hay una compra activa"
-      subtitle="La boleta cierra una compra: marca lo que compraste en Mi Lista y toca Finalizar."
-      actionLabel="Ir a Mi Lista"
+      message="No hay una compra para cerrar"
+      subtitle="Escanea la boleta desde Compras o toca Finalizar en Mi Lista."
+      actionLabel="Volver"
       actionIcon="arrow-left"
       (action)="cancel()"
     />
     } @else {
     <div class="flex flex-col gap-5 mt-2">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between gap-3">
         <!-- Sin lista el encabezado ya dice "Compra sin lista" (Q22) -->
-        <h2 class="text-xl font-bold text-text-primary">
+        <h2 class="text-xl font-bold text-text-primary truncate">
           @if (close.kind() !== 'new') { {{ close.list()!.name }} }
         </h2>
         <button
-          class="text-sm text-text-muted font-medium active:scale-95 transition-all"
+          class="text-sm text-text-muted font-medium active:scale-95 transition-all shrink-0"
+          data-llm-action="cancelar-cierre"
           (click)="cancel()"
         >
           Cancelar
         </button>
       </div>
 
-      @if (close.kind() === 'active' && pendingCount() > 0) {
-      <label class="flex items-center gap-3 text-sm text-text-muted">
-        <input
-          type="checkbox"
-          class="w-5 h-5 accent-brand"
-          [checked]="close.carryPending()"
-          (change)="close.carryPending.set($any($event.target).checked)"
-        />
-        Pasar
-        {{ pendingCount() === 1 ? 'el pendiente' : 'los ' + pendingCount() + ' pendientes' }} a la
-        próxima lista
-      </label>
+      @if (close.error()) {
+      <app-alert-card severity="error" [title]="close.error()!" data-testid="error-cierre" />
       }
+
+      <ng-template #carry>
+        @if (close.kind() === 'active' && pendingCount() > 0) {
+        <label class="flex items-center gap-3 text-sm text-text-muted">
+          <input
+            type="checkbox"
+            class="w-5 h-5 accent-brand"
+            [checked]="close.carryPending()"
+            (change)="close.carryPending.set($any($event.target).checked)"
+          />
+          Pasar
+          {{ pendingCount() === 1 ? 'el pendiente' : 'los ' + pendingCount() + ' pendientes' }} a la
+          próxima lista
+        </label>
+        }
+      </ng-template>
 
       <!-- ── Sin boleta ─────────────────────────────────────────────── -->
       @if (close.mode() === 'manual') {
@@ -70,7 +77,7 @@
         <h3 class="text-sm font-bold text-text-primary">Precio de lo que compraste</h3>
         @for (item of close.checkedItems(); track item.id) {
         <div
-          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-xl"
+          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-2xl"
         >
           <span class="text-text-primary flex-1">
             {{ item.product?.name }}
@@ -106,6 +113,7 @@
         }
       </div>
 
+      <ng-container *ngTemplateOutlet="carry" />
       <button
         class="btn-primary w-full"
         data-llm-action="cerrar-compra-sin-boleta"
@@ -126,25 +134,45 @@
 
       <!-- ── Con boleta ─────────────────────────────────────────────── -->
       @if (close.mode() === 'receipt') { @if (close.isScanning()) {
-      <div class="flex flex-col items-center justify-center text-center py-16">
+      <!-- Leyendo (D6): se puede seguir usando la app; al terminar avisa -->
+      <div class="flex flex-col items-center text-center gap-3 py-8" data-testid="leyendo">
+        @if (close.previewUrl(); as url) {
+        <img
+          [src]="url"
+          alt="Foto de la boleta"
+          class="w-28 h-36 object-cover rounded-xl border border-border-subtle"
+        />
+        }
         <app-icon
           name="loader-2"
-          [size]="48"
-          class="text-brand animate-spin mb-6"
+          [size]="32"
+          class="text-brand animate-spin"
           [attr.aria-label]="'Leyendo'"
         />
-        <h3 class="text-xl font-bold text-text-primary mb-2">Leyendo la boleta...</h3>
-        <p class="text-sm text-text-muted">La cruzamos con lo que marcaste en la lista.</p>
+        <h3 class="text-lg font-bold text-text-primary">
+          Leyendo la boleta (puede tardar un minuto)
+        </h3>
+        <p class="text-sm text-text-muted">
+          Puedes seguir usando la app: te avisamos cuando esté lista.
+        </p>
+        <button
+          class="mt-2 px-4 py-2 rounded-full border border-border-default text-sm font-semibold text-text-primary active:scale-95 transition-transform"
+          (click)="leave()"
+        >
+          Seguir en la app
+        </button>
       </div>
       } @else if (close.decisions().length === 0 && !close.hasNoDetail()) {
       <button
-        class="w-full aspect-[3/4] max-h-[420px] border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-surface p-6 text-center active:scale-[0.99] transition-transform"
-        (click)="fileInput.click()"
+        class="w-full aspect-[3/4] max-h-[300px] border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-surface p-6 text-center active:scale-[0.99] transition-transform"
+        data-llm-action="foto-boleta"
+        (click)="picker.open()"
       >
         <app-icon name="camera" [size]="40" class="text-brand mb-4" [attr.aria-label]="'Cámara'" />
         <span class="text-lg font-bold text-text-primary mb-2">Foto de la boleta</span>
         <span class="text-sm text-text-muted"
-          >Si es larga, puedes subir hasta 5 fotos (de arriba hacia abajo).</span
+          >Tómala o elígela de la galería. Si es larga, hasta 5 fotos (de arriba hacia
+          abajo).</span
         >
       </button>
       @if (close.kind() === 'active') {
@@ -155,39 +183,82 @@
       >
         Es otra compra (no de esta lista)
       </button>
-      }
-      <input
-        #fileInput
-        type="file"
-        accept="image/*"
-        capture="environment"
-        multiple
-        class="hidden"
-        (change)="onFiles($event)"
-      />
-      } @else {
-      <!-- Resumen -->
+      } } @else {
+      <!-- Resumen: una fila por boleta con tienda y fecha editables (AC12) -->
       <div
-        class="flex items-center justify-between p-4 bg-surface border border-border-default rounded-2xl"
+        class="flex flex-col gap-2 p-4 bg-surface border border-border-default rounded-2xl"
+        data-testid="resumen-boleta"
       >
-        <div>
+        <div class="flex items-center justify-between gap-3">
           <p class="text-sm text-text-muted">
-            @if (close.receiptCount() > 1) { {{ close.receiptCount() }} boletas · }
-            {{ close.receipt()?.store || 'Boleta' }}
+            {{ close.receiptCount() > 1 ? close.receiptCount() + ' boletas' : 'Boleta' }}
           </p>
-          <p class="text-2xl font-black text-text-primary">
+          <p class="text-2xl font-black text-text-primary shrink-0">
             ${{ close.receipt()?.total ?? close.receiptSum() | number : '1.0-0' }}
           </p>
         </div>
-        @if (!close.hasNoDetail()) {
-        <p class="text-xs text-text-muted text-right" data-testid="resumen-boleta">
+        @for (r of close.receiptSummaries(); track $index) { @if (editingReceipt() === $index) {
+        <div class="flex flex-col gap-2" data-testid="editar-boleta">
+          <input
+            #store
+            class="w-full bg-base border border-border-default rounded-lg px-3 py-2 text-text-primary"
+            placeholder="Tienda"
+            aria-label="Tienda"
+            data-llm-description="nombre de la tienda de la boleta"
+            [value]="r.store ?? ''"
+          />
+          <input
+            #date
+            type="date"
+            class="w-full bg-base border border-border-default rounded-lg px-3 py-2 text-text-primary"
+            aria-label="Fecha de la compra"
+            [value]="r.date ?? ''"
+          />
+          <div class="flex gap-2 justify-end">
+            <button class="text-sm text-text-muted px-3 py-1" (click)="editingReceipt.set(null)">
+              Cancelar
+            </button>
+            <button
+              class="text-sm font-semibold text-brand px-3 py-1"
+              data-llm-action="guardar-tienda-fecha"
+              (click)="saveReceiptMeta($index, store.value, date.value)"
+            >
+              Listo
+            </button>
+          </div>
+        </div>
+        } @else {
+        <button
+          class="flex items-center justify-between gap-3 text-sm text-left"
+          [attr.aria-label]="'Editar tienda y fecha de ' + (r.store || 'la boleta')"
+          (click)="editingReceipt.set($index)"
+        >
+          <span class="min-w-0 truncate text-text-primary">
+            {{ r.store || 'Tienda sin leer' }}
+            <span class="text-text-muted"> · {{ receiptDay(r.date) }}</span>
+          </span>
+          <span class="flex items-center gap-1 text-text-muted shrink-0">
+            @if (close.receiptCount() > 1) { @if (r.noDetail) { sin detalle · } ${{
+              r.total | number : '1.0-0'
+            }}
+            }
+            <app-icon name="pencil" [size]="14" [attr.aria-label]="'Editar'" />
+          </span>
+        </button>
+        } } @if (close.receiptCount() === 1) { @if (close.validation()?.totalMatches === true &&
+        !close.otherCharges().length) {
+        <p class="flex items-center gap-1 text-xs font-semibold text-success">
+          <app-icon name="check" [size]="14" [attr.aria-label]="'Cuadra'" /> Cuadra con la boleta
+        </p>
+        } @else if (!close.hasNoDetail()) {
+        <p class="text-xs text-text-muted">
           Productos ${{ close.receiptSum() | number : '1.0-0' }} @if (close.otherCharges().length) {
-          <br />Otros {{ close.otherSum() < 0 ? '-' : '' }}${{
+          · Otros {{ close.otherSum() < 0 ? '-' : '' }}${{
             abs(close.otherSum()) | number : '1.0-0'
           }}
           }
         </p>
-        }
+        } }
       </div>
 
       @if (close.hasNoDetail()) {
@@ -204,23 +275,37 @@
       </app-alert-card>
       }
 
-      <ng-template #row let-d>
+      <!-- Una fila: texto; al tocarla se edita (AC11). "× 2" si junta líneas repetidas (AC10). -->
+      <ng-template #row let-g>
         <div
-          class="flex flex-col gap-2 p-3 bg-surface border rounded-xl"
-          [class.border-border-default]="!d.doubt"
-          [class.border-warning]="!!d.doubt"
+          class="flex flex-col gap-2 p-3 bg-surface border rounded-2xl"
+          [class.border-border-default]="!g.doubt"
+          [class.border-warning]="g.doubt"
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="flex-1 min-w-0">
-              <p class="font-medium text-text-primary truncate">{{ lineName(d) }}</p>
-              <p class="text-xs text-text-muted truncate">{{ d.rawText }}</p>
-              @if (d.target?.wasPending) {
-              <p class="text-xs font-semibold text-brand" data-testid="estaba-pendiente">
+          <button
+            class="flex items-start justify-between gap-2 text-left"
+            [attr.aria-expanded]="expanded() === g.key"
+            (click)="toggleRow(g.key)"
+          >
+            <span class="flex-1 min-w-0">
+              <span class="block font-medium text-text-primary truncate">
+                {{ lineName(g.decision) }}
+              </span>
+              @if (g.decision.rawText && g.decision.rawText !== lineName(g.decision)) {
+              <span class="block text-xs text-text-muted truncate">{{ g.decision.rawText }}</span>
+              } @if (g.decision.target?.wasPending) {
+              <span class="block text-xs font-semibold text-brand" data-testid="estaba-pendiente">
                 Estaba pendiente: queda comprado
-              </p>
+              </span>
               }
-            </div>
-            @if (d.doubt) {
+            </span>
+            <span class="flex flex-col items-end shrink-0">
+              <span class="font-bold text-text-primary">${{ g.total | number : '1.0-0' }}</span>
+              <span class="text-xs text-text-muted">
+                × {{ g.quantity }} · ${{ g.decision.unitPrice | number : '1.0-0' }}
+              </span>
+            </span>
+            @if (g.doubt) {
             <app-icon
               name="alert-triangle"
               [size]="16"
@@ -228,35 +313,79 @@
               [attr.aria-label]="'Revisar esta línea'"
             />
             }
-          </div>
-          <div class="flex items-center gap-2">
+          </button>
+
+          @if (expanded() === g.key) {
+          <div class="flex items-center gap-2" data-testid="editar-linea">
+            @if (g.indexes.length === 1) {
             <input
               inputmode="decimal"
               class="w-16 bg-base border border-border-default rounded-lg px-2 py-1 text-center text-text-primary"
-              [attr.aria-label]="'Cantidad de ' + lineName(d)"
-              [value]="d.quantity"
-              (change)="
-                close.updateDecision(d.index, { quantity: +$any($event.target).value || 1 })
-              "
+              [attr.aria-label]="'Cantidad de ' + lineName(g.decision)"
+              [value]="g.decision.quantity"
+              (change)="updateGroup(g, { quantity: +$any($event.target).value || 1 })"
             />
+            } @else {
+            <span class="text-sm text-text-muted">{{ g.indexes.length }} líneas</span>
+            }
             <span class="text-text-muted text-sm">×</span>
             <input
               inputmode="numeric"
               class="w-24 bg-base border border-border-default rounded-lg px-2 py-1 text-right text-text-primary"
-              [attr.aria-label]="'Precio de ' + lineName(d)"
-              [value]="d.unitPrice"
-              (change)="
-                close.updateDecision(d.index, {
-                  unitPrice: toAmount($any($event.target).value) ?? 0
-                })
-              "
+              [attr.aria-label]="'Precio de ' + lineName(g.decision)"
+              [value]="g.decision.unitPrice"
+              (change)="updateGroup(g, { unitPrice: toAmount($any($event.target).value) ?? 0 })"
             />
-            <span class="ml-auto font-bold text-brand"
+            @if (g.decision.target?.kind !== 'new') {
+            <button class="ml-auto text-xs text-text-muted underline" (click)="notThisGroup(g)">
+              No es este
+            </button>
+            }
+          </div>
+          } @if (g.decision.target?.kind === 'new') {
+          <label class="flex items-center gap-2 text-sm text-text-muted">
+            <input
+              type="checkbox"
+              class="w-4 h-4 accent-brand"
+              [checked]="g.decision.saveToCatalog"
+              (change)="updateGroup(g, { saveToCatalog: $any($event.target).checked })"
+            />
+            Guardar en catálogo
+          </label>
+          @if (g.decision.saveToCatalog && expanded() === g.key) {
+          <input
+            class="w-full bg-base border border-border-default rounded-lg px-3 py-2 text-text-primary"
+            placeholder="Nombre del producto"
+            data-llm-description="nombre con que el producto de la boleta entra al catálogo"
+            [value]="g.decision.name"
+            (change)="updateGroup(g, { name: $any($event.target).value })"
+          />
+          } }
+        </div>
+      </ng-template>
+
+      <!-- ── Por decidir: siempre arriba y abierto (AC9) ── -->
+      @if (toDecide() > 0) {
+      <p class="text-sm font-semibold text-warning" data-testid="por-decidir">
+        {{ toDecide() }} por decidir
+      </p>
+      } @if (groups().candidates.length) {
+      <section class="flex flex-col gap-2">
+        <h3 class="text-sm font-bold text-text-primary">¿Es este?</h3>
+        @for (d of groups().candidates; track d.index) {
+        <div
+          class="flex flex-col gap-2 p-3 bg-surface border rounded-2xl"
+          [class.border-warning]="d.target === null"
+          [class.border-border-default]="d.target !== null"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-text-primary truncate">{{ d.rawText || d.name }}</p>
+            </div>
+            <span class="font-bold text-text-primary shrink-0"
               >${{ d.quantity * d.unitPrice | number : '1.0-0' }}</span
             >
           </div>
-
-          @if (d.status === 'candidate') {
           <div class="flex flex-wrap gap-2">
             @for (c of d.candidates; track c.productId) {
             <button
@@ -283,87 +412,18 @@
               Otro
             </button>
           </div>
-          } @else if (d.target?.kind !== 'new') {
-          <button class="self-start text-xs text-text-muted underline" (click)="notThis(d.index)">
-            No es este
-          </button>
-          } @if (d.target?.kind === 'new') {
-          <label class="flex items-center gap-2 text-sm text-text-muted">
-            <input
-              type="checkbox"
-              class="w-4 h-4 accent-brand"
-              [checked]="d.saveToCatalog"
-              (change)="
-                close.updateDecision(d.index, { saveToCatalog: $any($event.target).checked })
-              "
-            />
-            Guardar en catálogo
-          </label>
-          @if (d.saveToCatalog) {
-          <input
-            class="w-full bg-base border border-border-default rounded-lg px-3 py-2 text-text-primary"
-            placeholder="Nombre del producto"
-            data-llm-description="nombre con que el producto de la boleta entra al catálogo"
-            [value]="d.name"
-            (change)="close.updateDecision(d.index, { name: $any($event.target).value })"
-          />
-          } }
-        </div>
-      </ng-template>
-
-      @if (groups().candidates.length) {
-      <section class="flex flex-col gap-2">
-        <h3 class="text-sm font-bold text-text-primary">¿Es este?</h3>
-        @for (d of groups().candidates; track d.index) {
-        <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
-        }
-      </section>
-      } @if (groups().matched.length) {
-      <section class="flex flex-col gap-2">
-        <h3 class="text-sm font-bold text-text-primary">Coinciden</h3>
-        @for (d of groups().matched; track d.index) {
-        <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
-        }
-      </section>
-      } @if (groups().extras.length) {
-      <section class="flex flex-col gap-2">
-        <h3 class="text-sm font-bold text-text-primary">No estaban en la lista</h3>
-        <p class="text-xs text-text-muted">
-          Suman al gasto. Marca "Guardar en catálogo" solo lo que vuelvas a comprar.
-        </p>
-        @for (d of groups().extras; track d.index) {
-        <ng-container *ngTemplateOutlet="row; context: { $implicit: d }" />
-        }
-      </section>
-      } @if (close.otherCharges().length) {
-      <section class="flex flex-col gap-2" data-testid="otros-cargos">
-        <h3 class="text-sm font-bold text-text-primary">Otros cargos</h3>
-        @for (c of close.otherCharges(); track c.index) {
-        <div
-          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-xl"
-        >
-          <div class="flex-1 min-w-0">
-            <p class="text-text-primary truncate">
-              @switch (c.kind) { @case ('bag') { Bolsa } @case ('deposit') { Envase } @case
-              ('discount') { Descuento } @default { No suma al total } }
-            </p>
-            <p class="text-xs text-text-muted truncate">{{ c.rawText }}</p>
-          </div>
-          <span class="font-bold text-text-primary"
-            >{{ c.amount < 0 ? '-' : '' }}${{ abs(c.amount) | number : '1.0-0' }}</span
-          >
         </div>
         }
       </section>
       } @if (close.missing().length) {
-      <section class="flex flex-col gap-2">
+      <section class="flex flex-col gap-2" data-testid="no-lo-compraste">
         <h3 class="text-sm font-bold text-text-primary">¿No lo compraste?</h3>
         <p class="text-xs text-text-muted">
           Lo marcaste pero no aparece en la boleta. "No lo compré" lo deja para la próxima lista.
         </p>
         @for (m of close.missing(); track m.item.itemId) {
         <div
-          class="flex flex-col gap-2 p-3 bg-surface border rounded-xl"
+          class="flex flex-col gap-2 p-3 bg-surface border rounded-2xl"
           [class.border-border-default]="m.bought !== null"
           [class.border-warning]="m.bought === null"
         >
@@ -399,51 +459,158 @@
         </div>
         }
       </section>
+      }
+
+      <!-- ── Grupos cerrados con su cantidad y total; se abren al tocar (AC9) ── -->
+      @if (rows().matched.length) {
+      <section class="flex flex-col gap-2" data-testid="grupo-coinciden">
+        <button
+          class="flex items-center justify-between gap-3 py-2 text-left"
+          [attr.aria-expanded]="isOpen('matched')"
+          (click)="toggleSection('matched')"
+        >
+          <span class="text-sm font-bold text-text-primary">
+            Coinciden <span class="text-text-muted font-medium">{{ rows().matched.length }}</span>
+          </span>
+          <span class="flex items-center gap-2 text-sm text-text-muted">
+            ${{ totals().matched | number : '1.0-0' }}
+            <app-icon
+              [name]="isOpen('matched') ? 'chevron-up' : 'chevron-down'"
+              [size]="18"
+              [attr.aria-label]="isOpen('matched') ? 'Cerrar' : 'Abrir'"
+            />
+          </span>
+        </button>
+        @if (isOpen('matched')) { @for (g of rows().matched; track g.key) {
+        <ng-container *ngTemplateOutlet="row; context: { $implicit: g }" />
+        } }
+      </section>
+      } @if (rows().extras.length) {
+      <section class="flex flex-col gap-2" data-testid="grupo-otros">
+        <button
+          class="flex items-center justify-between gap-3 py-2 text-left"
+          [attr.aria-expanded]="isOpen('extras')"
+          (click)="toggleSection('extras')"
+        >
+          <span class="text-sm font-bold text-text-primary">
+            No estaban en la lista
+            <span class="text-text-muted font-medium">{{ rows().extras.length }}</span>
+          </span>
+          <span class="flex items-center gap-2 text-sm text-text-muted">
+            ${{ totals().extras | number : '1.0-0' }}
+            <app-icon
+              [name]="isOpen('extras') ? 'chevron-up' : 'chevron-down'"
+              [size]="18"
+              [attr.aria-label]="isOpen('extras') ? 'Cerrar' : 'Abrir'"
+            />
+          </span>
+        </button>
+        @if (isOpen('extras')) {
+        <p class="text-xs text-text-muted">
+          Suman al gasto. Guarda en el catálogo lo que vuelvas a comprar.
+        </p>
+        <div class="flex gap-2">
+          <button
+            class="px-3 py-1 rounded-full text-sm border border-border-default text-text-primary"
+            data-llm-action="guardar-todos-en-catalogo"
+            (click)="close.saveAllToCatalog(true)"
+          >
+            Guardar todos en el catálogo
+          </button>
+          <button
+            class="px-3 py-1 rounded-full text-sm border border-border-default text-text-muted"
+            data-llm-action="no-guardar-en-catalogo"
+            (click)="close.saveAllToCatalog(false)"
+          >
+            Ninguno
+          </button>
+        </div>
+        @for (g of rows().extras; track g.key) {
+        <ng-container *ngTemplateOutlet="row; context: { $implicit: g }" />
+        } }
+      </section>
+      } @if (close.otherCharges().length) {
+      <section class="flex flex-col gap-2" data-testid="otros-cargos">
+        <button
+          class="flex items-center justify-between gap-3 py-2 text-left"
+          [attr.aria-expanded]="isOpen('charges')"
+          (click)="toggleSection('charges')"
+        >
+          <span class="text-sm font-bold text-text-primary">
+            Otros cargos
+            <span class="text-text-muted font-medium">{{ close.otherCharges().length }}</span>
+          </span>
+          <span class="flex items-center gap-2 text-sm text-text-muted">
+            {{ close.otherSum() < 0 ? '-' : '' }}${{ abs(close.otherSum()) | number : '1.0-0' }}
+            <app-icon
+              [name]="isOpen('charges') ? 'chevron-up' : 'chevron-down'"
+              [size]="18"
+              [attr.aria-label]="isOpen('charges') ? 'Cerrar' : 'Abrir'"
+            />
+          </span>
+        </button>
+        @if (isOpen('charges')) { @for (c of close.otherCharges(); track c.index) {
+        <div
+          class="flex items-center justify-between gap-3 p-3 bg-surface border border-border-default rounded-2xl"
+        >
+          <div class="flex-1 min-w-0">
+            <p class="text-text-primary truncate">
+              @switch (c.kind) { @case ('bag') { Bolsa } @case ('deposit') { Envase } @case
+              ('discount') { Descuento } @default { No suma al total } }
+            </p>
+            <p class="text-xs text-text-muted truncate">{{ c.rawText }}</p>
+          </div>
+          <span class="font-bold text-text-primary"
+            >{{ c.amount < 0 ? '-' : '' }}${{ abs(c.amount) | number : '1.0-0' }}</span
+          >
+        </div>
+        } }
+      </section>
       } @if (close.canAddReceipt()) {
       <button
         class="w-full py-3 rounded-xl border border-dashed border-border-default text-text-primary font-semibold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
         data-llm-action="agregar-otra-boleta"
-        (click)="moreFiles.click()"
+        (click)="more.open()"
       >
         <app-icon name="camera" [size]="18" [attr.aria-label]="'Cámara'" />
         Agregar otra boleta (otra tienda)
       </button>
-      <input
-        #moreFiles
-        type="file"
-        accept="image/*"
-        capture="environment"
-        multiple
-        class="hidden"
-        (change)="onMoreFiles($event)"
-      />
       }
 
-      <button
-        class="btn-primary w-full"
-        data-llm-action="cerrar-compra-con-boleta"
-        [disabled]="!close.canConfirm() || close.isSaving()"
-        (click)="confirm()"
+      <!-- Fijo abajo: siempre se ve qué falta para cerrar (fix-049) -->
+      <ng-container *ngTemplateOutlet="carry" />
+      <div
+        class="sticky-bottom-edge flex flex-col gap-2 bg-base pt-2 pb-2 border-t border-border-subtle"
+        data-testid="pie-cierre"
       >
-        @if (close.isSaving()) {
-        <app-icon
-          name="loader-2"
-          [size]="18"
-          class="animate-spin"
-          [attr.aria-label]="'Guardando'"
-        />
-        Guardando... } @else {
-        <app-icon name="check" [size]="18" [attr.aria-label]="'Cerrar'" /> Cerrar compra }
-      </button>
-      @if (!close.canConfirm()) {
-      <p class="text-xs text-text-muted text-center">
-        @if (close.missingUnchosen()) { Elige qué pasó con lo que no salió en la boleta. } @else {
-        Elige una opción en cada "¿Es este?". }
-      </p>
-      } } @if (close.error()) {
-      <app-alert-card severity="error" [title]="close.error()!" />
+        @if (!close.canConfirm()) {
+        <p class="text-xs text-text-muted text-center">
+          @if (close.missingUnchosen()) { Elige qué pasó con lo que no salió en la boleta. } @else {
+          Elige una opción en cada "¿Es este?". }
+        </p>
+        }
+        <button
+          class="btn-primary w-full"
+          data-llm-action="cerrar-compra-con-boleta"
+          [disabled]="!close.canConfirm() || close.isSaving()"
+          (click)="confirm()"
+        >
+          @if (close.isSaving()) {
+          <app-icon
+            name="loader-2"
+            [size]="18"
+            class="animate-spin"
+            [attr.aria-label]="'Guardando'"
+          />
+          Guardando... } @else {
+          <app-icon name="check" [size]="18" [attr.aria-label]="'Cerrar'" /> Cerrar compra }
+        </button>
+      </div>
       } }
     </div>
     }
   </main>
+
+  <app-receipt-picker #picker (picked)="onFiles($event)" />
+  <app-receipt-picker #more (picked)="onMoreFiles($event)" />
 </div>

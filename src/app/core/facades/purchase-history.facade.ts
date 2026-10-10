@@ -1,16 +1,21 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { BaseFacade } from './base.facade';
-import type { MonthlySpending, PurchaseSummary } from '../models/purchase-history.model';
+import type { MonthComparison, PurchaseSummary } from '../models/purchase-history.model';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ToastService } from '../services/ui/toast.service';
-import { spendingInMonth, summarizePurchases } from '../utils/purchase-history.utils';
+import {
+  monthComparison,
+  purchasesInMonth,
+  shiftMonth,
+  summarizePurchases,
+} from '../utils/purchase-history.utils';
 import { purchaseTitle } from '../utils/purchase-name.utils';
 
 const MAX_NAME = 60;
 
-/** Historial de compras finalizadas de la familia y gasto real del mes (boleta o total ingresado). */
+/** Compras finalizadas de la familia y gasto real por mes (boleta o total ingresado). */
 @Injectable({ providedIn: 'root' })
 export class PurchaseHistoryFacade extends BaseFacade<PurchaseSummary[]> {
   private readonly family = inject(FamilyRepository);
@@ -18,7 +23,31 @@ export class PurchaseHistoryFacade extends BaseFacade<PurchaseSummary[]> {
   private readonly receipts = inject(ReceiptsRepository);
   private readonly toast = inject(ToastService);
 
-  readonly thisMonth = computed<MonthlySpending>(() => spendingInMonth(this.data() ?? []));
+  /** Mes que se está mirando en Compras (primer día, hora local; spec 0016 D4). */
+  private readonly _month = signal(shiftMonth(new Date(), 0));
+  readonly month = this._month.asReadonly();
+
+  /** Gasto del mes elegido y la diferencia con el anterior. */
+  readonly selected = computed<MonthComparison>(() =>
+    monthComparison(this.data() ?? [], this._month())
+  );
+  /** Las compras del mes elegido, más recientes primero. */
+  readonly visible = computed(() => purchasesInMonth(this.data() ?? [], this._month()));
+  /** No se avanza más allá del mes en curso. */
+  readonly canGoNext = computed(() => this._month() < shiftMonth(new Date(), 0));
+
+  prevMonth(): void {
+    this._month.update((m) => shiftMonth(m, -1));
+  }
+
+  nextMonth(): void {
+    if (this.canGoNext()) this._month.update((m) => shiftMonth(m, 1));
+  }
+
+  /** Una compra ya cargada (detalle en `/app/purchases/:id`). */
+  byId(id: string): PurchaseSummary | null {
+    return this.data()?.find((p) => p.id === id) ?? null;
+  }
 
   protected override async fetchData(): Promise<PurchaseSummary[]> {
     const familyId = await this.family.getOrCreateFamilyId();

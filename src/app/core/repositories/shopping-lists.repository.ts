@@ -132,8 +132,11 @@ export class ShoppingListsRepository {
     return data as ShoppingList;
   }
 
-  /** Compras finalizadas de la familia, más recientes primero (para el Historial). */
-  async findCompleted(familyId: string, limit = 50): Promise<ActiveShoppingList[]> {
+  /**
+   * Compras finalizadas de la familia, más recientes primero (pestaña Compras). 200 alcanza para
+   * varios meses hacia atrás (spec 0016 D4).
+   */
+  async findCompleted(familyId: string, limit = 200): Promise<ActiveShoppingList[]> {
     const { data, error } = await this.db
       .from('shopping_lists')
       .select(

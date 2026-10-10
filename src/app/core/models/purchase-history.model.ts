@@ -35,6 +35,9 @@ export interface PurchaseSummary {
   hasReceipt: boolean;
   /** Ruta de la foto en el bucket privado `receipts`; null si no se guardó. */
   receiptImagePath: string | null;
+  /** Las fotos de todas sus boletas (varias si la salida fue por varias tiendas). */
+  receiptImagePaths: string[];
+  /** Tienda o tiendas de sus boletas, unidas con " · "; null sin boleta o si no se leyó. */
   store: string | null;
   items: PurchasedItem[];
   /** Lo que no es producto en la boleta; vacío sin boleta o en compras antiguas. */
@@ -48,4 +51,12 @@ export interface MonthlySpending {
   count: number;
   /** Cuántas de esas compras tienen el total estimado (sin boleta ni total ingresado). */
   estimatedCount: number;
+}
+
+/** Gasto de un mes contra el anterior (spec 0016 D4). */
+export interface MonthComparison {
+  current: MonthlySpending;
+  previous: MonthlySpending;
+  /** current − previous; null si el mes anterior no tuvo compras. */
+  diff: number | null;
 }

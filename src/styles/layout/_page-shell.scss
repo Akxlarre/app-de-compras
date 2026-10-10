@@ -208,6 +208,19 @@ $bp-lg: 1024px !default;
   padding-bottom: calc(var(--chrome-bottom) + var(--space-4) + 64px + var(--space-4));
 }
 
+/* Acción fija al final de un `main.pb-chrome` (p. ej. "Cerrar compra", fix-049). `sticky` descuenta
+   el padding del contenedor (chrome + space-6), así que se compensa: queda justo sobre la barra
+   flotante, o pegada al borde cuando la barra está oculta. */
+.sticky-above-chrome {
+  position: sticky;
+  bottom: calc(var(--space-3) - var(--space-6));
+}
+
+.sticky-bottom-edge {
+  position: sticky;
+  bottom: calc(-1 * (var(--chrome-bottom) + var(--space-6)));
+}
+
 .fab-above-chrome {
   bottom: calc(var(--chrome-bottom) + var(--space-4));
 }

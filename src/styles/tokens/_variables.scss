@@ -44,12 +44,12 @@
 
   /* Paleta Fresh/Rappi Dark
      Ratios medidos sobre --bg-base (#09090b): */
-  --brand-ink: #09090b;       /* Zinc 950 - Fondo profundo */
-  --brand-bone: #f8fafc;      /* Slate 50 - Texto crujiente */
-  --brand-crimson: #10b981;   /* Emerald 500 - (Usado donde antes iba el crimson, ahora es el verde frescura) */
-  --brand-ember: #f59e0b;     /* Amber 500 - Alertas, notificaciones */
-  --brand-gold: #3b82f6;      /* Blue 500 - Botones secundarios/links */
-  --brand-iron: #27272a;      /* Zinc 800 - Superficies y bordes */
+  --brand-ink: #09090b; /* Zinc 950 - Fondo profundo */
+  --brand-bone: #f8fafc; /* Slate 50 - Texto crujiente */
+  --brand-crimson: #10b981; /* Emerald 500 - (Usado donde antes iba el crimson, ahora es el verde frescura) */
+  --brand-ember: #f59e0b; /* Amber 500 - Alertas, notificaciones */
+  --brand-gold: #3b82f6; /* Blue 500 - Botones secundarios/links */
+  --brand-iron: #27272a; /* Zinc 800 - Superficies y bordes */
 
   /* Escala de radio (Cornershop Vibe: Muy redondeado) */
   --radius-sm: 8px;
@@ -234,9 +234,10 @@
   --state-success-bg: rgba(16, 185, 129, 0.12);
   --state-success-border: rgba(16, 185, 129, 0.34);
 
-  --state-warning: var(--brand-gold);
-  --state-warning-bg: rgba(255, 200, 61, 0.1);
-  --state-warning-border: rgba(255, 200, 61, 0.38);
+  /* Ámbar, no el azul de --brand-gold: un aviso no debe leerse como link (fix-050, V1). */
+  --state-warning: var(--brand-ember);
+  --state-warning-bg: rgba(245, 158, 11, 0.1);
+  --state-warning-border: rgba(245, 158, 11, 0.38);
 
   --state-error: #e8455a;
   --state-error-bg: rgba(232, 69, 90, 0.12);
@@ -375,22 +376,18 @@
   --card-hover-lift-y: -2px;
   --card-hover-scale: 1.005;
 
-  --transition-btn:
-    background-color var(--duration-fast) var(--ease-standard),
+  --transition-btn: background-color var(--duration-fast) var(--ease-standard),
     box-shadow var(--duration-fast) var(--ease-standard),
     transform var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard);
 
-  --transition-input:
-    border-color var(--duration-fast) var(--ease-standard),
+  --transition-input: border-color var(--duration-fast) var(--ease-standard),
     box-shadow var(--duration-fast) var(--ease-standard);
 
-  --transition-card:
-    box-shadow var(--duration-normal) var(--ease-standard),
+  --transition-card: box-shadow var(--duration-normal) var(--ease-standard),
     transform var(--duration-normal) var(--ease-standard);
 
-  --transition-color:
-    color var(--duration-fast) var(--ease-standard),
+  --transition-color: color var(--duration-fast) var(--ease-standard),
     background-color var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard);
 
@@ -407,8 +404,6 @@
    ESTILOS BASE
    ============================================================ */
 
-
-
 body {
   font-family: var(--font-body);
   background: var(--bg-base);
@@ -424,8 +419,7 @@ body {
      Se usa -weight y no `font-synthesis: none` para no perder la
      cursiva sintética donde haga falta. */
   font-synthesis-weight: none;
-  transition:
-    background-color var(--duration-theme) var(--ease-standard),
+  transition: background-color var(--duration-theme) var(--ease-standard),
     color var(--duration-theme) var(--ease-standard),
     border-color var(--duration-theme) var(--ease-standard);
 }

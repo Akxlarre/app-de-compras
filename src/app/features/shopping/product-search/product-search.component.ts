@@ -158,17 +158,7 @@ import { IonModal } from '@ionic/angular';
             } @else {
             <!-- Esenciales -->
             <div class="py-4">
-              <h3
-                class="flex items-center gap-2 text-sm font-bold text-text-primary uppercase tracking-wider mb-4 px-2"
-              >
-                <app-icon
-                  name="shopping-cart"
-                  [size]="16"
-                  class="text-brand"
-                  [attr.aria-label]="'Esenciales'"
-                />
-                Tus Esenciales
-              </h3>
+              <h3 class="text-sm font-bold text-text-primary mb-3 px-2">Tus esenciales</h3>
 
               @if (facade.essentialsLoading()) {
               <div class="flex flex-col gap-2" data-testid="essentials-loading">

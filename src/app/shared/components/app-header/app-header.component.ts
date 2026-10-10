@@ -10,9 +10,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     <header class="app-top-header">
       <div class="header-content">
         <div class="title-group">
-          @if (showBrand()) {
-          <span class="font-data font-bold tracking-widest text-xs text-brand">SHOPPING</span>
-          }
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             @if (showBack()) {
             <button class="header-back-btn" (click)="onBack()" aria-label="Volver">
@@ -118,7 +115,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 })
 export class AppHeaderComponent {
   title = input.required<string>();
-  showBrand = input<boolean>(true);
   showStreak = input<boolean>(false);
   showBack = input<boolean>(false);
   backClicked = output<void>();

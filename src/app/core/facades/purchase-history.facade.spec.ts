@@ -75,11 +75,42 @@ describe('PurchaseHistoryFacade', () => {
   it('thisMonth suma solo las compras del mes en curso', async () => {
     await facade.initialize();
 
-    expect(facade.thisMonth()).toEqual({ total: 2000, count: 1, estimatedCount: 1 });
+    expect(facade.selected().current).toEqual({ total: 2000, count: 1, estimatedCount: 1 });
   });
 
-  it('thisMonth es 0 antes de cargar', () => {
-    expect(facade.thisMonth()).toEqual({ total: 0, count: 0, estimatedCount: 0 });
+  describe('meses (spec 0016 D4)', () => {
+    it('parte en el mes actual con las compras de ese mes y la diferencia con el anterior', async () => {
+      await facade.initialize();
+
+      expect(facade.month()).toEqual(new Date(2026, 8, 1));
+      expect(facade.visible().map((p) => p.id)).toEqual(['a']);
+      expect(facade.selected().diff).toBe(-2000);
+      expect(facade.canGoNext()).toBe(false);
+    });
+
+    it('va al mes anterior y vuelve, sin pasar del mes actual', async () => {
+      await facade.initialize();
+
+      facade.prevMonth();
+      expect(facade.month()).toEqual(new Date(2026, 7, 1));
+      expect(facade.visible().map((p) => p.id)).toEqual(['b']);
+      expect(facade.selected().current.total).toBe(4000);
+      expect(facade.canGoNext()).toBe(true);
+
+      facade.nextMonth();
+      facade.nextMonth();
+      expect(facade.month()).toEqual(new Date(2026, 8, 1));
+    });
+
+    it('byId encuentra una compra cargada', async () => {
+      await facade.initialize();
+      expect(facade.byId('b')?.total).toBe(4000);
+      expect(facade.byId('zz')).toBeNull();
+    });
+  });
+
+  it('el gasto es 0 antes de cargar', () => {
+    expect(facade.selected().current).toEqual({ total: 0, count: 0, estimatedCount: 0 });
   });
 
   it('el gasto del mes usa el total de la boleta y cuenta las compras estimadas (spec 0009)', async () => {
@@ -99,7 +130,7 @@ describe('PurchaseHistoryFacade', () => {
 
     await facade.initialize();
 
-    expect(facade.thisMonth()).toEqual({ total: 2850, count: 2, estimatedCount: 1 });
+    expect(facade.selected().current).toEqual({ total: 2850, count: 2, estimatedCount: 1 });
   });
 
   it('receiptUrl pide la URL firmada de la foto de la boleta', async () => {
@@ -167,7 +198,7 @@ describe('PurchaseHistoryFacade', () => {
 
       expect(lists.deletePurchase).toHaveBeenCalledWith('a');
       expect(facade.data()?.map((p) => p.id)).toEqual(['b']);
-      expect(facade.thisMonth()).toEqual({ total: 500, count: 1, estimatedCount: 1 });
+      expect(facade.selected().current).toEqual({ total: 500, count: 1, estimatedCount: 1 });
       expect(receipts.removeImage).toHaveBeenCalledWith('fam/r1.jpg');
     });
 

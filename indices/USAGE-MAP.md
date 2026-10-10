@@ -35,6 +35,7 @@
 | `features/shopping/active-list` | ❌ | ❌ | ❌ | ❌ |
 | `features/shopping/active-list` | ❌ | ❌ | ❌ | ❌ |
 | `features/shopping/product-search` | ❌ | ❌ | ❌ | ✅ |
+| `features/shopping/purchase-close` | ❌ | ❌ | ❌ | ❌ |
 
 
 <!-- AUTO-GENERATED:END -->

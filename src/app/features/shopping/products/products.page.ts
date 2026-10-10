@@ -1,12 +1,11 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ProductsFacade } from '@core/facades/products.facade';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
-import { parsePrice } from '@core/utils/price.utils';
+import { formatAmount } from '@core/utils/price.utils';
 import { formatDaysAgo } from '@core/utils/date.utils';
 import { ToastService } from '@core/services/ui/toast.service';
 
@@ -15,7 +14,6 @@ import { ToastService } from '@core/services/ui/toast.service';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     AppHeaderComponent,
     IconComponent,
     SkeletonBlockComponent,
@@ -23,13 +21,13 @@ import { ToastService } from '@core/services/ui/toast.service';
   ],
   template: `
     <div class="h-full flex flex-col bg-base">
-      <app-header title="Catálogo Inteligente" />
+      <app-header title="Catálogo" />
 
       <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-chrome">
         <div class="bento-grid">
           <!-- Las sugerencias de reposición viven en Mi Lista ("Te puede faltar", spec 0014). -->
           <!-- Lista de Productos -->
-          <div class="bento-wide card-accent flex flex-col gap-4">
+          <div class="bento-wide flex flex-col gap-4">
             <h2 class="text-lg font-bold text-primary">Todos tus productos</h2>
 
             @if (facade.isLoading()) {
@@ -48,7 +46,7 @@ import { ToastService } from '@core/services/ui/toast.service';
             <div class="flex flex-col gap-3">
               @for (product of facade.products(); track product.id) {
               <div
-                class="flex items-center justify-between p-3 bg-surface border border-border-default rounded-xl"
+                class="flex items-center justify-between p-3 bg-surface border border-border-default rounded-2xl"
               >
                 <div class="flex-1 min-w-0 pr-4">
                   <span class="font-medium text-primary block truncate">{{ product.name }}</span>
@@ -63,34 +61,40 @@ import { ToastService } from '@core/services/ui/toast.service';
                   </span>
                 </div>
 
-                <div class="flex items-center gap-2">
-                  <div class="relative w-24">
-                    <span
-                      class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-medium"
-                      aria-hidden="true"
-                      >$</span
-                    >
-                    <input
-                      type="number"
-                      [attr.aria-label]="'Precio de ' + product.name"
-                      data-llm-description="último precio del producto en pesos"
-                      class="w-full bg-base border border-border-subtle rounded-lg py-1.5 pl-6 pr-2 text-sm font-bold focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand text-primary transition-all duration-300"
-                      [class.border-brand]="savedId() === product.id"
-                      [class.ring-1]="savedId() === product.id"
-                      [class.ring-brand]="savedId() === product.id"
-                      [ngModel]="product.last_price"
-                      (blur)="onPriceBlur(product.id, $event)"
-                      (keydown.enter)="onPriceBlur(product.id, $event)"
-                    />
-                    @if (savedId() === product.id) {
-                    <app-icon
-                      name="check"
-                      [size]="14"
-                      class="absolute right-2 top-1/2 -translate-y-1/2 text-brand"
-                    />
-                    }
-                  </div>
+                <!-- El precio se ve como texto y se edita al tocarlo (fix-050, V3) -->
+                @if (editingId() === product.id) {
+                <div class="relative w-28 shrink-0">
+                  <span
+                    class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-medium"
+                    aria-hidden="true"
+                    >$</span
+                  >
+                  <input
+                    inputmode="numeric"
+                    data-price-edit
+                    [attr.aria-label]="'Precio de ' + product.name"
+                    data-llm-description="último precio del producto en pesos"
+                    class="w-full bg-base border border-brand rounded-lg py-1.5 pl-6 pr-2 text-sm font-bold text-right focus:outline-none text-primary"
+                    [value]="formatAmount(product.last_price ?? null)"
+                    (blur)="onPriceBlur(product.id, $event)"
+                    (keydown.enter)="$any($event.target).blur()"
+                  />
                 </div>
+                } @else {
+                <button
+                  class="flex items-center gap-1 shrink-0 px-2 py-1.5 rounded-lg text-sm"
+                  [class.font-bold]="product.last_price != null"
+                  [class.text-primary]="product.last_price != null"
+                  [class.text-muted]="product.last_price == null"
+                  [attr.aria-label]="'Editar precio de ' + product.name"
+                  data-llm-action="actualizar-precio"
+                  (click)="edit(product.id)"
+                >
+                  {{ priceLabel(product.last_price ?? null) }} @if (savedId() === product.id) {
+                  <app-icon name="check" [size]="14" class="text-brand" [attr.aria-label]="'Guardado'" />
+                  }
+                </button>
+                }
               </div>
               }
             </div>
@@ -112,18 +116,26 @@ export class ProductsPage implements OnInit {
     this.facade.loadProducts();
   }
 
+  /** Producto con el precio en edición; los demás se ven como texto. */
+  readonly editingId = signal<string | null>(null);
+  readonly formatAmount = formatAmount;
+
+  edit(productId: string): void {
+    this.editingId.set(productId);
+    // El input aparece en el próximo render: se enfoca para escribir de una vez.
+    setTimeout(() => document.querySelector<HTMLInputElement>('[data-price-edit]')?.focus());
+  }
+
   async onPriceBlur(productId: string, event: Event) {
+    if (this.editingId() !== productId) return; // Enter ya guardó y el blur llega después
+    this.editingId.set(null);
     const input = event.target as HTMLInputElement;
     const current = this.facade.products().find((p) => p.id === productId)?.last_price;
-    const restore = () => (input.value = current == null ? '' : String(current));
+    const digits = input.value.replace(/[^\d]/g, '');
+    const newPrice = digits ? Number(digits) : null;
+    if (newPrice === null || newPrice === current) return; // vacío o sin cambios: no se guarda
 
-    const newPrice = parsePrice(input.value);
-    if (newPrice === null || newPrice === current) {
-      restore(); // vacío, inválido o sin cambios: no se guarda nada
-      return;
-    }
     if (!(await this.facade.updatePrice(productId, newPrice))) {
-      restore();
       this.toast.error('No se pudo guardar el precio', 'Intenta de nuevo.');
       return;
     }
@@ -137,7 +149,11 @@ export class ProductsPage implements OnInit {
     }, 1500);
   }
 
+  priceLabel(price: number | null): string {
+    return price == null ? 'Sin precio' : `$${formatAmount(price)}`;
+  }
+
   lastPurchaseLabel(days: number | null): string {
-    return days === null ? 'Sin compras aún' : `Comprado ${formatDaysAgo(days)}`;
+    return days === null ? 'Sin compras aún' : `Última compra: ${formatDaysAgo(days)}`;
   }
 }

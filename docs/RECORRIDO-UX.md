@@ -258,3 +258,56 @@ Probado con `test3` (dueño de "Casa QA" con test4) y `test5` (solo).
 | 5 | **Spec: ficha de producto** | H1, K1–K7, H2, H3 | Corregir y entender lo comprado; necesaria cuando hay boletas. |
 | 6 | **Spec: cuenta** | P5 (borrar cuenta, antes de publicar en Play), P1, P6, P7 | Requisito de tienda + invitar más fácil. |
 | 7 | **Plus** | F3/F4/F5 + H4 (unidades, pasillos, precio al marcar), G5/Z1/Y1 (precios por tienda), W1 (gráfico) | Con datos confiables ya acumulados. |
+
+---
+
+## 6. Coherencia entre pestañas (2026-10-09)
+
+Recorrido a 375×667 en staging (cuenta `test5`), después de la spec 0015 y el fix-049. Mira la app
+como un todo: navegación, textos y sistema visual. Las decisiones de cada pestaña siguen arriba.
+
+### Navegación: dónde vive cada cosa
+| # | Qué pasa | Por qué importa |
+|---|---|---|
+| N1 | **El Historial no es una pestaña.** Se llega por un ícono de reloj en Mi Lista; estando ahí, la barra marca "Mi Lista" y el encabezado cambia (flecha atrás, sin "SHOPPING"). | Las compras y el gasto del mes, lo que más se consulta después de comprar, están escondidos. |
+| N2 | **Dos puertas al mismo cierre:** "Finalizar" en Mi Lista (menú: Escanear boleta / Sin boleta / Ahora no / Cancelar) y la pestaña Boletas. | Dos caminos para lo mismo; la pestaña Boletas solo es una cámara. |
+| N3 | **Dos puertas a "compra sin lista":** el botón del Historial y "Es otra compra" en Boletas. | Igual que N2. |
+| N4 | **La pestaña Boletas no muestra boletas.** Las boletas guardadas se ven en el detalle del Historial. | El nombre promete algo que está en otra parte. |
+
+### Textos
+| # | Qué pasa |
+|---|---|
+| T1 | El encabezado dice "SHOPPING" (inglés) en todas las pestañas menos el Historial. |
+| T2 | Los títulos no son el nombre de la pestaña: Boletas → "Escanear boleta", Catálogo → "Catálogo Inteligente". |
+| T3 | Anglicismos y mezcla de palabras para lo mismo: "Est. Costo", "EN CARRITO" (Mi Lista), "lo marcaste" (Boletas), "Comprado hace" (Catálogo). |
+| T4 | Mayúsculas inconsistentes: "Cerrar Sesión", "Buscar Actualizaciones" (cada palabra) frente al resto en oración; el menú de "Finalizar" en MAYÚSCULAS (estilo por defecto de Ionic). |
+
+### Sistema visual
+| # | Qué pasa |
+|---|---|
+| V1 | **El color de aviso es azul.** `--brand-gold` vale `#3b82f6` (resto de la plantilla) y es `--state-warning`: los "por decidir" de Boletas y los avisos se ven azules, como un link. |
+| V2 | Radios distintos para la misma tarjeta: Mi Lista y Catálogo muy redondeadas, Boletas `rounded-xl`, Historial `rounded-2xl`. |
+| V3 | Catálogo: una línea verde suelta sobre "Todos tus productos" (resto del banner de sugerencias que pasó a Mi Lista en 0014) y cajas de precio "$" vacías y editables en cada fila. |
+| V4 | El buscador usa encabezado de sección en MAYÚSCULAS con ícono ("TUS ESENCIALES"); el resto de las secciones no. |
+
+### Propuesta: 4 pestañas con un trabajo cada una
+| Pestaña | Para qué | Qué cambia |
+|---|---|---|
+| **Mi Lista** | Armar y marcar la compra. | "Finalizar" abre el flujo de cierre. Sin ícono de Historial. |
+| **Compras** (antes Boletas + Historial) | Ver lo comprado y registrar una compra. | Arriba el gasto del mes y "Escanear boleta" (si hay algo marcado cierra la lista; si no, es una compra sin lista, con confirmación). Debajo, las compras con sus boletas y detalle. Una sola puerta para N2, N3 y N4. |
+| **Catálogo** | Los productos de la familia. | Búsqueda, ficha de producto (precios, tiendas, cada cuánto), renombrar/juntar. |
+| **Perfil** | Cuenta, familia y app. | Cuenta (cambiar contraseña, salir), familia, actualizaciones. |
+
+El **cierre con boleta** pasa a ser un flujo a pantalla completa (sin barra), al que se llega desde
+"Finalizar" y desde Compras: primero lo que hay que decidir, después el resumen agrupado, con el
+cierre fijo abajo; mientras lee la boleta, se ve la foto y se puede seguir usando la app.
+
+### Orden replanificado (reemplaza al de "Resumen y orden propuesto")
+| Paso | Qué | Cubre |
+|---|---|---|
+| 1 | ✅ Spec 0015 (boleta confiable) y fix-049 (arreglos rápidos de Boletas). | B1–B9, G2 |
+| 2 | ✅ Spec 0016: pestaña Compras + flujo de cierre a pantalla completa (2026-10-09). R8–R10 quedan fuera. | N1–N4, R1–R7, G1, G3, G4, lo que quedó fuera del fix-049 (líneas repetidas, editar al tocar, lectura en segundo plano) |
+| 3 | ✅ Fix-050: coherencia visual y de textos (2026-10-10). | T1–T4, V1–V4 |
+| 4 | Spec: ficha de producto y catálogo editable. | H1–H6, K1, K3, K7 |
+| 5 | Spec: cuenta (antes de publicar en Play Store). | P1, P5–P7 |
+| 6 | Plus: categorías, precios por tienda, gasto por tienda. | — |
