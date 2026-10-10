@@ -101,6 +101,45 @@ body.modal-open {
   pointer-events: auto !important;
 }
 
+/* Alertas y hojas de acciones de Ionic (Finalizar, borrar, renombrar, foto o galería): con los
+   tokens del tema y sin las MAYÚSCULAS de Material (fix-050, T4). */
+ion-alert {
+  --background: var(--bg-elevated);
+  --max-width: 22rem;
+}
+ion-alert .alert-head .alert-title,
+ion-alert .alert-message {
+  color: var(--text-primary);
+}
+ion-alert .alert-message {
+  color: var(--text-muted);
+}
+ion-alert .alert-wrapper {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+}
+/* .alert-button-group sube la especificidad sobre `.alert-button.sc-ion-alert-md` de Ionic. */
+ion-alert .alert-button-group .alert-button {
+  text-transform: none;
+  font-weight: 600;
+  color: var(--ds-brand);
+}
+ion-alert .alert-button.alert-cancel-btn {
+  color: var(--text-muted);
+}
+ion-alert .alert-button.alert-button-role-destructive {
+  color: var(--state-error);
+}
+ion-action-sheet {
+  --background: var(--bg-elevated);
+  --color: var(--text-primary);
+  --button-color: var(--text-primary);
+}
+ion-action-sheet .action-sheet-destructive {
+  --button-color: var(--state-error);
+  color: var(--state-error);
+}
+
 /* Toast con acción ("Quitaste X · Deshacer", ToastService.action — spec 0013 Q27).
    Es un ion-toast (overlay global): se viste con los tokens del tema. */
 ion-toast.action-toast {
