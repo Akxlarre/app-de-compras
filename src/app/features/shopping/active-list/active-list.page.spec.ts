@@ -8,6 +8,8 @@ import { AlertController, NavController } from '@ionic/angular';
 import { FamilyFacade } from '@core/facades/family.facade';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
 import { RestockFacade } from '@core/facades/restock.facade';
+import { ShareService } from '@core/services/share.service';
+import { ToastService } from '@core/services/ui/toast.service';
 
 describe('ActiveListPage', () => {
   let component: ActiveListPage;
@@ -17,6 +19,8 @@ describe('ActiveListPage', () => {
   let restock: any;
   let closeFacade: { start: ReturnType<typeof vi.fn> };
   let nav: { navigateForward: ReturnType<typeof vi.fn> };
+  let share: { openWhatsApp: ReturnType<typeof vi.fn> };
+  let toast: { info: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     alertController = {
@@ -28,6 +32,8 @@ describe('ActiveListPage', () => {
     };
     closeFacade = { start: vi.fn() };
     nav = { navigateForward: vi.fn() };
+    share = { openWhatsApp: vi.fn().mockResolvedValue('opened') };
+    toast = { info: vi.fn(), error: vi.fn() };
     // Mock del Facade y su Signal 'data'
     mockFacade = {
       data: signal(null),
@@ -83,6 +89,8 @@ describe('ActiveListPage', () => {
         { provide: PurchaseCloseFacade, useValue: closeFacade },
         { provide: RestockFacade, useValue: restock },
         { provide: NavController, useValue: nav },
+        { provide: ShareService, useValue: share },
+        { provide: ToastService, useValue: toast },
         // La página se instancia como provider (sin render), así que no hay CDR de vista.
         { provide: ChangeDetectorRef, useValue: { detectChanges: vi.fn() } },
       ],
@@ -218,6 +226,7 @@ describe('ActiveListPage', () => {
         unit: 'un',
         unitPrice: null,
         notes: null,
+        addedBy: null,
       });
 
       component.saveDetail({ itemId: '1', patch: { unit: 'kg', quantity: 1.5 } });
@@ -297,6 +306,57 @@ describe('ActiveListPage', () => {
     it('al entrar carga la familia si todavía no está', () => {
       component.ngOnInit();
       expect(familyFacade.loadMyFamily).toHaveBeenCalled();
+    });
+  });
+
+  describe('lista compartida (spec 0024)', () => {
+    it('"Pedido por" en pendientes que agregó otro miembro (D1)', () => {
+      expect(component.addedByLabel({ is_checked: false, added_by: 'u2' } as any)).toBe(
+        'Pedido por beto'
+      );
+      expect(component.addedByLabel({ is_checked: false, added_by: 'u1' } as any)).toBeNull();
+      expect(component.addedByLabel({ is_checked: true, added_by: 'u2' } as any)).toBeNull();
+      expect(component.addedByLabel({ is_checked: false } as any)).toBeNull();
+      familyFacade.hasOtherMembers.set(false);
+      expect(component.addedByLabel({ is_checked: false, added_by: 'u2' } as any)).toBeNull();
+    });
+
+    it('el detalle dice quién lo agregó (D1)', () => {
+      const item = (added_by?: string) =>
+        ({ id: 'i', is_checked: false, quantity: 1, added_by, product: { name: 'Leche' } } as any);
+      component.openDetail(item('u2'));
+      expect(component.detail()?.addedBy).toBe('Lo agregó beto');
+      component.openDetail(item('u1'));
+      expect(component.detail()?.addedBy).toBe('Lo agregaste tú');
+      component.openDetail(item());
+      expect(component.detail()?.addedBy).toBeNull();
+    });
+
+    it('"Compartir" manda los pendientes a WhatsApp; si se copió, avisa (D2)', async () => {
+      mockFacade.data.set({
+        id: 'list-1',
+        list_items: [
+          {
+            id: '1',
+            created_at: '2026-10-10T10:00:00Z',
+            is_checked: false,
+            quantity: 2,
+            product: { name: 'Leche', category: 'Lácteos y huevos' },
+          },
+        ],
+      });
+      expect(component.shareText()).toBe('*Lista de compras*\n_Lácteos y huevos_\n• Leche × 2');
+
+      await component.share();
+      expect(share.openWhatsApp).toHaveBeenCalledWith(component.shareText());
+      expect(toast.info).not.toHaveBeenCalled();
+
+      share.openWhatsApp.mockResolvedValue('copied');
+      await component.share();
+      expect(toast.info).toHaveBeenCalledWith(
+        'Lista copiada',
+        'Pégala en WhatsApp o donde quieras.'
+      );
     });
   });
 

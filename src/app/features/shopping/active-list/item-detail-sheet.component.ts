@@ -20,6 +20,8 @@ export interface ItemDetail {
   unit: ItemUnit;
   unitPrice: number | null;
   notes: string | null;
+  /** "Lo agregó Ana" / "Lo agregaste tú"; null si no se sabe (spec 0024 D1). */
+  addedBy?: string | null;
 }
 
 /** Largo máximo de la nota de un ítem (spec 0021 D1). */
@@ -49,7 +51,14 @@ export const NOTES_MAX = 80;
         class="relative bg-surface border-t border-border-default rounded-t-3xl px-4 pt-5 pb-chrome flex flex-col gap-4"
         (submit)="$event.preventDefault(); submit()"
       >
-        <h2 class="text-lg font-bold text-text-primary break-words">{{ item().name }}</h2>
+        <div>
+          <h2 class="text-lg font-bold text-text-primary break-words">{{ item().name }}</h2>
+          @if (item().addedBy) {
+          <p class="text-xs text-text-muted mt-0.5" data-testid="agregado-por">
+            {{ item().addedBy }}
+          </p>
+          }
+        </div>
 
         <fieldset class="flex flex-col gap-2">
           <legend class="text-xs font-semibold text-text-muted mb-2">Unidad</legend>

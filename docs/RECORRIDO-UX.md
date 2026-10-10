@@ -44,12 +44,12 @@ falla o confunde, qué falta y qué daría un plus. Prioridad: **P1** = afecta e
 | F3 | P2 | **Unidades** (kg, g, L, paquete) y cantidades decimales | "1 Papas" no dice si es 1 kg o 1 unidad; la boleta trae kg. |
 | F4 | P2 | **Agrupar por categoría / pasillo** | `products.category` existe pero no hay forma de asignarla ni de ver la lista por secciones (verduras, lácteos, aseo). Ordena el recorrido en el súper. |
 | F5 | P2 | **Precio al marcar** (opcional) | Anotar el precio mientras se compra hace que el cierre "sin boleta" sea casi automático y el costo estimado se acerque al real. Pendiente desde 0009. |
-| F6 | P3 | **Quién agregó cada producto** | Ya se muestra quién marcó; saber quién lo pidió ayuda a preguntar ("¿qué detergente?"). |
+| F6 | P3 | ✅ 0024 · **Quién agregó cada producto** | Ya se muestra quién marcó; saber quién lo pidió ayuda a preguntar ("¿qué detergente?"). |
 
 ### Ideas que darían un plus
 | # | Idea |
 |---|---|
-| X1 | **Compartir la lista por WhatsApp** (texto con los pendientes) para alguien que no usa la app. |
+| X1 | ✅ 0024 · **Compartir la lista por WhatsApp** (texto con los pendientes) para alguien que no usa la app. |
 | X2 | **Presupuesto de la compra**: fijar un tope y ver "vas en $X de $Y" con el costo estimado. |
 | X3 | **Modo supermercado**: pantalla siempre encendida, filas más grandes, solo pendientes. |
 | X4 | **Agregar por voz o pegando un texto** ("leche, pan, 2 kg de papas") que se convierte en ítems. |
@@ -204,9 +204,9 @@ boleta) y `test5` (ninguna).
 | # | Prio | Falta | Por qué |
 |---|---|---|---|
 | R7 | P2 | **Meses anteriores** (selector o lista por mes con su total) y comparación con el mes anterior. | Responder "¿cuánto gastamos al mes?" es la razón para registrar. |
-| R8 | P2 | **"Agregar estos productos a la lista"** desde cualquier compra pasada (hoy solo "Repetir última compra"). | Reusar la compra de hace dos semanas sin guardar plantilla. |
-| R9 | P3 | **Quién compró** (quién cerró la compra / quién marcó). | En familia: saber quién fue. |
-| R10 | P3 | **Buscar** en el historial ("¿cuándo compramos pilas?"). | Con meses de historia. |
+| R8 | P2 | ✅ 0023 · **"Agregar estos productos a la lista"** desde cualquier compra pasada (hoy solo "Repetir última compra"). | Reusar la compra de hace dos semanas sin guardar plantilla. |
+| R9 | P3 | ✅ 0023 · **Quién compró** (quién cerró la compra / quién marcó). | En familia: saber quién fue. |
+| R10 | P3 | ✅ 0023 · **Buscar** en el historial ("¿cuándo compramos pilas?"). | Con meses de historia. |
 
 ### Ideas que darían un plus
 | # | Idea |
@@ -315,3 +315,5 @@ cierre fijo abajo; mientras lee la boleta, se ve la foto y se puede seguir usand
 | 7 | ✅ Spec 0021: nota por ítem y detalle completo (2026-10-10): nota en la fila, pulsación larga para abrir el detalle, "Ver ficha del producto". Sigue: 0023 compras (R8–R10), 0024 lista compartida (F6, X1), 0025 en el súper (X2, X3), 0026 exportar (Y3). Y5 descartado. | F1, F2 |
 | 8 | ✅ Spec 0022: orden (A–Z, Más comprados, Hace más tiempo) y filtros (Pasillo, Sin precio) en el Catálogo (2026-10-10). | H5 |
 | 9 | ✅ Spec 0026: "Exportar <mes> a planilla" en Compras (2026-10-10): CSV para Excel/Sheets en español; en el teléfono se abre con una app de planillas. | Y3 |
+| 10 | ✅ Spec 0023: buscar en Compras, "Agregar a la lista" desde cualquier compra y "Cerrada por" (2026-10-10). | R8, R9, R10 |
+| 11 | ✅ Spec 0024: "Pedido por" en la lista y "Compartir" los pendientes por WhatsApp (2026-10-10). | F6, X1 |

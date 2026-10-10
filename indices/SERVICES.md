@@ -13,6 +13,7 @@
 | `NetworkStatusService` | `DestroyRef` | `src/app/core/services/infrastructure/network-status.service.ts` |
 | `OfflineStoreService` | `SessionScopeService` | `src/app/core/services/infrastructure/offline-store.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
+| `ShareService` | — | `src/app/core/services/share.service.ts` |
 | `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
 | `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
 | `GsapAnimationsService` | `PLATFORM_ID`, `NgZone` | `src/app/core/services/ui/gsap-animations.service.ts` |

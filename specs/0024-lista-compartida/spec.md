@@ -1,7 +1,7 @@
 > id: 0024-lista-compartida
 > refs: `docs/RECORRIDO-UX.md` §1 Mi Lista (F6, X1). Orden acordado en la spec 0021.
-> status: approved (2026-10-10: el dueño pidió "continúa hasta terminar todas las spec"; las
-> decisiones las tomó Claude y quedan escritas aquí para revisarlas)
+> status: done (2026-10-10; decisiones tomadas por Claude a pedido del dueño: "continúa hasta
+> terminar todas las spec")
 > created: 2026-10-10
 
 ## Problema
@@ -36,9 +36,21 @@
 - Recibir de vuelta lo que marque alguien sin la app.
 
 ## Criterios de aceptación
-- [ ] AC1. Agregar un ítem guarda quién lo agregó; la fila de un pendiente agregado por otro miembro
+- [x] AC1. Agregar un ítem guarda quién lo agregó; la fila de un pendiente agregado por otro miembro
   dice "Pedido por <nombre>", y el detalle dice quién lo agregó.
-- [ ] AC2. "Compartir" abre WhatsApp con los pendientes por pasillo en el formato de D2.
-- [ ] AC3. Migración en plataforma-db con pgTAP (compartida con 0023 y 0025).
-- [ ] AC4. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
-- [ ] AC5. Verificado en staging a 375×667 con `test5`.
+- [x] AC2. "Compartir" abre WhatsApp con los pendientes por pasillo en el formato de D2.
+- [x] AC3. Migración en plataforma-db con pgTAP (compartida con 0023 y 0025).
+- [x] AC4. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
+- [x] AC5. Verificado en staging a 375×667 con `test5`.
+
+## Cierre (2026-10-10)
+- AC3: plataforma-db #21, mergeada y aplicada en staging (pgTAP `shop_who_and_budget`).
+- AC4: 844 tests, `lint:arch` sin errores y `ng build` sin avisos.
+- AC5, en staging a 375×667 con la familia `test3` + `test4` (`test5` está sola en su familia y no
+  muestra nombres, como dice D1):
+  - `test4` agregó Yogurt × 2; `test3` ve "Pedido por test4" en la fila, y el detalle dice "Lo
+    agregó test4"; Arroz (agregado antes del cambio) no dice nada;
+  - "Compartir" abrió `wa.me` con `*Lista de compras*` / `_Lácteos y huevos_` / `• Yogurt × 2` /
+    `_Despensa_` / `• Arroz`.
+- El Yogurt de prueba se cerró y la compra se borró; la lista de `test3` quedó con lo que tenía.
+- En el teléfono `wa.me` lo abre Capacitor fuera de la app; no se probó en un Android real.

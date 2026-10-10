@@ -121,6 +121,16 @@
               <app-icon name="plus" [size]="12" [attr.aria-label]="'Agregar'" />
               Agregar plantilla
             </button>
+            } @if (shareText()) {
+            <button
+              class="text-xs text-text-muted font-medium whitespace-nowrap hover:text-text-primary active:scale-95 transition-all flex items-center gap-1"
+              data-testid="compartir-lista"
+              data-llm-action="compartir-lista"
+              (click)="share()"
+            >
+              <app-icon name="share-2" [size]="12" [attr.aria-label]="'Compartir'" />
+              Compartir
+            </button>
             }
             <button
               class="text-xs text-text-muted font-medium whitespace-nowrap hover:text-text-primary active:scale-95 transition-all flex items-center gap-1 disabled:opacity-40"
@@ -295,6 +305,9 @@
                     } @if (checkedByName(item); as who) {
                     <span>•</span>
                     <span class="truncate" data-testid="checked-by">{{ who }}</span>
+                    } @if (addedByLabel(item); as who) {
+                    <span>•</span>
+                    <span class="truncate" data-testid="pedido-por">{{ who }}</span>
                     }
                   </div>
                 </div>

@@ -76,6 +76,9 @@ function writeFlag(key: string): void {
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { sortListItems } from '@core/utils/shopping-list.utils';
 import { groupByAisle } from '@core/utils/aisles.utils';
+import { pendingListText } from '@core/utils/share-list.utils';
+import { ShareService } from '@core/services/share.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import { formatQuantity, hasStepper, isDecimalUnit } from '@core/utils/units.utils';
 import { parsePrice } from '@core/utils/price.utils';
 import type { ItemPatch } from '@core/models/offline-queue.model';
@@ -139,6 +142,8 @@ export class ActiveListPage implements OnInit {
   private gsap = inject(GsapAnimationsService);
   private cdr = inject(ChangeDetectorRef);
   private restock = inject(RestockFacade);
+  private sharing = inject(ShareService);
+  private toast = inject(ToastService);
 
   @ViewChild('ionList', { read: ElementRef }) listElementRef?: ElementRef;
 
@@ -198,7 +203,34 @@ export class ActiveListPage implements OnInit {
       unit: item.unit ?? 'un',
       unitPrice: item.unit_price ?? null,
       notes: item.notes ?? null,
+      addedBy: this.addedByDetail(item),
     });
+  }
+
+  // ── Lista compartida (spec 0024) ───────────────────────────────────────────
+  /** "Pedido por Ana": en un pendiente que agregó otro miembro (D1). */
+  addedByLabel(item: PopulatedListItem): string | null {
+    if (item.is_checked || !item.added_by || !this.family.hasOtherMembers()) return null;
+    const name = this.family.memberNames().get(item.added_by);
+    return name && name !== 'Tú' ? `Pedido por ${name}` : null;
+  }
+
+  private addedByDetail(item: PopulatedListItem): string | null {
+    const name = item.added_by ? this.family.memberNames().get(item.added_by) : undefined;
+    if (!name) return null;
+    return name === 'Tú' ? 'Lo agregaste tú' : `Lo agregó ${name}`;
+  }
+
+  /** Los pendientes como texto para WhatsApp; null si no hay (D2). */
+  readonly shareText = computed(() => pendingListText(this.facade.data()?.list_items ?? []));
+
+  async share(): Promise<void> {
+    const text = this.shareText();
+    if (!text) return;
+    const result = await this.sharing.openWhatsApp(text);
+    if (result === 'copied')
+      this.toast.info('Lista copiada', 'Pégala en WhatsApp o donde quieras.');
+    else if (result === 'failed') this.toast.error('No se pudo compartir la lista');
   }
 
   /** "Ver ficha del producto" desde el detalle (spec 0021 D4). */

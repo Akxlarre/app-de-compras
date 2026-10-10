@@ -1,5 +1,5 @@
 > spec: 0023-compras-utiles
-> status: approved
+> status: done
 > created: 2026-10-10
 
 # Plan
