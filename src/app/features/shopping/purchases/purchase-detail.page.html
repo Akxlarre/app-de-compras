@@ -1,9 +1,5 @@
 <div class="h-full flex flex-col bg-base" data-testid="purchase-detail">
-  <app-header
-    [title]="purchase()?.title ?? 'Compra'"
-    [showBack]="true"
-    (backClicked)="back()"
-  >
+  <app-header [title]="purchase()?.title ?? 'Compra'" [showBack]="true" (backClicked)="back()">
     @if (purchase()) {
     <button
       slot="actions"
@@ -29,6 +25,8 @@
         <p class="text-sm text-text-muted">{{ dateLabel() }}</p>
         @if (p.store) {
         <p class="font-semibold text-text-primary mt-0.5">{{ p.store }}</p>
+        } @if (closedBy(); as who) {
+        <p class="text-xs text-text-muted mt-0.5" data-testid="cerrada-por">{{ who }}</p>
         }
         <div class="flex items-end justify-between gap-3 mt-2">
           <p class="kpi-value">
@@ -62,7 +60,23 @@
           </button>
           }
         </div>
-        }
+        } @if (toAdd().length) {
+        <!-- Volver a comprar lo de esta compra (spec 0023 D1) -->
+        <button
+          class="w-full mt-3 flex items-center justify-center gap-2 py-2.5 rounded-full border border-border-default text-sm font-semibold text-text-primary active:scale-[0.99] transition-transform disabled:opacity-40"
+          data-testid="agregar-a-la-lista"
+          data-llm-action="agregar-compra-a-lista"
+          [disabled]="adding()"
+          (click)="addToList()"
+        >
+          <app-icon name="plus" [size]="16" [attr.aria-label]="'Agregar a la lista'" />
+          Agregar a la lista ({{ toAdd().length }})
+        </button>
+        @if (toAdd().length < p.itemCount) {
+        <p class="text-xs text-text-muted text-center mt-1" data-testid="solo-catalogo">
+          Solo lo que está en tu catálogo
+        </p>
+        } }
       </section>
 
       <!-- Boletas: miniaturas que se amplían -->
@@ -74,7 +88,12 @@
           [attr.aria-label]="'Ampliar boleta ' + ($index + 1)"
           (click)="enlarged.set(url)"
         >
-          <img [src]="url" alt="Foto de la boleta" class="w-full h-full object-cover" loading="lazy" />
+          <img
+            [src]="url"
+            alt="Foto de la boleta"
+            class="w-full h-full object-cover"
+            loading="lazy"
+          />
         </button>
         } @else {
         <p class="text-xs text-text-muted self-center">No se pudo abrir la foto.</p>

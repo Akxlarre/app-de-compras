@@ -13,6 +13,10 @@ export interface ShoppingList {
   /** Lo pagado de verdad (boleta o a mano); null = no se sabe (spec 0008). */
   total_paid?: number | null;
   total_source?: TotalSource;
+  /** Quién la cerró; lo fija la BD al pasar a `completed` (spec 0023 D3). */
+  completed_by?: string | null;
+  /** Presupuesto en pesos; null = sin tope (spec 0025 D2). */
+  budget?: number | null;
 }
 
 /** Boleta embebida en la compra (`receipts(id, image_url, store, total_amount)`). */
@@ -41,6 +45,8 @@ export interface ListItem {
   is_checked: boolean;
   checked_at?: string;
   checked_by?: string;
+  /** Quién lo agregó; lo fija la BD al crearlo (spec 0024 D1). */
+  added_by?: string | null;
   /**
    * Precio pagado. Se puede anotar al marcar (spec 0019 D5); si no, lo completa `complete_list`
    * con el último precio al finalizar.
@@ -64,7 +70,8 @@ export interface PurchaseLine {
   quantity: number | null;
   unit_price: number | null;
   amount: number;
-  product: Pick<Product, 'name'> | null;
+  /** `id` para volver a agregarlo a la lista (spec 0023 D1). */
+  product: (Pick<Product, 'name'> & Partial<Pick<Product, 'id'>>) | null;
 }
 
 /** Lista con sus ítems poblados: la forma que consume la UI. */

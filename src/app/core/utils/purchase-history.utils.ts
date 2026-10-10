@@ -8,6 +8,8 @@ import type {
   PurchasedItem,
 } from '@core/models/purchase-history.model';
 import { disambiguateTitles, purchaseTitle } from './purchase-name.utils';
+import { matchesSearch } from './product-sheet.utils';
+import { formatAmount } from './price.utils';
 
 /** Las boletas de la compra: varias si la salida fue por varias tiendas (spec 0015 D6). */
 function receiptsOf(list: ActiveShoppingList): ListReceipt[] {
@@ -82,6 +84,7 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
     ),
     store: stores || null,
     items,
+    completedBy: list.completed_by ?? null,
     charges,
     source: list,
   };
@@ -178,4 +181,57 @@ export function spendByStore(
         : [['Sin boleta', p.total]]
     )
   ).filter((s) => s.total > 0);
+}
+
+/**
+ * Lo comprado, para volver a agregarlo a la lista (spec 0023 D1): los productos de la boleta (las
+ * líneas del mismo producto suman) y lo marcado que no estaba en ella. Una vez cada producto.
+ */
+export function purchasedProducts(
+  list: Pick<ActiveShoppingList, 'list_items' | 'purchase_lines'>
+): { product_id: string; quantity: number }[] {
+  const qty = (q: number | string | null | undefined) => Number(q ?? 1) || 1;
+  const totals = new Map<string, number>();
+  for (const l of list.purchase_lines ?? []) {
+    const id = l.product?.id;
+    if (l.kind === 'product' && id) totals.set(id, (totals.get(id) ?? 0) + qty(l.quantity));
+  }
+  for (const i of list.list_items ?? []) {
+    if (i.is_checked && i.product_id && !totals.has(i.product_id)) {
+      totals.set(i.product_id, qty(i.quantity));
+    }
+  }
+  return [...totals].map(([product_id, quantity]) => ({ product_id, quantity }));
+}
+
+export interface PurchaseSearchResult<T> {
+  purchase: T;
+  /** El producto que coincidió ("Pilas AA · 2 × $3.990"); null si coincidió el nombre o la tienda. */
+  match: string | null;
+}
+
+function itemLabel(i: PurchasedItem): string {
+  const qty = i.quantity === 1 ? '' : `${String(i.quantity).replace('.', ',')} × `;
+  return i.unitPrice == null ? i.name : `${i.name} · ${qty}$${formatAmount(i.unitPrice)}`;
+}
+
+/**
+ * Compras de cualquier mes cuyo título, nombre, tienda o algún producto coincide con `query`
+ * (sin tildes ni mayúsculas), la más nueva primero (spec 0023 D2).
+ */
+export function searchPurchases<
+  T extends Pick<PurchaseSummary, 'title' | 'name' | 'store' | 'completedAt' | 'items'>
+>(purchases: T[], query: string): PurchaseSearchResult<T>[] {
+  const term = query.trim();
+  if (!term) return [];
+  return purchases
+    .flatMap((purchase): PurchaseSearchResult<T>[] => {
+      const item = purchase.items.find((i) => matchesSearch(i.name, term));
+      if (item) return [{ purchase, match: itemLabel(item) }];
+      const byName = [purchase.title, purchase.name, purchase.store ?? ''].some(
+        (text) => text && matchesSearch(text, term)
+      );
+      return byName ? [{ purchase, match: null }] : [];
+    })
+    .sort((a, b) => b.purchase.completedAt.localeCompare(a.purchase.completedAt));
 }

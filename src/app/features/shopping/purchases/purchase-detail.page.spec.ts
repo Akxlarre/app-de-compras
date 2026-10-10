@@ -6,6 +6,9 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { PurchaseDetailPage } from './purchase-detail.page';
 import { PurchaseHistoryFacade } from '@core/facades/purchase-history.facade';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
+import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
+import { FamilyFacade } from '@core/facades/family.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 
 describe('PurchaseDetailPage (spec 0016 AC7)', () => {
   let page: PurchaseDetailPage;
@@ -15,6 +18,10 @@ describe('PurchaseDetailPage (spec 0016 AC7)', () => {
   let close: { start: ReturnType<typeof vi.fn> };
   let alerts: { create: ReturnType<typeof vi.fn> };
   let sheets: { create: ReturnType<typeof vi.fn> };
+  let lists: { addToList: ReturnType<typeof vi.fn> };
+  let toast: { success: ReturnType<typeof vi.fn> };
+  let family: any;
+  let hasOthers: ReturnType<typeof signal<boolean>>;
   const source = { id: 'a', status: 'completed', list_items: [] };
   const purchase = (over: object = {}) => ({
     id: 'a',
@@ -50,6 +57,20 @@ describe('PurchaseDetailPage (spec 0016 AC7)', () => {
         .mockResolvedValue({ present: vi.fn(), onDidDismiss: () => new Promise(() => {}) }),
     };
     sheets = { create: vi.fn().mockResolvedValue({ present: vi.fn() }) };
+    lists = { addToList: vi.fn().mockResolvedValue(2) };
+    toast = { success: vi.fn() };
+    hasOthers = signal(false);
+    family = {
+      hasOtherMembers: hasOthers,
+      memberNames: signal(
+        new Map([
+          ['me', 'Tú'],
+          ['u2', 'Ana'],
+        ])
+      ),
+      currentFamily: signal({ id: 'f' }),
+      loadMyFamily: vi.fn(),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -59,6 +80,9 @@ describe('PurchaseDetailPage (spec 0016 AC7)', () => {
         { provide: NavController, useValue: nav },
         { provide: AlertController, useValue: alerts },
         { provide: ActionSheetController, useValue: sheets },
+        { provide: ShoppingListFacade, useValue: lists },
+        { provide: FamilyFacade, useValue: family },
+        { provide: ToastService, useValue: toast },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 'a' }) } },
@@ -66,6 +90,49 @@ describe('PurchaseDetailPage (spec 0016 AC7)', () => {
       ],
     });
     page = TestBed.inject(PurchaseDetailPage);
+  });
+
+  describe('compras útiles (spec 0023)', () => {
+    const bought = {
+      id: 'a',
+      status: 'completed',
+      list_items: [
+        { id: 'i1', product_id: 'p1', is_checked: true, quantity: 2 },
+        { id: 'i2', product_id: 'p2', is_checked: true, quantity: 1 },
+      ],
+    };
+
+    it('"Agregar a la lista" agrega lo comprado y avisa cuántos (D1)', async () => {
+      current.set(purchase({ source: bought }));
+      expect(page.toAdd()).toHaveLength(2);
+
+      await page.addToList();
+
+      expect(lists.addToList).toHaveBeenCalledWith([
+        { product_id: 'p1', quantity: 2 },
+        { product_id: 'p2', quantity: 1 },
+      ]);
+      expect(toast.success).toHaveBeenCalledWith('2 productos agregados a Mi Lista');
+    });
+
+    it('si no se pudo, no dice que se agregaron (el facade ya avisó)', async () => {
+      current.set(purchase({ source: bought }));
+      lists.addToList.mockResolvedValue(null);
+      await page.addToList();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('"Cerrada por" solo con más miembros y si se sabe quién (D3)', () => {
+      current.set(purchase({ completedBy: 'u2' }));
+      expect(page.closedBy()).toBeNull();
+
+      hasOthers.set(true);
+      expect(page.closedBy()).toBe('Cerrada por Ana');
+      current.set(purchase({ completedBy: 'me' }));
+      expect(page.closedBy()).toBe('Cerrada por ti');
+      current.set(purchase({ completedBy: null }));
+      expect(page.closedBy()).toBeNull();
+    });
   });
 
   it('busca la compra de la URL', () => {

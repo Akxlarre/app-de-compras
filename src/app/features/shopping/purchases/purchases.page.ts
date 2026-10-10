@@ -32,6 +32,12 @@ const shortDay = new Intl.DateTimeFormat('es-CL', {
   day: 'numeric',
   month: 'short',
 });
+const dayWithYear = new Intl.DateTimeFormat('es-CL', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
 
 /** Fila de una compra: la tienda en vez de repetir la fecha (R4) y de dónde sale el total (R3). */
 export function purchaseRow(p: PurchaseSummary) {
@@ -97,6 +103,22 @@ export class PurchasesPage implements OnInit {
   /** Ninguna compra todavía: se explica cómo empezar (R6). */
   readonly isEmpty = computed(() => (this.facade.data() ?? []).length === 0);
   readonly rows = computed(() => this.facade.visible().map(purchaseRow));
+
+  // ── Buscar en todas las compras (spec 0023 D2) ─────────────────────────────
+  readonly searching = computed(() => !!this.facade.query().trim());
+  /** Cada resultado con su fecha (pueden ser de cualquier mes) y lo que coincidió. */
+  readonly resultRows = computed(() =>
+    this.facade.results().map(({ purchase, match }) => ({
+      ...purchaseRow(purchase),
+      when: dayWithYear.format(new Date(purchase.completedAt)),
+      match,
+    }))
+  );
+  readonly resultsLabel = computed(() => {
+    const n = this.facade.results().length;
+    if (n === 0) return `Ninguna compra con «${this.facade.query().trim()}»`;
+    return n === 1 ? '1 compra' : `${n} compras`;
+  });
 
   /** Barras de los últimos 6 meses (spec 0020 D3): alto relativo al mes más alto. */
   readonly bars = computed(() => {

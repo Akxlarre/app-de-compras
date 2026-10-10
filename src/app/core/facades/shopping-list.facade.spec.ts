@@ -700,6 +700,29 @@ describe('ShoppingListFacade', () => {
       expect(facade.data()?.id).toBe('list-1');
     });
 
+    describe('addToList (spec 0023 D1)', () => {
+      const bought = [
+        { product_id: 'p1', quantity: 2 },
+        { product_id: 'p2', quantity: 1 },
+      ];
+
+      it('agrega a la lista activa (o la que crea) y devuelve cuántos', async () => {
+        lists['startActive'].mockResolvedValue({ id: 'list-1', created: false });
+        expect(await facade.addToList(bought)).toBe(2);
+        expect(items['addMany']).toHaveBeenCalledWith('list-1', bought);
+        expect(facade.data()?.id).toBe('list-1');
+      });
+
+      it('sin productos no hace nada; si falla, avisa y devuelve null', async () => {
+        expect(await facade.addToList([])).toBe(0);
+        expect(lists['startActive']).not.toHaveBeenCalled();
+
+        items['addMany'].mockRejectedValue(new Error('boom'));
+        expect(await facade.addToList(bought)).toBeNull();
+        expect(toast['error']).toHaveBeenCalled();
+      });
+    });
+
     it('startListFrom: si ya había lista activa (doble toque) no copia otra vez (AC3)', async () => {
       lists['startActive'].mockResolvedValue({ id: 'list-1', created: false });
 
