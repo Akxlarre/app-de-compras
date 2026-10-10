@@ -309,5 +309,5 @@ cierre fijo abajo; mientras lee la boleta, se ve la foto y se puede seguir usand
 | 2 | ✅ Spec 0016: pestaña Compras + flujo de cierre a pantalla completa (2026-10-09). R8–R10 quedan fuera. | N1–N4, R1–R7, G1, G3, G4, lo que quedó fuera del fix-049 (líneas repetidas, editar al tocar, lectura en segundo plano) |
 | 3 | ✅ Fix-050: coherencia visual y de textos (2026-10-10). | T1–T4, V1–V4 |
 | 4 | ✅ Spec 0017: ficha de producto y catálogo editable (2026-10-10). Quedan H4, H5 (categorías, filtros). | H1–H3, H6, K1–K7 |
-| 5 | Spec: cuenta (antes de publicar en Play Store). | P1, P5–P7 |
+| 5 | ✅ Spec 0018: cuenta (2026-10-10). Nombre, contraseña y Perfil compacto; borrar cuenta (P5) e invitar con enlace (P7) descartados: no se publica en Google Play. | P1–P4, P6 |
 | 6 | Plus: categorías, precios por tienda, gasto por tienda. | — |

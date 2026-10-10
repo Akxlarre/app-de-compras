@@ -1,8 +1,9 @@
 > id: 0018-cuenta
 > refs: `docs/RECORRIDO-UX.md` §5 Perfil (P1–P4, P6) y §6 (paso 5 del orden replanificado).
-> status: approved (2026-10-10: el dueño quitó D1 y D6 —no se publica en Google Play— y con D1 caen
+> status: done (2026-10-10: el dueño quitó D1 y D6 —no se publica en Google Play— y con D1 caen
 > D2 y D3; quedan D4, D5 y D7)
 > created: 2026-10-10
+> closed: 2026-10-10
 
 ## Problema
 1. **No se puede cambiar el propio nombre** (P1). Quien se registró sin nombre queda como la parte del
@@ -32,7 +33,7 @@
   pasar el rol de dueño, preferencias, foto de perfil, cambiar el correo.
 
 ## Criterios de aceptación
-- [ ] AC1. "Editar" el nombre (1–40) lo cambia en Perfil y en los miembros de la familia (lo que ven
+- [x] AC1. "Editar" el nombre (1–40) lo cambia en Perfil y en los miembros de la familia (lo que ven
   los demás); vacío o más largo avisa y no cambia nada.
 - [x] AC2. Cambiar contraseña pide la actual y la nueva dos veces; si la actual está mal, si las
   nuevas no coinciden o si es corta, avisa y no cambia; si todo está bien, avisa y la nueva sirve
@@ -43,7 +44,7 @@
 - [x] AC5. En la app instalada, junto a "Buscar actualizaciones" se ve la versión ("Versión 1.0.7"); en la
   web no se muestra (el build web no tiene versión: `package.json` dice 0.0.0).
 - [x] AC6. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
-- [ ] AC7. Verificado en staging a 375×667 con una cuenta de prueba creada para esto: cambiar el
+- [x] AC7. Verificado en staging a 375×667 con una cuenta de prueba creada para esto: cambiar el
   nombre (se ve en la familia), cambiar la contraseña y volver a entrar con la nueva.
 
 ## Verificación en staging (2026-10-10)
@@ -60,5 +61,8 @@ scratchpad (`ux-0018/`).
   policy for relation "profiles"`. La policy `profiles_update_own_safe` (baseline compartida)
   consulta `profiles` dentro de su WITH CHECK: nadie puede actualizar su perfil. La app avisó "No se
   cambió el nombre" y no cambió nada (como corresponde). Arreglo: RPC
-  `public.set_my_display_name` en plataforma-db #19 (pgTAP 7/7); la app ya la usa. Falta verificar
-  en staging cuando se mergee el #19.
+  `public.set_my_display_name` en plataforma-db #19 (pgTAP 7/7); la app ya la usa.
+- **AC1 tras el merge del #19** (deploy a staging en verde): nombre vacío → "No se cambió el nombre ·
+  Escribe un nombre de 1 a 40 caracteres."; "Benja Prueba" → "Nombre actualizado". Se ve en Perfil,
+  sigue después de recargar y en los miembros de la familia ("BP Benja Prueba · Tú · Dueño"). Sin
+  errores HTTP.
