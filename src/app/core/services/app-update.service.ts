@@ -32,6 +32,16 @@ export class AppUpdateService {
     }
   }
 
+  /** Versión instalada ("1.0.7"); null en la web, que no tiene versión propia. */
+  async getCurrentVersion(): Promise<string | null> {
+    if (!Capacitor.isNativePlatform()) return null;
+    try {
+      return (await App.getInfo()).version || null;
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Consulta a Supabase por la última actualización
    */

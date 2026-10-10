@@ -38,4 +38,18 @@ describe('ProfilesRepository', () => {
     mock.client.from.mockReturnValue(queryMock({ error }));
     await expect(repo.findById('u1')).rejects.toBe(error);
   });
+
+  it('updateDisplayName usa la RPC set_my_display_name (la policy de UPDATE de profiles es recursiva, spec 0018)', async () => {
+    mock.client.rpc.mockResolvedValue({ data: 'Benja', error: null });
+
+    await repo.updateDisplayName('Benja');
+    expect(mock.client.rpc).toHaveBeenCalledWith('set_my_display_name', { p_name: 'Benja' });
+    expect(mock.client.from).not.toHaveBeenCalled();
+  });
+
+  it('updateDisplayName lanza el error de Supabase', async () => {
+    const error = { message: 'invalid_name' };
+    mock.client.rpc.mockResolvedValue({ data: null, error });
+    await expect(repo.updateDisplayName('x')).rejects.toBe(error);
+  });
 });

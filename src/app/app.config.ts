@@ -69,6 +69,7 @@ import {
   Camera,
   PackageOpen,
   Archive, // Productos archivados (spec 0017)
+  Lock, // Cambiar contraseña (spec 0018)
   // ── Acciones extendidas ──
   Copy,
   Eye,
@@ -205,6 +206,7 @@ export const appConfig: ApplicationConfig = {
         Camera,
         PackageOpen,
         Archive,
+        Lock,
         // Acciones extendidas
         Copy,
         Eye,

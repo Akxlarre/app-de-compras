@@ -6,6 +6,7 @@ import { AuthFacade } from './auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ProfilesRepository } from '@core/repositories/profiles.repository';
 import { SessionScopeService } from '@core/services/auth/session-scope.service';
+import { initialsOf } from '@core/utils/avatar.utils';
 
 type AuthCallback = (event: string, session: unknown) => void;
 
@@ -35,9 +36,13 @@ describe('AuthFacade', () => {
       signUp: vi.fn().mockResolvedValue({ data: null, error: null }),
       signOut: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
-      updatePassword: vi.fn(),
+      updatePassword: vi.fn().mockResolvedValue({ error: null }),
+      updateUserMetadata: vi.fn().mockResolvedValue({ error: null }),
     };
-    profiles = { findById: vi.fn().mockResolvedValue({ id: 'u1', email: 'a@b.cl', role_id: 1 }) };
+    profiles = {
+      findById: vi.fn().mockResolvedValue({ id: 'u1', email: 'a@b.cl', role_id: 1 }),
+      updateDisplayName: vi.fn().mockResolvedValue(undefined),
+    } as any;
 
     TestBed.configureTestingModule({
       providers: [
@@ -191,6 +196,61 @@ describe('AuthFacade', () => {
       const result = await facade.updatePassword('123');
 
       expect(result.error).toBe(authError);
+    });
+  });
+
+  describe('cuenta (spec 0018)', () => {
+    beforeEach(async () => {
+      authCallbacks[0]('SIGNED_IN', { user: { id: 'u1', email: 'test3@test.com' } });
+      await vi.waitFor(() => expect(facade.currentUser()?.role).toBe('alumno'));
+    });
+
+    it('rename cambia el nombre en el perfil (lo que ve la familia) y en la sesión (AC1)', async () => {
+      expect(await facade.rename('  Benja  ')).toEqual({ ok: true });
+
+      expect((profiles as any).updateDisplayName).toHaveBeenCalledWith('Benja');
+      expect(mockSupabase.updateUserMetadata).toHaveBeenCalledWith({ display_name: 'Benja' });
+      expect(facade.currentUser()).toMatchObject({ name: 'Benja', initials: initialsOf('Benja') });
+    });
+
+    it('rename rechaza vacío o más de 40 caracteres sin ir al servidor', async () => {
+      expect(await facade.rename('   ')).toEqual({ ok: false, error: 'Escribe un nombre de 1 a 40 caracteres.' });
+      expect((await facade.rename('x'.repeat(41))).ok).toBe(false);
+      expect((profiles as any).updateDisplayName).not.toHaveBeenCalled();
+    });
+
+    it('rename: si el perfil falla no cambia nada', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      (profiles as any).updateDisplayName.mockRejectedValue(new Error('rls'));
+      expect((await facade.rename('Benja')).ok).toBe(false);
+      expect(mockSupabase.updateUserMetadata).not.toHaveBeenCalled();
+      expect(facade.currentUser()?.name).toBe('test3');
+    });
+
+    it('changePassword verifica la actual y cambia a la nueva (AC2)', async () => {
+      expect(await facade.changePassword('vieja123', 'nueva123', 'nueva123')).toEqual({ ok: true });
+      expect(mockSupabase.signIn).toHaveBeenCalledWith('test3@test.com', 'vieja123');
+      expect(mockSupabase.updatePassword).toHaveBeenCalledWith('nueva123');
+    });
+
+    it('changePassword no cambia si las nuevas no coinciden, si es corta o igual a la actual', async () => {
+      expect(await facade.changePassword('vieja123', 'nueva123', 'nueva124')).toEqual({
+        ok: false,
+        error: 'Las contraseñas nuevas no coinciden.',
+      });
+      expect((await facade.changePassword('vieja123', 'corta', 'corta')).error).toMatch(/6/);
+      expect((await facade.changePassword('vieja123', 'vieja123', 'vieja123')).error).toMatch(/distinta/);
+      expect(mockSupabase.signIn).not.toHaveBeenCalled();
+      expect(mockSupabase.updatePassword).not.toHaveBeenCalled();
+    });
+
+    it('changePassword con la actual equivocada no cambia nada', async () => {
+      mockSupabase.signIn.mockResolvedValue({ error: { message: 'Invalid login credentials' } });
+      expect(await facade.changePassword('mala1234', 'nueva123', 'nueva123')).toEqual({
+        ok: false,
+        error: 'La contraseña actual no es correcta.',
+      });
+      expect(mockSupabase.updatePassword).not.toHaveBeenCalled();
     });
   });
 

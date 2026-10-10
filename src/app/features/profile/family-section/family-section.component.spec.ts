@@ -47,6 +47,14 @@ describe('FamilySectionComponent', () => {
     expect(cmp.displayCode()).toBe('ABCD-EFGH');
   });
 
+  it('"Unirme a otra familia" parte plegado y se abre al tocarlo (spec 0018 AC4)', () => {
+    expect(cmp.joinOpen()).toBe(false);
+    cmp.toggleJoin();
+    expect(cmp.joinOpen()).toBe(true);
+    cmp.toggleJoin();
+    expect(cmp.joinOpen()).toBe(false);
+  });
+
   describe('unirse', () => {
     it('un código mal escrito avisa junto al campo sin consultar', async () => {
       await cmp.joinWithCode('abc');

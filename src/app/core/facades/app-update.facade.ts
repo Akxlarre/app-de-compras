@@ -30,6 +30,12 @@ export class AppUpdateFacade {
   readonly downloadProgress = computed(() => this._downloadProgress());
   readonly updateAvailable = computed(() => this._updateAvailable());
   readonly error = computed(() => this._error());
+  /** Versión instalada ("1.0.7"); null en la web (spec 0018 AC5). */
+  readonly currentVersion = signal<string | null>(null);
+
+  async loadVersion(): Promise<void> {
+    this.currentVersion.set(await this.updateService.getCurrentVersion());
+  }
 
   /**
    * En 'manual' avisa los casos que antes quedaban mudos: al día, falla y

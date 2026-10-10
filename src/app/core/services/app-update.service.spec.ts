@@ -17,6 +17,10 @@ describe('AppUpdateService', () => {
     service = TestBed.inject(AppUpdateService);
   });
 
+  it('getCurrentVersion en la web es null (no hay versión instalada, spec 0018)', async () => {
+    expect(await service.getCurrentVersion()).toBeNull();
+  });
+
   it('getLatestUpdate pide la última versión del target shop', async () => {
     const update = { id: 'u', build_number: 7 };
     repo.findLatest.mockResolvedValue(update);
