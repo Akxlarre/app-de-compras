@@ -62,36 +62,42 @@ boletas:
 
 ## Criterios de aceptación
 **Ficha (D1, D2)**
-- [ ] AC1. Tocar un producto del Catálogo abre su ficha; la barra marca Catálogo y "atrás" vuelve.
-- [ ] AC2. La ficha muestra el nombre completo, el último precio pagado (o el estimado, o "Sin
+- [x] AC1. Tocar un producto del Catálogo abre su ficha; la barra marca Catálogo y "atrás" vuelve.
+- [x] AC2. La ficha muestra el nombre completo, el último precio pagado (o el estimado, o "Sin
   precio"), "Lo compras cada ~N días · N compras" (si hay 2 o más) y la lista de compras con fecha,
   tienda, cantidad y precio, la más reciente primero.
-- [ ] AC3. "Agregar a la lista" lo suma a la lista activa (o avisa si ya está) sin salir de la ficha.
-- [ ] AC4. Se ven los textos de boleta que lo reconocen; quitar uno equivocado hace que la próxima
+- [x] AC3. "Agregar a la lista" lo suma a la lista activa (o avisa si ya está) sin salir de la ficha.
+- [x] AC4. Se ven los textos de boleta que lo reconocen; quitar uno equivocado hace que la próxima
   boleta no lo reconozca solo.
 
 **Corregir (D2–D4)**
-- [ ] AC5. Renombrar valida 1 a 60 caracteres y que no exista otro producto con ese nombre en la
+- [x] AC5. Renombrar valida 1 a 60 caracteres y que no exista otro producto con ese nombre en la
   familia (si existe, ofrece juntarlos).
-- [ ] AC6. Sin compras: "Borrar" con confirmación. Con compras: "Archivar"; el archivado no sale en
+- [x] AC6. Sin compras: "Borrar" con confirmación. Con compras: "Archivar"; el archivado no sale en
   el buscador, en "Te puede faltar" ni en el Catálogo, y las compras pasadas siguen con su nombre.
-- [ ] AC7. Catálogo → "Archivados" lista los archivados; "Reactivar" lo devuelve.
-- [ ] AC8. "Juntar con…" mueve compras, líneas de boleta, textos de boleta y la lista activa al que
+- [x] AC7. Catálogo → "Archivados" lista los archivados; "Reactivar" lo devuelve.
+- [x] AC8. "Juntar con…" mueve compras, líneas de boleta, textos de boleta y la lista activa al que
   queda (sumando cantidades) y borra el otro; el historial y "cada ~N días" del que queda incluyen
   las compras del otro.
 
 **Catálogo (D5, D6)**
-- [ ] AC9. Buscador arriba que filtra al escribir (sin tildes ni mayúsculas); si no hay resultado,
+- [x] AC9. Buscador arriba que filtra al escribir (sin tildes ni mayúsculas); si no hay resultado,
   "Crear «texto»" lo agrega al catálogo.
-- [ ] AC10. La fila muestra el nombre en hasta dos líneas, el último precio pagado como texto (no se
+- [x] AC10. La fila muestra el nombre en hasta dos líneas, el último precio pagado como texto (no se
   edita) y la última compra; el encabezado no ocupa más de lo que ocupa en las otras pestañas.
-- [ ] AC11. El precio estimado se escribe en la ficha solo si no hay compras; con compras se muestra
+- [x] AC11. El precio estimado se escribe en la ficha solo si no hay compras; con compras se muestra
   "Último pagado $X" y no se edita.
 
 **General**
-- [ ] AC12. Migración en `plataforma-db` con tests pgTAP para `merge_products` (sumar en la misma
+- [x] AC12. Migración en `plataforma-db` con tests pgTAP para `merge_products` (sumar en la misma
   lista, mover alias y líneas, otra familia rechazada) y `archived_at` (fuera del buscador y de
   `restock_stats`).
-- [ ] AC13. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
+- [x] AC13. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
 - [ ] AC14. Verificado en staging a 375×667: juntar "Arroz G1 grano largo 1kg" con "Arroz",
   archivar "Leche QA 0011", buscar y crear desde el Catálogo.
+
+## Estado (2026-10-10)
+- AC1–AC13 implementados y con tests: `npm run test:ci` 721 pasan, `lint:arch` 0 errores, `ng build`
+  limpio. pgTAP `shop_product_sheet` 14/14 en Postgres local; CI de plataforma-db #18 en verde.
+- AC14 (staging) espera el merge de plataforma-db #18: el merge a main despliega la migración a
+  staging, y sin `archived_at` el Catálogo falla.
