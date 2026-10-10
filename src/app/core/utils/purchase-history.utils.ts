@@ -1,4 +1,5 @@
 import type { ActiveShoppingList, ListReceipt } from '@core/models/shopping-list.model';
+import type { MonthTotal, SpendItem } from '@core/models/price-insights.model';
 import type {
   MonthComparison,
   MonthlySpending,
@@ -76,6 +77,9 @@ export function summarizePurchase(list: ActiveShoppingList): PurchaseSummary {
     hasReceipt: receipts.length > 0,
     receiptImagePath: receipts.find((r) => r.image_url)?.image_url ?? null,
     receiptImagePaths: receipts.flatMap((r) => (r.image_url ? [r.image_url] : [])),
+    receiptTotals: receipts.flatMap((r) =>
+      r.total_amount == null ? [] : [{ store: r.store, total: Number(r.total_amount) }]
+    ),
     store: stores || null,
     items,
     charges,
@@ -133,4 +137,45 @@ export function monthComparison(
   const current = spendingInMonth(purchases, month);
   const previous = spendingInMonth(purchases, shiftMonth(month, -1));
   return { current, previous, diff: previous.count ? current.total - previous.total : null };
+}
+
+/** Gasto de los `n` meses que terminan en `endMonth`, del más viejo al más nuevo (spec 0020 D3). */
+export function monthlyTotals(
+  purchases: Pick<PurchaseSummary, 'completedAt' | 'total' | 'totalSource'>[],
+  endMonth: Date,
+  n = 6
+): MonthTotal[] {
+  return Array.from({ length: n }, (_, i) => {
+    const month = shiftMonth(endMonth, i - n + 1);
+    const { total, count } = spendingInMonth(purchases, month);
+    return { month, total, count };
+  });
+}
+
+const byTotal = (a: SpendItem, b: SpendItem) => b.total - a.total || a.name.localeCompare(b.name);
+
+function sumBy(entries: [string, number][]): SpendItem[] {
+  const totals = new Map<string, number>();
+  for (const [name, amount] of entries) totals.set(name, (totals.get(name) ?? 0) + amount);
+  return [...totals].map(([name, total]) => ({ name, total })).sort(byTotal);
+}
+
+/** Los productos que más pesaron en lo pagado (spec 0020 D4). */
+export function topProducts(purchases: Pick<PurchaseSummary, 'items'>[], n = 5): SpendItem[] {
+  return sumBy(purchases.flatMap((p) => p.items.map((i): [string, number] => [i.name, i.subtotal])))
+    .filter((i) => i.total > 0)
+    .slice(0, n);
+}
+
+/** Gasto por tienda: cada boleta en su tienda; las compras sin boleta, aparte (spec 0020 D4). */
+export function spendByStore(
+  purchases: Pick<PurchaseSummary, 'total' | 'receiptTotals'>[]
+): SpendItem[] {
+  return sumBy(
+    purchases.flatMap((p): [string, number][] =>
+      p.receiptTotals.length
+        ? p.receiptTotals.map((r): [string, number] => [r.store || 'Tienda sin leer', r.total])
+        : [['Sin boleta', p.total]]
+    )
+  ).filter((s) => s.total > 0);
 }

@@ -102,6 +102,34 @@ describe('PurchaseHistoryFacade', () => {
       expect(facade.month()).toEqual(new Date(2026, 8, 1));
     });
 
+    it('gráfico de 6 meses hasta el actual, promedio, top y tiendas del mes elegido (spec 0020)', async () => {
+      await facade.initialize();
+
+      expect(facade.chart().map((m) => [m.month.getMonth(), m.total])).toEqual([
+        [3, 0],
+        [4, 0],
+        [5, 0],
+        [6, 0],
+        [7, 4000],
+        [8, 2000],
+      ]);
+      expect(facade.average()).toBe(2000);
+      expect(facade.top()).toEqual([{ name: 'Pan', total: 2000 }]);
+      expect(facade.byStore()).toEqual([{ name: 'Sin boleta', total: 2000 }]);
+
+      facade.goToMonth(new Date(2026, 7, 15));
+      expect(facade.month()).toEqual(new Date(2026, 7, 1));
+      expect(facade.top()).toEqual([{ name: 'Café', total: 4000 }]);
+      // El gráfico sigue terminando en el mes actual.
+      expect(facade.chart().at(-1)!.month).toEqual(new Date(2026, 8, 1));
+    });
+
+    it('no va a un mes futuro', async () => {
+      await facade.initialize();
+      facade.goToMonth(new Date(2026, 11, 1));
+      expect(facade.month()).toEqual(new Date(2026, 8, 1));
+    });
+
     it('byId encuentra una compra cargada', async () => {
       await facade.initialize();
       expect(facade.byId('b')?.total).toBe(4000);

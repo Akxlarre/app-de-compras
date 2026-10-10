@@ -37,6 +37,8 @@ export interface PurchaseSummary {
   receiptImagePath: string | null;
   /** Las fotos de todas sus boletas (varias si la salida fue por varias tiendas). */
   receiptImagePaths: string[];
+  /** Total de cada boleta con su tienda, para el gasto por tienda (spec 0020 D4). */
+  receiptTotals: { store: string | null; total: number }[];
   /** Tienda o tiendas de sus boletas, unidas con " · "; null sin boleta o si no se leyó. */
   store: string | null;
   items: PurchasedItem[];

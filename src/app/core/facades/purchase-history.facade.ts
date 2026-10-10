@@ -7,9 +7,12 @@ import { ShoppingListsRepository } from '../repositories/shopping-lists.reposito
 import { ToastService } from '../services/ui/toast.service';
 import {
   monthComparison,
+  monthlyTotals,
   purchasesInMonth,
   shiftMonth,
+  spendByStore,
   summarizePurchases,
+  topProducts,
 } from '../utils/purchase-history.utils';
 import { purchaseTitle } from '../utils/purchase-name.utils';
 
@@ -42,6 +45,23 @@ export class PurchaseHistoryFacade extends BaseFacade<PurchaseSummary[]> {
 
   nextMonth(): void {
     if (this.canGoNext()) this._month.update((m) => shiftMonth(m, 1));
+  }
+
+  /** Gasto de los últimos 6 meses, terminando en el actual (spec 0020 D3). */
+  readonly chart = computed(() => monthlyTotals(this.data() ?? [], shiftMonth(new Date(), 0)));
+  /** Promedio por compra del mes elegido; null sin compras. */
+  readonly average = computed(() => {
+    const { total, count } = this.selected().current;
+    return count ? Math.round(total / count) : null;
+  });
+  /** Los productos que más pesaron y el gasto por tienda del mes elegido (spec 0020 D4). */
+  readonly top = computed(() => topProducts(this.visible()));
+  readonly byStore = computed(() => spendByStore(this.visible()));
+
+  /** Tocar una barra del gráfico: ese mes (nunca uno futuro). */
+  goToMonth(date: Date): void {
+    const month = shiftMonth(date, 0);
+    if (month <= shiftMonth(new Date(), 0)) this._month.set(month);
   }
 
   /** Una compra ya cargada (detalle en `/app/purchases/:id`). */

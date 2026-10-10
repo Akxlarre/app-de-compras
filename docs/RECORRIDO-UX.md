@@ -310,4 +310,5 @@ cierre fijo abajo; mientras lee la boleta, se ve la foto y se puede seguir usand
 | 3 | ✅ Fix-050: coherencia visual y de textos (2026-10-10). | T1–T4, V1–V4 |
 | 4 | ✅ Spec 0017: ficha de producto y catálogo editable (2026-10-10). Quedan H4, H5 (categorías, filtros). | H1–H3, H6, K1–K7 |
 | 5 | ✅ Spec 0018: cuenta (2026-10-10). Nombre, contraseña y Perfil compacto; borrar cuenta (P5) e invitar con enlace (P7) descartados: no se publica en Google Play. | P1–P4, P6 |
-| 6 | Plus: categorías, precios por tienda, gasto por tienda. | — |
+| 6a | ✅ Spec 0020: precios y gasto (2026-10-10). Precio por tienda y "Subió X%" en la ficha y el cierre; barras de 6 meses, promedio, lo que más pesó y gasto por tienda en Compras. | G5, Y1, Z1, W1, W2 |
+| 6b | ✅ Spec 0019: lista para el súper (2026-10-10): pasillos fijos con sugerencia automática, Mi Lista por pasillo, unidades (kg/L con decimales) y "¿Precio?" al marcar. Migración en plataforma-db #20. | F3–F5, H4, K8 |

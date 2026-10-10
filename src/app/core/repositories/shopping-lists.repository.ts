@@ -140,7 +140,7 @@ export class ShoppingListsRepository {
     const { data, error } = await this.db
       .from('shopping_lists')
       .select(
-        `${WITH_ITEMS}, receipts(id, image_url, store), purchase_lines(receipt_id, line_index, raw_text, name, kind, quantity, unit_price, amount, product:products(name))`
+        `${WITH_ITEMS}, receipts(id, image_url, store, total_amount), purchase_lines(receipt_id, line_index, raw_text, name, kind, quantity, unit_price, amount, product:products(name))`
       )
       .eq('family_id', familyId)
       .eq('status', 'completed')

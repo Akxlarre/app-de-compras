@@ -18,6 +18,7 @@ import type {
 import { validateReceipt } from '@core/utils/receipt.utils';
 import { MutationError, toMutationError } from '@core/utils/mutation-error.utils';
 import { reconcileReceipt } from '@core/utils/reconcile.utils';
+import { priceRise } from '@core/utils/price-insights.utils';
 import {
   combineReceipts,
   combineValidations,
@@ -163,6 +164,16 @@ export class PurchaseCloseFacade {
   /** Miniatura de la foto mientras se lee (spec 0016 AC14). */
   readonly previewUrl = signal<string | null>(null);
   /** Hay una boleta leyéndose o leída sin cerrar: se puede volver a ella desde Compras. */
+  /** Último precio conocido de cada producto antes de esta boleta (spec 0020 D2). */
+  private readonly previousPrices = signal<Record<string, number>>({});
+
+  /** "Subió X%": el precio de la línea contra el último del producto; null si no subió 10%. */
+  riseOf(d: LineDecision): number | null {
+    const target = d.target;
+    if (!target || target.kind === 'new') return null;
+    return priceRise(this.previousPrices()[target.productId], d.unitPrice);
+  }
+
   readonly hasOpenReceipt = computed(
     () => this.mode() === 'receipt' && (this.isScanning() || this.parts().length > 0)
   );
@@ -189,7 +200,10 @@ export class PurchaseCloseFacade {
     this.mode.set(mode);
     this.kind.set(kind);
     this.manualPrices.set(
-      Object.fromEntries(this.checkedItems().map((i) => [i.id, i.product?.last_price ?? null]))
+      // Lo anotado al marcar manda sobre el último precio (spec 0019 D5).
+      Object.fromEntries(
+        this.checkedItems().map((i) => [i.id, i.unit_price ?? i.product?.last_price ?? null])
+      )
     );
   }
 
@@ -294,6 +308,13 @@ export class PurchaseCloseFacade {
         this.products.findByFamily(familyId),
       ]);
       if (stale()) return;
+      // El último precio de cada producto antes de esta boleta, para "Subió X%" (spec 0020 D2).
+      this.previousPrices.update((prev) => ({
+        ...prev,
+        ...Object.fromEntries(
+          catalog.filter((p) => p.last_price != null).map((p) => [p.id, Number(p.last_price)])
+        ),
+      }));
 
       const validation = validateReceipt(receipt);
       const result = reconcileReceipt(
@@ -440,6 +461,7 @@ export class PurchaseCloseFacade {
     this.decisions.set([]);
     this.parts.set([]);
     this.unmatched.set([]);
+    this.previousPrices.set({});
   }
 
   private async save(op: () => Promise<void>): Promise<boolean> {

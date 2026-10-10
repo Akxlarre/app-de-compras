@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type { ListItem } from '@core/models/shopping-list.model';
+import type { ItemPatch } from '@core/models/offline-queue.model';
 import { MutationError, toMutationError } from '@core/utils/mutation-error.utils';
 
 export type ListItemContent = Pick<ListItem, 'quantity'> & { product_id: string | null };
@@ -65,6 +66,16 @@ export class ListItemsRepository {
     const { data, error } = await this.db
       .from('list_items')
       .update({ is_checked: checked })
+      .eq('id', itemId)
+      .select('id');
+    this.assertAffected(data, error);
+  }
+
+  /** Unidad, cantidad o precio anotado: valores finales (spec 0019). */
+  async update(itemId: string, patch: ItemPatch): Promise<void> {
+    const { data, error } = await this.db
+      .from('list_items')
+      .update(patch)
       .eq('id', itemId)
       .select('id');
     this.assertAffected(data, error);

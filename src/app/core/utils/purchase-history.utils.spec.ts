@@ -5,6 +5,9 @@ import {
   monthComparison,
   purchasesInMonth,
   shiftMonth,
+  monthlyTotals,
+  topProducts,
+  spendByStore,
 } from './purchase-history.utils';
 import type { ActiveShoppingList } from '@core/models/shopping-list.model';
 import type { PurchaseSummary } from '@core/models/purchase-history.model';
@@ -284,8 +287,12 @@ describe('spendingInMonth', () => {
 
 describe('meses (spec 0016 D4)', () => {
   const purchase = (completedAt: Date, total: number, totalSource = 'receipt') =>
-    ({ id: completedAt.toISOString(), completedAt: completedAt.toISOString(), total, totalSource } as
-      PurchaseSummary);
+    ({
+      id: completedAt.toISOString(),
+      completedAt: completedAt.toISOString(),
+      total,
+      totalSource,
+    } as PurchaseSummary);
   const purchases = [
     purchase(new Date(2026, 9, 5, 12), 122_760),
     purchase(new Date(2026, 9, 1, 9), 3_000, 'estimated'),
@@ -325,5 +332,102 @@ describe('meses (spec 0016 D4)', () => {
 
   it('sin compras el mes anterior no hay diferencia que mostrar', () => {
     expect(monthComparison(purchases, new Date(2025, 11, 1)).diff).toBeNull();
+  });
+});
+
+describe('gasto (spec 0020 D3, D4)', () => {
+  const p = (completedAt: Date, total: number, over: Partial<PurchaseSummary> = {}) =>
+    ({
+      id: completedAt.toISOString(),
+      completedAt: completedAt.toISOString(),
+      total,
+      totalSource: 'receipt',
+      items: [],
+      receiptTotals: [],
+      ...over,
+    } as unknown as PurchaseSummary);
+
+  it('monthlyTotals da los últimos 6 meses terminando en el mes pedido, con los vacíos en 0', () => {
+    const totals = monthlyTotals(
+      [
+        p(new Date(2026, 9, 5), 122_760),
+        p(new Date(2026, 9, 1), 3_000),
+        p(new Date(2026, 7, 20), 50_000),
+      ],
+      new Date(2026, 9, 1)
+    );
+    expect(totals.map((t) => [t.month.getMonth(), t.total, t.count])).toEqual([
+      [4, 0, 0],
+      [5, 0, 0],
+      [6, 0, 0],
+      [7, 50_000, 1],
+      [8, 0, 0],
+      [9, 125_760, 2],
+    ]);
+  });
+
+  it('topProducts suma por nombre lo pagado y deja los 5 más caros', () => {
+    const items = (pairs: [string, number][]) =>
+      pairs.map(([name, subtotal]) => ({ name, subtotal, quantity: 1, unitPrice: subtotal }));
+    const top = topProducts([
+      p(new Date(2026, 9, 5), 0, {
+        items: items([
+          ['Leche', 2_800],
+          ['Carne', 12_000],
+          ['Pan', 1_500],
+        ]),
+      }),
+      p(new Date(2026, 9, 1), 0, {
+        items: items([
+          ['Leche', 2_800],
+          ['Queso', 4_000],
+          ['Café', 6_000],
+          ['Arroz', 1_000],
+        ]),
+      }),
+    ]);
+    expect(top).toEqual([
+      { name: 'Carne', total: 12_000 },
+      { name: 'Café', total: 6_000 },
+      { name: 'Leche', total: 5_600 },
+      { name: 'Queso', total: 4_000 },
+      { name: 'Pan', total: 1_500 },
+    ]);
+  });
+
+  it('spendByStore suma cada boleta en su tienda; sin boleta va aparte', () => {
+    const byStore = spendByStore([
+      p(new Date(2026, 9, 5), 81_700, {
+        receiptTotals: [
+          { store: 'Aroca', total: 58_900 },
+          { store: 'El Nene Jr SPA', total: 22_800 },
+        ],
+      }),
+      p(new Date(2026, 9, 3), 10_000, { receiptTotals: [{ store: 'Aroca', total: 10_000 }] }),
+      p(new Date(2026, 9, 2), 4_000, { receiptTotals: [] }),
+      p(new Date(2026, 9, 1), 2_000, { receiptTotals: [{ store: null, total: 2_000 }] }),
+    ]);
+    expect(byStore).toEqual([
+      { name: 'Aroca', total: 68_900 },
+      { name: 'El Nene Jr SPA', total: 22_800 },
+      { name: 'Sin boleta', total: 4_000 },
+      { name: 'Tienda sin leer', total: 2_000 },
+    ]);
+  });
+
+  it('summarizePurchase da el total de cada boleta con su tienda', () => {
+    const s = summarizePurchase({
+      ...completed([]),
+      total_paid: 81_700,
+      total_source: 'receipt',
+      receipts: [
+        { id: 'r1', image_url: null, store: 'Aroca', total_amount: 58_900 },
+        { id: 'r2', image_url: null, store: 'El Nene', total_amount: 22_800 },
+      ],
+    } as unknown as ActiveShoppingList);
+    expect(s.receiptTotals).toEqual([
+      { store: 'Aroca', total: 58_900 },
+      { store: 'El Nene', total: 22_800 },
+    ]);
   });
 });

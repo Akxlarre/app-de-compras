@@ -185,8 +185,52 @@
           }
         </div>
         } @else {
+        <!-- Por pasillo o como se agregó; se recuerda en el teléfono (spec 0019 D3) -->
+        <div
+          class="self-start flex p-1 bg-surface border border-border-default rounded-full text-xs font-semibold"
+          role="group"
+          aria-label="Orden de la lista"
+          data-testid="orden-lista"
+        >
+          <button
+            class="px-3 py-1.5 rounded-full"
+            [class.bg-base]="byAisle()"
+            [class.text-text-primary]="byAisle()"
+            [class.text-text-muted]="!byAisle()"
+            [attr.aria-pressed]="byAisle()"
+            (click)="setView(true)"
+          >
+            Por pasillo
+          </button>
+          <button
+            class="px-3 py-1.5 rounded-full"
+            [class.bg-base]="!byAisle()"
+            [class.text-text-primary]="!byAisle()"
+            [class.text-text-muted]="byAisle()"
+            [attr.aria-pressed]="!byAisle()"
+            (click)="setView(false)"
+          >
+            Como la agregué
+          </button>
+        </div>
+
         <ion-list #ionList style="background: transparent" class="m-0 p-0">
-          @for (item of sortedListItems(); track item.id; let last = $last) {
+          @for (row of rows(); track row.key; let last = $last) { @if (row.aisle) {
+          <div
+            class="flex items-baseline justify-between gap-2 px-1 pb-2"
+            [class.pt-2]="!$first"
+            data-testid="pasillo"
+          >
+            <h3 class="text-sm font-bold text-text-primary">{{ row.aisle }}</h3>
+            <span class="text-xs text-text-muted">
+              {{
+                row.pending
+                  ? row.pending + (row.pending === 1 ? ' pendiente' : ' pendientes')
+                  : 'Listo'
+              }}
+            </span>
+          </div>
+          } @else if (row.item; as item) {
           <!-- Sin transiciones CSS en la fila: el único movimiento es el de animateListReorder (Q3). -->
           <ion-item-sliding
             class="rounded-2xl overflow-hidden"
@@ -226,11 +270,17 @@
                   </span>
 
                   <div class="flex items-center gap-2 text-xs text-text-muted mt-0.5">
-                    @if (item.product?.category) {
+                    @if (!byAisle() && item.product?.category) {
                     <span class="truncate">{{ item.product?.category }}</span>
-                    } @if (item.product?.last_price) {
+                    } @if (priceOf(item); as price) { @if (!byAisle() && item.product?.category) {
                     <span>•</span>
-                    <span>${{ item.product?.last_price | number : '1.0-0' }}</span>
+                    }
+                    <span
+                      [class.text-text-primary]="item.unit_price != null"
+                      [class.font-semibold]="item.unit_price != null"
+                      data-testid="precio-item"
+                      >${{ price | number : '1.0-0' }}{{ priceUnit(item) }}</span
+                    >
                     } @if (checkedByName(item); as who) {
                     <span>•</span>
                     <span class="truncate" data-testid="checked-by">{{ who }}</span>
@@ -238,7 +288,8 @@
                   </div>
                 </div>
 
-                <!-- Stepper Pulgar-First -->
+                <!-- Stepper Pulgar-First; tocar la cantidad abre el detalle (unidad, cantidad, precio) -->
+                @if (hasStepper(item.unit)) {
                 <div
                   class="flex items-center bg-base rounded-full border border-border-subtle overflow-hidden z-10 shrink-0"
                   [class.opacity-40]="item.is_checked"
@@ -251,18 +302,35 @@
                     [disabled]="(item.quantity || 1) <= 1"
                     (click)="updateQuantity(item.id, item.quantity || 1, -1, $event)"
                   >
-                    <app-icon name="minus" [size]="20" />
+                    <app-icon name="minus" [size]="20" [attr.aria-label]="'Quitar uno'" />
                   </button>
-                  <div class="w-8 flex justify-center font-black text-base text-text-primary">
-                    {{ item.quantity || 1 }}
-                  </div>
+                  <button
+                    class="min-w-8 h-12 px-1 flex justify-center items-center font-black text-base text-text-primary"
+                    [attr.aria-label]="'Cantidad y unidad de ' + (item.product?.name ?? 'producto')"
+                    data-testid="cantidad"
+                    (click)="openDetail(item, $event)"
+                  >
+                    {{ formatQuantity(item.quantity || 1, item.unit) }}
+                  </button>
                   <button
                     class="w-12 h-12 flex items-center justify-center text-brand hover:bg-surface active:bg-border-subtle transition-colors"
+                    aria-label="Agregar uno"
                     (click)="updateQuantity(item.id, item.quantity || 1, 1, $event)"
                   >
-                    <app-icon name="plus" [size]="20" />
+                    <app-icon name="plus" [size]="20" [attr.aria-label]="'Agregar uno'" />
                   </button>
                 </div>
+                } @else {
+                <button
+                  class="h-12 px-4 bg-base rounded-full border border-border-subtle font-black text-base text-text-primary z-10 shrink-0"
+                  [class.opacity-40]="item.is_checked"
+                  [attr.aria-label]="'Cantidad y unidad de ' + (item.product?.name ?? 'producto')"
+                  data-testid="cantidad"
+                  (click)="openDetail(item, $event)"
+                >
+                  {{ formatQuantity(item.quantity, item.unit) }}
+                </button>
+                }
               </div>
             </ion-item>
 
@@ -280,7 +348,7 @@
               </ion-item-option>
             </ion-item-options>
           </ion-item-sliding>
-          }
+          } }
         </ion-list>
         @if (!swipeHintSeen()) {
         <p class="text-xs text-text-muted text-center" data-testid="swipe-hint">
@@ -306,5 +374,40 @@
   </button>
   }
 </div>
+
+<!-- "¿Precio?" al marcar: unos segundos, sin bloquear y sin teclado hasta que se toque (spec 0019 D5) -->
+@if (pricePrompt(); as p) {
+<form
+  class="fixed fab-above-chrome left-4 right-24 z-40 flex items-center gap-2 bg-elevated border border-border-default rounded-2xl pl-3 pr-1 py-1 shadow-[var(--shadow-lg)]"
+  role="status"
+  data-testid="precio-al-marcar"
+  (submit)="$event.preventDefault(); savePrompt(priceInput.value)"
+>
+  <span class="flex-1 min-w-0 flex flex-col leading-tight">
+    <span class="text-xs text-text-muted">¿Precio{{ p.unit }}?</span>
+    <span class="text-sm font-semibold text-text-primary truncate">{{ p.name }}</span>
+  </span>
+  <input
+    #priceInput
+    inputmode="numeric"
+    placeholder="$"
+    class="w-20 bg-base border border-border-default rounded-lg py-2 px-2 text-right font-bold text-text-primary focus:outline-none focus:border-brand"
+    [attr.aria-label]="'Precio de ' + p.name"
+    data-llm-description="precio pagado por el producto recién marcado, en pesos (opcional)"
+    (focus)="holdPrompt()"
+    (blur)="releasePrompt()"
+  />
+  <button
+    type="submit"
+    class="w-10 h-10 rounded-full flex items-center justify-center text-brand shrink-0"
+    aria-label="Guardar precio"
+    data-llm-action="anotar-precio"
+  >
+    <app-icon name="check" [size]="20" [attr.aria-label]="'Guardar precio'" />
+  </button>
+</form>
+} @if (detail(); as d) {
+<app-item-detail-sheet [item]="d" (save)="saveDetail($event)" (closed)="detail.set(null)" />
+}
 
 <app-product-search [visible]="isSearchOpen()" (visibleChange)="isSearchOpen.set($event)" />

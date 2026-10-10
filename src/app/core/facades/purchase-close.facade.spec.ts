@@ -186,6 +186,29 @@ describe('PurchaseCloseFacade', () => {
       expect(toast['action']).not.toHaveBeenCalled();
     });
 
+    it('marca "Subió X%" cuando la boleta trae un precio 10% o más sobre el último (spec 0020 D2)', async () => {
+      products.findByFamily.mockResolvedValue([
+        { id: 'p-leche', name: 'Leche', last_price: 1000 },
+        { id: 'p-pan', name: 'Pan', last_price: 1000 },
+      ]);
+      facade.start(list, true, 'receipt');
+      receipts['extractReceipt'].mockResolvedValue({
+        store: 'Aroca',
+        date: '2026-10-05',
+        total: 3200,
+        lines: [
+          line({ raw_text: 'LECHE', quantity: 2, unit_price: 1200, line_total: 2400 }),
+          line({ raw_text: 'PAN', unit_price: 800, line_total: 800 }),
+        ],
+      });
+      await facade.scan([file]);
+
+      const [leche, pan] = facade.decisions();
+      expect(facade.riseOf(leche)).toBe(20);
+      expect(facade.riseOf(pan)).toBeNull();
+      expect(facade.riseOf({ ...leche, target: { kind: 'new' } })).toBeNull();
+    });
+
     it('hasOpenReceipt: hay una boleta leyéndose o leída sin cerrar', async () => {
       expect(facade.hasOpenReceipt()).toBe(false);
       facade.start(list, true, 'receipt');
@@ -206,6 +229,15 @@ describe('PurchaseCloseFacade', () => {
       expect(facade.checkedItems().map((i) => i.id)).toEqual(['i-leche', 'i-pan']);
       expect(facade.manualPrices()).toEqual({ 'i-leche': 1000, 'i-pan': null });
       expect(facade.manualSum()).toBe(2000);
+    });
+
+    it('el precio anotado al marcar manda sobre el último (spec 0019 D5)', () => {
+      const noted = {
+        ...list,
+        list_items: list.list_items.map((i) => (i.id === 'i-pan' ? { ...i, unit_price: 1290 } : i)),
+      } as ActiveShoppingList;
+      facade.start(noted, true, 'manual');
+      expect(facade.manualPrices()).toEqual({ 'i-leche': 1000, 'i-pan': 1290 });
     });
 
     it('confirma con los precios editados y el total', async () => {
