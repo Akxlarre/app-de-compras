@@ -1,7 +1,8 @@
 > id: 0017-ficha-producto
 > refs: `docs/RECORRIDO-UX.md` §3 Catálogo (K1–K8, H1–H6) y §6 (paso 4 del orden replanificado);
 > fix-050 (precio como texto en la fila).
-> status: approved (D1–D6 confirmadas el 2026-10-10)
+> status: done (D1–D6 confirmadas el 2026-10-10)
+> closed: 2026-10-10
 > created: 2026-10-10
 
 ## Problema
@@ -93,11 +94,27 @@ boletas:
   lista, mover alias y líneas, otra familia rechazada) y `archived_at` (fuera del buscador y de
   `restock_stats`).
 - [x] AC13. `npm run test:ci`, `npm run lint:arch` y `ng build` pasan, con tests de cada decisión.
-- [ ] AC14. Verificado en staging a 375×667: juntar "Arroz G1 grano largo 1kg" con "Arroz",
+- [x] AC14. Verificado en staging a 375×667: juntar "Arroz G1 grano largo 1kg" con "Arroz",
   archivar "Leche QA 0011", buscar y crear desde el Catálogo.
 
-## Estado (2026-10-10)
-- AC1–AC13 implementados y con tests: `npm run test:ci` 721 pasan, `lint:arch` 0 errores, `ng build`
-  limpio. pgTAP `shop_product_sheet` 14/14 en Postgres local; CI de plataforma-db #18 en verde.
-- AC14 (staging) espera el merge de plataforma-db #18: el merge a main despliega la migración a
-  staging, y sin `archived_at` el Catálogo falla.
+## Verificación en staging (2026-10-10)
+Migración `20261010010000_shop_product_sheet` en staging (plataforma-db #18, deploy automático en
+verde). 375×667, capturas en el scratchpad de la sesión (`ux-0017/`).
+- **Catálogo (AC9, AC10):** `test3` muestra "15 productos", Activos / Archivados, filas con nombre,
+  última compra y precio como texto. Buscar "arroz" deja solo "Arroz".
+- **Archivar (AC6, AC7):** "Leche QA 0011" (con compras) ofrece Renombrar / Juntar / Archivar (no
+  Borrar). Archivado sale de los activos ("qa" → "Pan QA", "QA nuevo 9365") y aparece en
+  Archivados.
+- **Crear, precio estimado y borrar (AC9, AC11, AC6):** "Crear «Prueba 0017 …»" abre su ficha ("Sin
+  precio", "Todavía no lo compras"); el precio estimado queda "$1.500 estimado"; "Borrar" (sin
+  compras) vuelve al Catálogo.
+- **Juntar (AC8, AC2, AC4):** en `test3` no hay un "Arroz G1…" real, así que se usó un duplicado con
+  compra en `test5`. Se creó "Champiñones París" y se juntó "Champiñones" (compra del 05/10 en
+  Aroca · Del Pedregal · El Nene, "2 × $1.490", texto "ESMERALDA CHAMPIÑONES ENTEROS 400G").
+  La confirmación dice qué pasa y que no se puede deshacer; la ficha del que queda muestra la
+  compra, el precio y el texto de boleta. Se renombró de vuelta a "Champiñones" y el Catálogo
+  quedó con uno solo.
+- AC13: `npm run test:ci`, `npm run lint:arch` (0 errores) y `ng build` limpios. AC12: pgTAP 14/14
+  y CI de plataforma-db en verde.
+- Ajuste tras staging: la fecha de las compras en la ficha decía "05-10-2026"; ahora "5 oct 2026".
+- Datos de prueba cambiados: "Leche QA 0011" de `test3` quedó archivada.

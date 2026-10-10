@@ -85,6 +85,10 @@ describe('ProductSheetPage (spec 0017)', () => {
     expect(nav.navigateBack).toHaveBeenCalledWith('/app/products');
   });
 
+  it('la fecha de una compra se lee como en Compras', () => {
+    expect(page.dateLabel('2026-10-05T15:00:00Z')).toMatch(/^5 oct\.? 2026$/);
+  });
+
   it('el precio dice de dónde sale (D5)', () => {
     expect(page.priceLabel()).toBe('Último pagado $1.290');
     data.set(sheet({}, []));

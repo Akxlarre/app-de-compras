@@ -13,7 +13,6 @@ import { ProductSheetFacade } from '@core/facades/product-sheet.facade';
 import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import type { Product } from '@core/models/product.model';
 import { ToastService } from '@core/services/ui/toast.service';
-import { formatChileanDate } from '@core/utils/date.utils';
 import { formatAmount } from '@core/utils/price.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
@@ -28,7 +27,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 @Component({
   selector: 'app-product-sheet-page',
   standalone: true,
-  imports: [DecimalPipe, AppHeaderComponent, ErrorStateComponent, SkeletonBlockComponent, IconComponent],
+  imports: [
+    DecimalPipe,
+    AppHeaderComponent,
+    ErrorStateComponent,
+    SkeletonBlockComponent,
+    IconComponent,
+  ],
   templateUrl: './product-sheet.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -62,8 +67,13 @@ export class ProductSheetPage implements OnInit {
     this.facade.open(this.id);
   }
 
+  /** "5 oct 2026", como las fechas de Compras. */
   dateLabel(iso: string): string {
-    return formatChileanDate(iso, 'medium');
+    return new Intl.DateTimeFormat('es-CL', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(iso));
   }
 
   back(): void {
