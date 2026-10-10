@@ -6,23 +6,31 @@ const RISE_THRESHOLD = 0.1;
 
 /**
  * El último precio pagado en cada tienda (spec 0020 D1), del más barato al más caro. Solo líneas de
- * boleta con tienda; sin precio unitario se calcula desde el monto y la cantidad.
+ * boleta con tienda; sin precio unitario se calcula desde el monto y la cantidad. Varias líneas de
+ * la misma tienda en su fecha más reciente se promedian por cantidad, como el precio de la compra
+ * (fix-051).
  */
 export function pricesByStore(rows: StorePriceRow[]): StorePrice[] {
-  const latest = new Map<string, StorePrice>();
+  const latest = new Map<string, { date: string; amount: number; quantity: number }>();
   for (const r of rows) {
     const store = r.receipt?.store?.trim();
     const date = r.receipt?.purchased_at ?? r.list?.completed_at;
     if (!store || !date) continue;
+    const quantity = Number(r.quantity) || 1;
     const unitPrice =
-      r.unit_price != null
-        ? Number(r.unit_price)
-        : Math.round(Number(r.amount) / (Number(r.quantity) || 1));
+      r.unit_price != null ? Number(r.unit_price) : Math.round(Number(r.amount) / quantity);
     if (!unitPrice) continue;
     const seen = latest.get(store);
-    if (!seen || date > seen.date) latest.set(store, { store, unitPrice, date });
+    if (!seen || date > seen.date) {
+      latest.set(store, { date, amount: unitPrice * quantity, quantity });
+    } else if (date === seen.date) {
+      seen.amount += unitPrice * quantity;
+      seen.quantity += quantity;
+    }
   }
-  return [...latest.values()].sort((a, b) => a.unitPrice - b.unitPrice);
+  return [...latest]
+    .map(([store, s]) => ({ store, unitPrice: Math.round(s.amount / s.quantity), date: s.date }))
+    .sort((a, b) => a.unitPrice - b.unitPrice);
 }
 
 /** Porcentaje entero de subida si es de 10% o más; null si bajó, subió poco o no hay anterior. */
