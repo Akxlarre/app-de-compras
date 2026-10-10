@@ -113,7 +113,7 @@ Huevos marcados, y Arroz pendiente. `test5` probó "Es otra compra". La lectura 
 |---|---|
 | Y1 | **Alerta de precio**: "El aceite subió 18% desde la última compra". |
 | Y2 | **Reenviar la boleta electrónica por correo** a una dirección de la familia y que se registre sola. |
-| Y3 | **Exportar el mes** a una planilla (CSV) para el presupuesto familiar. |
+| Y3 | ✅ 0026 · **Exportar el mes** a una planilla (CSV) para el presupuesto familiar. |
 | Y4 | **Boletas de otras compras** (farmacia, ferretería, electro) con recordatorio de garantía. |
 | Y5 | **Dividir el gasto** entre miembros ("pagó Ana", "pagó Beto"). |
 
@@ -314,3 +314,4 @@ cierre fijo abajo; mientras lee la boleta, se ve la foto y se puede seguir usand
 | 6b | ✅ Spec 0019: lista para el súper (2026-10-10): pasillos fijos con sugerencia automática, Mi Lista por pasillo, unidades (kg/L con decimales) y "¿Precio?" al marcar. Migración en plataforma-db #20. | F3–F5, H4, K8 |
 | 7 | ✅ Spec 0021: nota por ítem y detalle completo (2026-10-10): nota en la fila, pulsación larga para abrir el detalle, "Ver ficha del producto". Sigue: 0023 compras (R8–R10), 0024 lista compartida (F6, X1), 0025 en el súper (X2, X3), 0026 exportar (Y3). Y5 descartado. | F1, F2 |
 | 8 | ✅ Spec 0022: orden (A–Z, Más comprados, Hace más tiempo) y filtros (Pasillo, Sin precio) en el Catálogo (2026-10-10). | H5 |
+| 9 | ✅ Spec 0026: "Exportar <mes> a planilla" en Compras (2026-10-10): CSV para Excel/Sheets en español; en el teléfono se abre con una app de planillas. | Y3 |

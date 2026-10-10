@@ -13,7 +13,7 @@
 | `ProductSheetFacade` | `FamilyRepository`, `ProductsRepository`, `ReceiptsRepository`, `ToastService` | — | `src/app/core/facades/product-sheet.facade.ts` |
 | `ProductsFacade` | `FamilyRepository`, `ProductsRepository`, `SessionScopeService` | — | `src/app/core/facades/products.facade.ts` |
 | `PurchaseCloseFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ReceiptsRepository`, `ProductsRepository`, `ToastService`, `NavController`, `SessionScopeService` | — | `src/app/core/facades/purchase-close.facade.ts` |
-| `PurchaseHistoryFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ReceiptsRepository`, `ToastService` | — | `src/app/core/facades/purchase-history.facade.ts` |
+| `PurchaseHistoryFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ReceiptsRepository`, `ToastService`, `FileExportService` | — | `src/app/core/facades/purchase-history.facade.ts` |
 | `RestockFacade` | `FamilyRepository`, `ProductsRepository`, `ToastService` | — | `src/app/core/facades/restock.facade.ts` |
 | `ShoppingListFacade` | `FamilyRepository`, `ShoppingListsRepository`, `ListItemsRepository`, `ToastService`, `NetworkStatusService`, `OfflineStoreService`, `SessionScopeService` | — | `src/app/core/facades/shopping-list.facade.ts` |
 
