@@ -11,6 +11,7 @@ import {
   monthComparison,
   monthlyTotals,
   purchasesInMonth,
+  searchPurchases,
   shiftMonth,
   spendByStore,
   summarizePurchases,
@@ -60,6 +61,16 @@ export class PurchaseHistoryFacade extends BaseFacade<PurchaseSummary[]> {
   /** Los productos que más pesaron y el gasto por tienda del mes elegido (spec 0020 D4). */
   readonly top = computed(() => topProducts(this.visible()));
   readonly byStore = computed(() => spendByStore(this.visible()));
+
+  /** Lo escrito en el buscador de Compras (spec 0023 D2). */
+  readonly query = signal('');
+  /** Compras de cualquier mes que coinciden con el buscador, la más nueva primero. */
+  readonly results = computed(() => searchPurchases(this.data() ?? [], this.query()));
+
+  override reset(): void {
+    super.reset();
+    this.query.set('');
+  }
 
   /** Tocar una barra del gráfico: ese mes (nunca uno futuro). */
   goToMonth(date: Date): void {

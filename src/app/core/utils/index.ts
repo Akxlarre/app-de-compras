@@ -20,3 +20,4 @@ export * from './aisles.utils';
 export * from './units.utils';
 export * from './catalog.utils';
 export * from './purchase-export.utils';
+export * from './share-list.utils';

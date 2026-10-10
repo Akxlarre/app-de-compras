@@ -186,6 +186,18 @@ describe('ShoppingListsRepository', () => {
       expect(q.select).toHaveBeenCalledWith('id');
     });
 
+    it('setBudget cambia el presupuesto solo de la lista activa (spec 0025)', async () => {
+      const q = queryMock({ data: [{ id: 'l1' }] });
+      mock.shop.from.mockReturnValue(q);
+
+      await repo.setBudget('l1', 60000);
+
+      expect(q.update).toHaveBeenCalledWith({ budget: 60000 });
+      expect(q.eq).toHaveBeenCalledWith('id', 'l1');
+      expect(q.eq).toHaveBeenCalledWith('status', 'active');
+      expect(q.select).toHaveBeenCalledWith('id');
+    });
+
     it('deleteTemplate borra solo una plantilla (nunca una compra ni la activa)', async () => {
       const q = queryMock({ data: [{ id: 't1' }] });
       mock.shop.from.mockReturnValue(q);
@@ -229,7 +241,7 @@ describe('ShoppingListsRepository', () => {
     // Trae también la boleta de cada compra (spec 0009): total real, comercio y foto; y todas sus
     // líneas (spec 0015, G2).
     expect(q.select).toHaveBeenCalledWith(
-      `${WITH_ITEMS}, receipts(id, image_url, store, total_amount), purchase_lines(receipt_id, line_index, raw_text, name, kind, quantity, unit_price, amount, product:products(name))`
+      `${WITH_ITEMS}, receipts(id, image_url, store, total_amount), purchase_lines(receipt_id, line_index, raw_text, name, kind, quantity, unit_price, amount, product:products(id, name))`
     );
     expect(q.eq).toHaveBeenCalledWith('family_id', 'fam-1');
     expect(q.eq).toHaveBeenCalledWith('status', 'completed');

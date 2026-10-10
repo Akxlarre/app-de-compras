@@ -187,6 +187,21 @@ describe('PurchaseHistoryFacade', () => {
     expect(facade.data()).toBeNull();
   });
 
+  describe('buscar (spec 0023 D2)', () => {
+    it('con texto busca en todos los meses; al cerrar sesión se limpia', async () => {
+      await facade.initialize();
+      expect(facade.results()).toEqual([]);
+
+      facade.query.set('cafe');
+      expect(facade.results().map((r) => [r.purchase.id, r.match])).toEqual([
+        ['b', 'Café · $4.000'],
+      ]);
+
+      TestBed.inject(SessionScopeService).clear();
+      expect(facade.query()).toBe('');
+    });
+  });
+
   describe('exportar el mes (spec 0026)', () => {
     it('exporta solo las compras del mes elegido, con el nombre del mes', async () => {
       await facade.initialize();

@@ -74,6 +74,8 @@ describe('PurchasesPage', () => {
       byStore: signal([{ name: 'Sin boleta', total: 2000 }]),
       initialize: vi.fn(),
       dispose: vi.fn(),
+      query: signal(''),
+      results: signal<any[]>([]),
     };
     close = { start: vi.fn(), startNew: vi.fn(), scan: vi.fn() };
     lists = { initialize: vi.fn().mockResolvedValue(undefined), data: signal<any>(null) };
@@ -150,6 +152,25 @@ describe('PurchasesPage', () => {
       { name: 'Sin boleta', total: 2000 },
     ]);
     expect(page.stores().map((s: { name: string }) => s.name)).toEqual(['Líder', 'Sin boleta']);
+  });
+
+  it('buscar: con texto muestra resultados con su fecha y lo que coincidió (spec 0023 D2)', () => {
+    expect(page.searching()).toBe(false);
+    facade.query.set('  ');
+    expect(page.searching()).toBe(false);
+
+    facade.query.set('pilas');
+    facade.results.set([{ purchase: summary({ store: 'Líder' }), match: 'Pilas AA · 2 × $3.990' }]);
+    expect(page.searching()).toBe(true);
+    expect(page.resultsLabel()).toBe('1 compra');
+    expect(page.resultRows()[0]).toMatchObject({
+      primary: 'Líder',
+      match: 'Pilas AA · 2 × $3.990',
+    });
+    expect(page.resultRows()[0].when).toMatch(/5 oct/);
+
+    facade.results.set([]);
+    expect(page.resultsLabel()).toBe('Ninguna compra con «pilas»');
   });
 
   it('abrir una compra va a su detalle', () => {

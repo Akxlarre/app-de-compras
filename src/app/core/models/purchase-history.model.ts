@@ -42,6 +42,8 @@ export interface PurchaseSummary {
   /** Tienda o tiendas de sus boletas, unidas con " · "; null sin boleta o si no se leyó. */
   store: string | null;
   items: PurchasedItem[];
+  /** Quién la cerró (userId); null en compras anteriores a la spec 0023. */
+  completedBy: string | null;
   /** Lo que no es producto en la boleta; vacío sin boleta o en compras antiguas. */
   charges: PurchasedCharge[];
   /** La compra tal como vino de la base, para cerrarla con boleta o total desde el Historial. */

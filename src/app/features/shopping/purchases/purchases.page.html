@@ -46,6 +46,60 @@
     />
     } @else {
     <div class="flex flex-col gap-4 mt-2">
+      <!-- Buscar en todas las compras (spec 0023 D2) -->
+      <div class="relative">
+        <app-icon
+          name="search"
+          [size]="18"
+          class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+          [attr.aria-label]="'Buscar'"
+        />
+        <input
+          type="search"
+          class="w-full bg-surface border border-border-default rounded-full pl-11 pr-4 py-3 text-text-primary"
+          placeholder="Buscar en tus compras"
+          aria-label="Buscar en tus compras"
+          data-testid="buscar-compras"
+          data-llm-description="producto, tienda o nombre de compra a buscar en todo el historial"
+          [value]="facade.query()"
+          (input)="facade.query.set($any($event.target).value)"
+        />
+      </div>
+
+      @if (searching()) {
+      <p class="text-sm text-text-muted" data-testid="resultados-contador">{{ resultsLabel() }}</p>
+      <ul class="flex flex-col gap-2">
+        @for (row of resultRows(); track row.id) {
+        <li>
+          <button
+            class="w-full flex items-center gap-3 p-4 bg-surface border border-border-default rounded-2xl text-left active:scale-[0.99] transition-transform"
+            [attr.aria-label]="'Ver compra ' + row.primary"
+            data-testid="resultado-compra"
+            (click)="open(row.id)"
+          >
+            <span class="flex-1 min-w-0">
+              <span class="block font-semibold text-text-primary truncate">{{ row.primary }}</span>
+              <span class="block text-xs text-text-muted mt-0.5 truncate">{{ row.when }}</span>
+              @if (row.match) {
+              <span class="block text-sm text-text-secondary mt-0.5 truncate">{{ row.match }}</span>
+              }
+            </span>
+            @if (!row.noPrices) {
+            <span class="font-bold text-text-primary shrink-0"
+              >${{ row.total | number : '1.0-0' }}</span
+            >
+            }
+            <app-icon
+              name="chevron-right"
+              [size]="18"
+              class="text-text-muted shrink-0"
+              [attr.aria-label]="'Ver detalle'"
+            />
+          </button>
+        </li>
+        }
+      </ul>
+      } @else {
       <!-- Gasto del mes elegido (D4) -->
       <section
         class="bg-surface border border-border-default rounded-2xl p-5"
@@ -209,7 +263,7 @@
           }
         </div>
       </section>
-      }
+      } }
 
       <div class="sticky-above-chrome bg-base pt-2 pb-2">
         <button

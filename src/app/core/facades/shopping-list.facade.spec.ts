@@ -700,6 +700,53 @@ describe('ShoppingListFacade', () => {
       expect(facade.data()?.id).toBe('list-1');
     });
 
+    describe('presupuesto (spec 0025 D2)', () => {
+      beforeEach(async () => {
+        lists['setBudget'] = vi.fn().mockResolvedValue(undefined);
+        await facade.initialize();
+      });
+
+      it('lo fija al instante y lo guarda; null lo quita', async () => {
+        expect(await facade.setBudget(60000)).toBe(true);
+        expect(facade.data()?.budget).toBe(60000);
+        expect(lists['setBudget']).toHaveBeenCalledWith('list-1', 60000);
+
+        await facade.setBudget(null);
+        expect(lists['setBudget']).toHaveBeenLastCalledWith('list-1', null);
+        expect(facade.data()?.budget).toBeNull();
+      });
+
+      it('si falla, vuelve al anterior y avisa', async () => {
+        lists['setBudget'].mockRejectedValue(new Error('rls'));
+        expect(await facade.setBudget(60000)).toBe(false);
+        expect(facade.data()?.budget ?? null).toBeNull();
+        expect(toast['error']).toHaveBeenCalled();
+      });
+    });
+
+    describe('addToList (spec 0023 D1)', () => {
+      const bought = [
+        { product_id: 'p1', quantity: 2 },
+        { product_id: 'p2', quantity: 1 },
+      ];
+
+      it('agrega a la lista activa (o la que crea) y devuelve cuántos', async () => {
+        lists['startActive'].mockResolvedValue({ id: 'list-1', created: false });
+        expect(await facade.addToList(bought)).toBe(2);
+        expect(items['addMany']).toHaveBeenCalledWith('list-1', bought);
+        expect(facade.data()?.id).toBe('list-1');
+      });
+
+      it('sin productos no hace nada; si falla, avisa y devuelve null', async () => {
+        expect(await facade.addToList([])).toBe(0);
+        expect(lists['startActive']).not.toHaveBeenCalled();
+
+        items['addMany'].mockRejectedValue(new Error('boom'));
+        expect(await facade.addToList(bought)).toBeNull();
+        expect(toast['error']).toHaveBeenCalled();
+      });
+    });
+
     it('startListFrom: si ya había lista activa (doble toque) no copia otra vez (AC3)', async () => {
       lists['startActive'].mockResolvedValue({ id: 'list-1', created: false });
 

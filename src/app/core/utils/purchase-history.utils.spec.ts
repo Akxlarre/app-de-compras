@@ -8,6 +8,8 @@ import {
   monthlyTotals,
   topProducts,
   spendByStore,
+  purchasedProducts,
+  searchPurchases,
 } from './purchase-history.utils';
 import type { ActiveShoppingList } from '@core/models/shopping-list.model';
 import type { PurchaseSummary } from '@core/models/purchase-history.model';
@@ -429,5 +431,95 @@ describe('gasto (spec 0020 D3, D4)', () => {
       { store: 'Aroca', total: 58_900 },
       { store: 'El Nene', total: 22_800 },
     ]);
+  });
+});
+
+describe('compras útiles (spec 0023)', () => {
+  it('summarizePurchase copia quién cerró la compra (D3)', () => {
+    expect(summarizePurchase({ ...completed([]), completed_by: 'u2' }).completedBy).toBe('u2');
+    expect(summarizePurchase(completed([])).completedBy).toBeNull();
+  });
+
+  it('purchasedProducts: lo marcado con producto, con su cantidad (D1)', () => {
+    const list = completed([
+      { id: 'a', product_id: 'p1', is_checked: true, quantity: 2 },
+      { id: 'b', product_id: 'p2', is_checked: false, quantity: 1 },
+      { id: 'c', product_id: null, is_checked: true, quantity: 1 },
+      { id: 'd', product_id: 'p3', is_checked: true, quantity: '1.5' },
+    ]);
+    expect(purchasedProducts(list)).toEqual([
+      { product_id: 'p1', quantity: 2 },
+      { product_id: 'p3', quantity: 1.5 },
+    ]);
+  });
+
+  it('purchasedProducts: con boleta, también sus productos; sin repetir y sumando líneas (D1)', () => {
+    const line = (product: object | null, quantity: number | null, kind = 'product') => ({
+      receipt_id: 'r',
+      line_index: 0,
+      raw_text: null,
+      name: null,
+      kind,
+      quantity,
+      unit_price: null,
+      amount: 0,
+      product,
+    });
+    const list = {
+      ...completed([{ id: 'a', product_id: 'p1', is_checked: true, quantity: 1 }]),
+      purchase_lines: [
+        line({ id: 'p1', name: 'Leche' }, 2),
+        line({ id: 'p2', name: 'Pan' }, 1),
+        line({ id: 'p2', name: 'Pan' }, null),
+        line({ name: 'sin id' }, 1),
+        line(null, 1),
+        line({ id: 'p9', name: 'Bolsa' }, 1, 'bag'),
+      ],
+    } as ActiveShoppingList;
+    expect(purchasedProducts(list)).toEqual([
+      { product_id: 'p1', quantity: 2 },
+      { product_id: 'p2', quantity: 2 },
+    ]);
+  });
+
+  describe('searchPurchases (D2)', () => {
+    const p = (id: string, completedAt: string, over: Partial<PurchaseSummary> = {}) =>
+      ({
+        id,
+        name: 'Compra',
+        title: `Compra ${id}`,
+        completedAt,
+        store: null,
+        items: [],
+        ...over,
+      } as unknown as PurchaseSummary);
+    const purchases = [
+      p('a', '2026-08-01T10:00:00Z', {
+        items: [{ name: 'Pilas AA', quantity: 2, unitPrice: 3990, subtotal: 7980 }],
+      }),
+      p('b', '2026-09-15T10:00:00Z', { store: 'Líder Express' }),
+      p('c', '2026-09-20T10:00:00Z', { title: 'Asado del sábado' }),
+      p('d', '2026-10-01T10:00:00Z', {
+        items: [{ name: 'Pilas recargables', quantity: 1, unitPrice: null, subtotal: 0 }],
+      }),
+    ];
+
+    it('busca por producto en cualquier mes y dice qué coincidió, la más nueva primero', () => {
+      expect(searchPurchases(purchases, 'pilas')).toEqual([
+        { purchase: purchases[3], match: 'Pilas recargables' },
+        { purchase: purchases[0], match: 'Pilas AA · 2 × $3.990' },
+      ]);
+    });
+
+    it('busca por tienda y por nombre, sin tildes ni mayúsculas', () => {
+      expect(searchPurchases(purchases, 'LIDER').map((r) => r.purchase.id)).toEqual(['b']);
+      expect(searchPurchases(purchases, 'sabado')).toEqual([
+        { purchase: purchases[2], match: null },
+      ]);
+    });
+
+    it('sin texto no busca', () => {
+      expect(searchPurchases(purchases, '  ')).toEqual([]);
+    });
   });
 });

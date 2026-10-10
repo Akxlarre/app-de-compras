@@ -11,8 +11,12 @@ import { ActivatedRoute } from '@angular/router';
 import { ActionSheetController, AlertController, NavController } from '@ionic/angular';
 import { PurchaseHistoryFacade } from '@core/facades/purchase-history.facade';
 import { PurchaseCloseFacade } from '@core/facades/purchase-close.facade';
+import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
+import { FamilyFacade } from '@core/facades/family.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 import type { PurchaseSummary } from '@core/models/purchase-history.model';
 import { formatChileanDate } from '@core/utils/date.utils';
+import { purchasedProducts } from '@core/utils/purchase-history.utils';
 import { AppHeaderComponent } from '@shared/components/app-header/app-header.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -41,6 +45,9 @@ export class PurchaseDetailPage implements OnInit {
   private readonly nav = inject(NavController);
   private readonly alerts = inject(AlertController);
   private readonly sheets = inject(ActionSheetController);
+  private readonly lists = inject(ShoppingListFacade);
+  private readonly family = inject(FamilyFacade);
+  private readonly toast = inject(ToastService);
   private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
   readonly purchase = computed(() => this.facade.byId(this.id));
@@ -60,7 +67,36 @@ export class PurchaseDetailPage implements OnInit {
     return !!p && !p.hasReceipt && p.totalSource === 'estimated';
   });
 
+  // ── Compras útiles (spec 0023) ─────────────────────────────────────────────
+  /** Lo comprado, para "Agregar a la lista" (D1). */
+  readonly toAdd = computed(() => {
+    const p = this.purchase();
+    return p ? purchasedProducts(p.source) : [];
+  });
+  readonly adding = signal(false);
+  /** "Cerrada por Ana" / "por ti"; solo en familias de más de uno y si se sabe (D3). */
+  readonly closedBy = computed(() => {
+    const id = this.purchase()?.completedBy;
+    if (!id || !this.family.hasOtherMembers()) return null;
+    const name = this.family.memberNames().get(id);
+    if (!name) return null;
+    return name === 'Tú' ? 'Cerrada por ti' : `Cerrada por ${name}`;
+  });
+
+  async addToList(): Promise<void> {
+    if (this.adding()) return;
+    this.adding.set(true);
+    const added = await this.lists.addToList(this.toAdd());
+    this.adding.set(false);
+    if (added) {
+      this.toast.success(
+        added === 1 ? '1 producto agregado a Mi Lista' : `${added} productos agregados a Mi Lista`
+      );
+    }
+  }
+
   async ngOnInit(): Promise<void> {
+    if (!this.family.currentFamily()) this.family.loadMyFamily();
     await this.facade.initialize();
     const p = this.purchase();
     if (p?.receiptImagePaths.length) {

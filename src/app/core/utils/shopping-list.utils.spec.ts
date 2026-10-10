@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { sortListItems } from './shopping-list.utils';
+import { budgetProgress, sortListItems } from './shopping-list.utils';
+
+describe('budgetProgress (spec 0025 D2)', () => {
+  it('porcentaje del tope y cuánto se pasa', () => {
+    expect(budgetProgress(30000, 60000)).toEqual({ percent: 50, over: null });
+    expect(budgetProgress(60000, 60000)).toEqual({ percent: 100, over: null });
+    expect(budgetProgress(72500, 60000)).toEqual({ percent: 100, over: 12500 });
+    expect(budgetProgress(0, 60000)).toEqual({ percent: 0, over: null });
+  });
+});
 
 const item = (id: string, created_at: string, is_checked = false) => ({
   id,

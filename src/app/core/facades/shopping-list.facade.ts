@@ -4,7 +4,7 @@ import type { ActiveShoppingList } from '../models/shopping-list.model';
 import type { ItemPatch, QueuedChange } from '../models/offline-queue.model';
 import { FamilyRepository } from '../repositories/family.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
-import { ListItemsRepository } from '../repositories/list-items.repository';
+import { ListItemsRepository, type ListItemContent } from '../repositories/list-items.repository';
 import { ToastService } from '../services/ui/toast.service';
 import { SessionScopeService } from '../services/auth/session-scope.service';
 import { NetworkStatusService } from '../services/infrastructure/network-status.service';
@@ -163,6 +163,43 @@ export class ShoppingListFacade extends BaseFacade<ActiveShoppingList> {
     }
     await this.refreshSilently();
     return ok;
+  }
+
+  /**
+   * Presupuesto de la lista (spec 0025 D2); null lo quita. Optimista, con rollback.
+   * @returns false si no se pudo (ya avisó).
+   */
+  async setBudget(budget: number | null): Promise<boolean> {
+    const list = this._data();
+    if (!list || !this.requireOnline()) return false;
+    const prev = list.budget ?? null;
+    this._data.update((l) => (l ? { ...l, budget } : l));
+    try {
+      await this.lists.setBudget(list.id, budget);
+      return true;
+    } catch (e) {
+      this._data.update((l) => (l ? { ...l, budget: prev } : l));
+      await this.handleMutationError(e);
+      return false;
+    }
+  }
+
+  /**
+   * Agrega productos a la lista activa, creándola si no hay (spec 0023 D1: desde una compra
+   * pasada). Lo que ya está suma. @returns cuántos se agregaron, o null si falló (ya avisó).
+   */
+  async addToList(products: ListItemContent[]): Promise<number | null> {
+    if (products.length === 0) return 0;
+    if (!this.requireOnline()) return null;
+    try {
+      const { id } = await this.lists.startActive(DEFAULT_LIST_NAME);
+      await this.items.addMany(id, products);
+    } catch (e) {
+      await this.handleMutationError(e);
+      return null;
+    }
+    await this.refreshSilently();
+    return products.length;
   }
 
   /**
