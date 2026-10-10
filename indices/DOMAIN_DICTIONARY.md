@@ -18,6 +18,7 @@ Lenguaje ubicuo. Usar estos términos en código, UI y specs.
 | Ítem | `list_items` | Producto + cantidad dentro de una lista. `is_checked` = ya está en el carro. |
 | Unidad | `list_items.unit`, `ITEM_UNITS` | un, kg, g, L, ml o paquete; kg y L admiten decimales ("1,5 kg"). Se elige en el detalle del ítem (spec 0019). |
 | Precio anotado | `list_items.unit_price` | Precio que se escribe al marcar ("¿Precio?", opcional). Suma en el Total estimado y viene puesto al cerrar sin boleta; con boleta manda la boleta (spec 0019). |
+| Nota del ítem | `list_items.notes` | Texto corto (hasta 80) para quien compra ("sin lactosa"). Es de ese ítem en esa lista; se ve en la fila y se escribe en el detalle (spec 0021). |
 | Tachar / marcar | `toggleItemCheck` | Marcar un ítem como comprado. Se propaga por Realtime. La BD guarda quién y cuándo (`checked_by`, `checked_at`). |
 | Pendiente | `is_checked = false` | Ítem de la lista que aún no está en el carro. |
 | Finalizar compra | `completeList(id, carryPending)` → RPC `complete_list` | La lista pasa a `completed` con lo marcado; los pendientes pasan a la próxima lista o se descartan. |

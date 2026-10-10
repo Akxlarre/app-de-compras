@@ -23,6 +23,7 @@ describe('ProductsFacade', () => {
       findByFamily: vi.fn(),
       findIdByName: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 'p-new', name: 'Sal de mar' }),
+      findRestockStats: vi.fn().mockResolvedValue([]),
     };
 
     TestBed.configureTestingModule({
@@ -36,6 +37,61 @@ describe('ProductsFacade', () => {
   });
 
   afterEach(() => vi.useRealTimers());
+
+  describe('orden y filtros (spec 0022)', () => {
+    beforeEach(async () => {
+      catalog.findByFamily.mockResolvedValue([
+        {
+          id: 'a',
+          name: 'Arroz',
+          category: 'Despensa',
+          last_price: 1100,
+          last_purchased_at: daysAgo(3),
+        },
+        {
+          id: 'b',
+          name: 'Leche',
+          category: 'Lácteos y huevos',
+          last_price: null,
+          last_purchased_at: daysAgo(30),
+        },
+        { id: 'c', name: 'Pan', category: 'Panadería', last_price: 900, last_purchased_at: null },
+      ]);
+      catalog.findRestockStats.mockResolvedValue([
+        { product_id: 'c', purchase_count: 1 },
+        { product_id: 'a', purchase_count: 4 },
+      ]);
+      await facade.loadProducts();
+    });
+
+    it('ordena por más comprados y por hace más tiempo (D1, AC1)', () => {
+      expect(facade.filtered().map((p) => p.id)).toEqual(['a', 'b', 'c']);
+      facade.order.set('most');
+      expect(facade.filtered().map((p) => p.id)).toEqual(['a', 'c', 'b']);
+      facade.order.set('oldest');
+      expect(facade.filtered().map((p) => p.id)).toEqual(['b', 'a', 'c']);
+    });
+
+    it('filtra sin precio y por pasillo; quitar filtros vuelve a todo (D2, D3)', () => {
+      expect(facade.hasFilters()).toBe(false);
+      facade.noPrice.set(true);
+      expect(facade.filtered().map((p) => p.id)).toEqual(['b']);
+      facade.aisle.set('Panadería');
+      expect(facade.filtered()).toEqual([]);
+      expect(facade.hasFilters()).toBe(true);
+
+      facade.clearFilters();
+      expect(facade.filtered()).toHaveLength(3);
+      expect(facade.hasFilters()).toBe(false);
+    });
+
+    it('si fallan las estadísticas, el catálogo carga igual (orden A–Z)', async () => {
+      catalog.findRestockStats.mockRejectedValue(new Error('rpc'));
+      await facade.loadProducts();
+      expect(facade.error()).toBeNull();
+      expect(facade.products()).toHaveLength(3);
+    });
+  });
 
   describe('loadProducts', () => {
     it('calcula daysSincePurchase desde la última compra (no desde el cambio de precio)', async () => {

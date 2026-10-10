@@ -113,7 +113,7 @@ Huevos marcados, y Arroz pendiente. `test5` probó "Es otra compra". La lectura 
 |---|---|
 | Y1 | **Alerta de precio**: "El aceite subió 18% desde la última compra". |
 | Y2 | **Reenviar la boleta electrónica por correo** a una dirección de la familia y que se registre sola. |
-| Y3 | **Exportar el mes** a una planilla (CSV) para el presupuesto familiar. |
+| Y3 | ✅ 0026 · **Exportar el mes** a una planilla (CSV) para el presupuesto familiar. |
 | Y4 | **Boletas de otras compras** (farmacia, ferretería, electro) con recordatorio de garantía. |
 | Y5 | **Dividir el gasto** entre miembros ("pagó Ana", "pagó Beto"). |
 
@@ -157,7 +157,7 @@ Probado con `test3` (15 productos, algunos comprados con la boleta de la secció
 | H2 | P1 | **Buscar y crear** desde el Catálogo. | Básico para un catálogo de más de una pantalla. |
 | H3 | P2 | **Juntar duplicados** ("Arroz G1…" → "Arroz"): mueve historial y alias al producto que queda. | Las boletas generan duplicados con nombres largos; sin esto, el historial de precios y las sugerencias se parten en dos. |
 | H4 | P2 | **Categorías** asignables (con sugerencia automática al crear) y filtro por categoría. | Base para agrupar Mi Lista por pasillo (F4) y para el gasto por categoría. |
-| H5 | P2 | **Orden y filtros**: más comprados, comprados hace tiempo, sin precio. | Encontrar rápido lo que importa sin buscar. |
+| H5 | P2 | ✅ 0022 · **Orden y filtros**: más comprados, comprados hace tiempo, sin precio. | Encontrar rápido lo que importa sin buscar. |
 | H6 | P3 | **Archivar** un producto que ya no se compra (sale del buscador y de las sugerencias, sin perder el historial). | Borrar pierde historia; archivar no. |
 
 ### Ideas que darían un plus
@@ -308,7 +308,10 @@ cierre fijo abajo; mientras lee la boleta, se ve la foto y se puede seguir usand
 | 1 | ✅ Spec 0015 (boleta confiable) y fix-049 (arreglos rápidos de Boletas). | B1–B9, G2 |
 | 2 | ✅ Spec 0016: pestaña Compras + flujo de cierre a pantalla completa (2026-10-09). R8–R10 quedan fuera. | N1–N4, R1–R7, G1, G3, G4, lo que quedó fuera del fix-049 (líneas repetidas, editar al tocar, lectura en segundo plano) |
 | 3 | ✅ Fix-050: coherencia visual y de textos (2026-10-10). | T1–T4, V1–V4 |
-| 4 | ✅ Spec 0017: ficha de producto y catálogo editable (2026-10-10). Quedan H4, H5 (categorías, filtros). | H1–H3, H6, K1–K7 |
+| 4 | ✅ Spec 0017: ficha de producto y catálogo editable (2026-10-10). Quedan H4 (categorías); H5 en la 0022. | H1–H3, H6, K1–K7 |
 | 5 | ✅ Spec 0018: cuenta (2026-10-10). Nombre, contraseña y Perfil compacto; borrar cuenta (P5) e invitar con enlace (P7) descartados: no se publica en Google Play. | P1–P4, P6 |
 | 6a | ✅ Spec 0020: precios y gasto (2026-10-10). Precio por tienda y "Subió X%" en la ficha y el cierre; barras de 6 meses, promedio, lo que más pesó y gasto por tienda en Compras. | G5, Y1, Z1, W1, W2 |
 | 6b | ✅ Spec 0019: lista para el súper (2026-10-10): pasillos fijos con sugerencia automática, Mi Lista por pasillo, unidades (kg/L con decimales) y "¿Precio?" al marcar. Migración en plataforma-db #20. | F3–F5, H4, K8 |
+| 7 | ✅ Spec 0021: nota por ítem y detalle completo (2026-10-10): nota en la fila, pulsación larga para abrir el detalle, "Ver ficha del producto". Sigue: 0023 compras (R8–R10), 0024 lista compartida (F6, X1), 0025 en el súper (X2, X3), 0026 exportar (Y3). Y5 descartado. | F1, F2 |
+| 8 | ✅ Spec 0022: orden (A–Z, Más comprados, Hace más tiempo) y filtros (Pasillo, Sin precio) en el Catálogo (2026-10-10). | H5 |
+| 9 | ✅ Spec 0026: "Exportar <mes> a planilla" en Compras (2026-10-10): CSV para Excel/Sheets en español; en el teléfono se abre con una app de planillas. | Y3 |

@@ -244,8 +244,14 @@
               style="--padding-start: 0; --padding-end: 0; --inner-padding-end: 0"
             >
               <div
-                class="w-full flex items-center gap-4 p-4 cursor-pointer"
-                (click)="toggleItem(item.id, item.is_checked)"
+                class="w-full flex items-center gap-4 p-4 cursor-pointer select-none"
+                (click)="tapItem(item.id, item.is_checked)"
+                (pointerdown)="startPress(item, $event)"
+                (pointermove)="movePress($event)"
+                (pointerup)="cancelPress()"
+                (pointercancel)="cancelPress()"
+                (pointerleave)="cancelPress()"
+                (contextmenu)="$event.preventDefault()"
               >
                 <!-- Botón circular gigante para fácil touch -->
                 <div
@@ -268,6 +274,11 @@
                   >
                     {{ item.product?.name || 'Producto sin nombre' }}
                   </span>
+                  @if (item.notes) {
+                  <span class="text-sm italic text-text-secondary truncate" data-testid="nota-item">
+                    {{ item.notes }}
+                  </span>
+                  }
 
                   <div class="flex items-center gap-2 text-xs text-text-muted mt-0.5">
                     @if (!byAisle() && item.product?.category) {
@@ -295,6 +306,7 @@
                   [class.opacity-40]="item.is_checked"
                   [class.pointer-events-none]="item.is_checked"
                   (click)="$event.stopPropagation()"
+                  (pointerdown)="$event.stopPropagation()"
                 >
                   <button
                     class="w-12 h-12 flex items-center justify-center text-text-muted hover:bg-surface active:bg-border-subtle transition-colors disabled:opacity-30"
@@ -326,6 +338,7 @@
                   [class.opacity-40]="item.is_checked"
                   [attr.aria-label]="'Cantidad y unidad de ' + (item.product?.name ?? 'producto')"
                   data-testid="cantidad"
+                  (pointerdown)="$event.stopPropagation()"
                   (click)="openDetail(item, $event)"
                 >
                   {{ formatQuantity(item.quantity, item.unit) }}
@@ -407,7 +420,12 @@
   </button>
 </form>
 } @if (detail(); as d) {
-<app-item-detail-sheet [item]="d" (save)="saveDetail($event)" (closed)="detail.set(null)" />
+<app-item-detail-sheet
+  [item]="d"
+  (save)="saveDetail($event)"
+  (closed)="detail.set(null)"
+  (openProduct)="openProduct($event)"
+/>
 }
 
 <app-product-search [visible]="isSearchOpen()" (visibleChange)="isSearchOpen.set($event)" />

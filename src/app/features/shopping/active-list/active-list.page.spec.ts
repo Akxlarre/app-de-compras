@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ActiveListPage, PRICE_PROMPT_MS } from './active-list.page';
+import { ActiveListPage, LONG_PRESS_MS, PRICE_PROMPT_MS } from './active-list.page';
 import { ShoppingListFacade } from '@core/facades/shopping-list.facade';
 import { ConfirmationService } from 'primeng/api';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -212,15 +212,68 @@ describe('ActiveListPage', () => {
       component.openDetail(mockFacade.data().list_items[0]);
       expect(component.detail()).toEqual({
         id: '1',
+        productId: 'p1',
         name: 'P1',
         quantity: 1,
         unit: 'un',
         unitPrice: null,
+        notes: null,
       });
 
       component.saveDetail({ itemId: '1', patch: { unit: 'kg', quantity: 1.5 } });
       expect(mockFacade.editItem).toHaveBeenCalledWith('1', { unit: 'kg', quantity: 1.5 });
       expect(component.detail()).toBeNull();
+    });
+  });
+
+  describe('nota y detalle del ítem (spec 0021)', () => {
+    const press = (x = 10, y = 10) => ({ clientX: x, clientY: y } as PointerEvent);
+    const item = {
+      id: 'i1',
+      created_at: '2026-10-10T10:00:00Z',
+      is_checked: false,
+      quantity: 1,
+      notes: 'sin lactosa',
+      product: { id: 'p1', name: 'Leche', category: 'Lácteos y huevos' },
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockFacade.data.set({ id: 'list-1', list_items: [item] });
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('la pulsación larga abre el detalle con la nota y no marca (D3, AC4)', () => {
+      component.startPress(item as any, press());
+      vi.advanceTimersByTime(LONG_PRESS_MS);
+      expect(component.detail()).toMatchObject({ id: 'i1', notes: 'sin lactosa', productId: 'p1' });
+
+      component.tapItem('i1', false); // el click que llega al soltar
+      expect(mockFacade.toggleItemCheck).not.toHaveBeenCalled();
+
+      component.tapItem('i1', false); // el siguiente toque sí marca
+      expect(mockFacade.toggleItemCheck).toHaveBeenCalledWith('i1', false);
+    });
+
+    it('un toque corto marca; moverse cancela la pulsación larga', () => {
+      component.startPress(item as any, press());
+      vi.advanceTimersByTime(200);
+      component.cancelPress();
+      component.tapItem('i1', false);
+      expect(mockFacade.toggleItemCheck).toHaveBeenCalledWith('i1', false);
+      expect(component.detail()).toBeNull();
+
+      component.startPress(item as any, press(10, 10));
+      component.movePress(press(40, 10)); // deslizar para borrar
+      vi.advanceTimersByTime(LONG_PRESS_MS);
+      expect(component.detail()).toBeNull();
+    });
+
+    it('"Ver ficha del producto" cierra el detalle y abre la ficha (D4, AC5)', () => {
+      component.openDetail(item as any);
+      component.openProduct('p1');
+      expect(component.detail()).toBeNull();
+      expect(nav.navigateForward).toHaveBeenCalledWith('/app/products/p1');
     });
   });
 

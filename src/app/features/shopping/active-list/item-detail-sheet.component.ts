@@ -14,15 +14,21 @@ import { isDecimalUnit, parseQuantity, unitLabel } from '@core/utils/units.utils
 
 export interface ItemDetail {
   id: string;
+  productId: string | null;
   name: string;
   quantity: number;
   unit: ItemUnit;
   unitPrice: number | null;
+  notes: string | null;
 }
 
+/** Largo máximo de la nota de un ítem (spec 0021 D1). */
+export const NOTES_MAX = 80;
+
 /**
- * Detalle de un ítem de Mi Lista (spec 0019 D4/D5): unidad, cantidad (decimales en kg y L) y
- * precio. Hoja inferior; quien la usa guarda y la cierra.
+ * Detalle de un ítem de Mi Lista (spec 0019 D4/D5, spec 0021): unidad, cantidad (decimales en kg y
+ * L), precio y nota, y el camino a la ficha del producto. Hoja inferior; quien la usa guarda y la
+ * cierra.
  */
 @Component({
   selector: 'app-item-detail-sheet',
@@ -101,6 +107,32 @@ export interface ItemDetail {
         </p>
         }
 
+        <label class="flex flex-col gap-1">
+          <span class="flex justify-between text-xs font-semibold text-text-muted">
+            Nota <span class="font-normal">{{ notesLeft() }}</span>
+          </span>
+          <input
+            class="w-full bg-base border border-border-default rounded-lg py-2.5 px-3 text-text-primary focus:outline-none"
+            placeholder="Ej.: sin lactosa, el grande"
+            [attr.maxlength]="notesMax"
+            data-testid="detalle-nota"
+            data-llm-description="nota para quien compra este producto (marca, tamaño, variedad), opcional"
+            [value]="notesText()"
+            (input)="notesText.set($any($event.target).value)"
+          />
+        </label>
+
+        @if (item().productId) {
+        <button
+          type="button"
+          class="self-start text-sm font-semibold text-brand"
+          data-testid="ver-ficha"
+          (click)="goToProduct()"
+        >
+          Ver ficha del producto
+        </button>
+        }
+
         <div class="flex gap-3">
           <button type="button" class="btn-secondary flex-1" (click)="closed.emit()">
             Cancelar
@@ -117,6 +149,7 @@ export class ItemDetailSheetComponent {
   readonly item = input.required<ItemDetail>();
   readonly save = output<{ itemId: string; patch: ItemPatch }>();
   readonly closed = output<void>();
+  readonly openProduct = output<string>();
 
   readonly units = ITEM_UNITS;
   readonly label = unitLabel;
@@ -124,6 +157,9 @@ export class ItemDetailSheetComponent {
   readonly unit = linkedSignal(() => this.item().unit);
   readonly quantityText = linkedSignal(() => String(this.item().quantity).replace('.', ','));
   readonly priceText = linkedSignal(() => formatAmount(this.item().unitPrice));
+  readonly notesText = linkedSignal(() => this.item().notes ?? '');
+  readonly notesMax = NOTES_MAX;
+  readonly notesLeft = computed(() => NOTES_MAX - this.notesText().length);
   private readonly tried = signal(false);
 
   readonly decimal = computed(() => isDecimalUnit(this.unit()));
@@ -145,6 +181,15 @@ export class ItemDetailSheetComponent {
     const patch: ItemPatch = { unit: this.unit(), quantity };
     const price = parsePrice(this.priceText().replace(/\D/g, ''));
     if (price !== null) patch.unit_price = price;
+    // La nota solo viaja si cambió; vacía la borra (spec 0021 D1).
+    const notes = this.notesText().trim().slice(0, NOTES_MAX) || null;
+    if (notes !== (this.item().notes ?? null)) patch.notes = notes;
     this.save.emit({ itemId: this.item().id, patch });
+  }
+
+  /** "Ver ficha del producto": nombre y pasillo se cambian allá (spec 0021 D4). */
+  goToProduct(): void {
+    const id = this.item().productId;
+    if (id) this.openProduct.emit(id);
   }
 }

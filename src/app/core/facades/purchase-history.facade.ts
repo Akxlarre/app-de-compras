@@ -5,6 +5,8 @@ import { FamilyRepository } from '../repositories/family.repository';
 import { ReceiptsRepository } from '../repositories/receipts.repository';
 import { ShoppingListsRepository } from '../repositories/shopping-lists.repository';
 import { ToastService } from '../services/ui/toast.service';
+import { FileExportService } from '../services/file-export.service';
+import { csvFileName, monthCsv } from '../utils/purchase-export.utils';
 import {
   monthComparison,
   monthlyTotals,
@@ -25,6 +27,7 @@ export class PurchaseHistoryFacade extends BaseFacade<PurchaseSummary[]> {
   private readonly lists = inject(ShoppingListsRepository);
   private readonly receipts = inject(ReceiptsRepository);
   private readonly toast = inject(ToastService);
+  private readonly files = inject(FileExportService);
 
   /** Mes que se está mirando en Compras (primer día, hora local; spec 0016 D4). */
   private readonly _month = signal(shiftMonth(new Date(), 0));
@@ -62,6 +65,22 @@ export class PurchaseHistoryFacade extends BaseFacade<PurchaseSummary[]> {
   goToMonth(date: Date): void {
     const month = shiftMonth(date, 0);
     if (month <= shiftMonth(new Date(), 0)) this._month.set(month);
+  }
+
+  /**
+   * Exporta a CSV las compras del mes elegido (spec 0026): en el teléfono se abre con una app de
+   * planillas, en el navegador se descarga.
+   * @returns false si no se pudo (avisa con un toast).
+   */
+  async exportMonth(): Promise<boolean> {
+    try {
+      await this.files.saveCsv(csvFileName(this._month()), monthCsv(this.visible()));
+      return true;
+    } catch (e) {
+      console.error('No se pudo exportar el mes', e);
+      this.toast.error('No se pudo exportar', 'Revisa que tengas una app para abrir planillas.');
+      return false;
+    }
   }
 
   /** Una compra ya cargada (detalle en `/app/purchases/:id`). */

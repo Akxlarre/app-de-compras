@@ -9,6 +9,7 @@
 | `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
 | `RoleService` | — | `src/app/core/services/auth/role.service.ts` |
 | `SessionScopeService` | — | `src/app/core/services/auth/session-scope.service.ts` |
+| `FileExportService` | — | `src/app/core/services/file-export.service.ts` |
 | `NetworkStatusService` | `DestroyRef` | `src/app/core/services/infrastructure/network-status.service.ts` |
 | `OfflineStoreService` | `SessionScopeService` | `src/app/core/services/infrastructure/offline-store.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |

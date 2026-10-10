@@ -36,7 +36,8 @@ export interface ListItem {
   quantity: number;
   /** "un" por defecto; kg y L admiten decimales (spec 0019 D4). */
   unit?: ItemUnit;
-  notes?: string;
+  /** Nota de este ítem en esta lista ("sin lactosa"), hasta 80 caracteres (spec 0021). */
+  notes?: string | null;
   is_checked: boolean;
   checked_at?: string;
   checked_by?: string;

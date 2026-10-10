@@ -6,6 +6,7 @@ import { ShoppingListsRepository } from '../repositories/shopping-lists.reposito
 import { ReceiptsRepository } from '../repositories/receipts.repository';
 import { SessionScopeService } from '../services/auth/session-scope.service';
 import { ToastService } from '../services/ui/toast.service';
+import { FileExportService } from '../services/file-export.service';
 
 const NOW = new Date(2026, 8, 25, 12, 0);
 
@@ -25,10 +26,12 @@ describe('PurchaseHistoryFacade', () => {
   let lists: Record<string, ReturnType<typeof vi.fn>>;
   let receipts: Record<string, ReturnType<typeof vi.fn>>;
   let toast: Record<string, ReturnType<typeof vi.fn>>;
+  let files: { saveCsv: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     receipts = { getSignedUrl: vi.fn(), removeImage: vi.fn().mockResolvedValue(undefined) };
     toast = { error: vi.fn(), warning: vi.fn(), success: vi.fn() };
+    files = { saveCsv: vi.fn().mockResolvedValue(undefined) };
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
 
@@ -55,6 +58,7 @@ describe('PurchaseHistoryFacade', () => {
         { provide: ShoppingListsRepository, useValue: lists },
         { provide: ReceiptsRepository, useValue: receipts },
         { provide: ToastService, useValue: toast },
+        { provide: FileExportService, useValue: files },
       ],
     });
     facade = TestBed.inject(PurchaseHistoryFacade);
@@ -181,6 +185,29 @@ describe('PurchaseHistoryFacade', () => {
 
     expect(facade.error()).toContain('conexión');
     expect(facade.data()).toBeNull();
+  });
+
+  describe('exportar el mes (spec 0026)', () => {
+    it('exporta solo las compras del mes elegido, con el nombre del mes', async () => {
+      await facade.initialize();
+      facade.prevMonth(); // agosto: solo la compra "b"
+
+      expect(await facade.exportMonth()).toBe(true);
+
+      const [name, csv] = files.saveCsv.mock.calls[0];
+      expect(name).toBe('compras-2026-08.csv');
+      expect(csv).toContain(';Café;1;4000;4000;4000');
+      expect(csv).not.toContain('Pan');
+    });
+
+    it('si no se pudo, avisa y devuelve false', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      files.saveCsv.mockRejectedValue(new Error('No app'));
+      await facade.initialize();
+
+      expect(await facade.exportMonth()).toBe(false);
+      expect(toast.error).toHaveBeenCalled();
+    });
   });
 
   describe('nombre, borrar y renombrar (spec 0012)', () => {
